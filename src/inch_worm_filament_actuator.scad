@@ -12,6 +12,9 @@ use <servo_horn_cavity.scad>
 use <triangular_bearing_shaft.scad>
 use <skate_bearing_fittings.scad>
 
+a_lot = 100;
+
+
 d_filament = 1.75 + 0.;
 od_ptfe_tube = 4 + 0;
 
@@ -37,7 +40,7 @@ show_filament = true;
 
 build_bearing_shaft_coupling = true;
 build_alt_shaft_gearing = true;
-
+build_drive_gear = true;
 
 
 build_shaft = true;
@@ -102,6 +105,7 @@ dx_glides = r_glide + od_ptfe_tube/2 + glide_filament_clearance;
 
 /* [General Gear Design] */
 gear_height = 5;
+gear_modulus = 1.7; 
 hub_height = 4.6;
 hub_diameter = 12.5;
 z_gear_clearance = 1;
@@ -251,7 +255,7 @@ module base_gear(teeth) {
     translate([0, 0, 1.2]) 
         bevel_gear(
           n = teeth,  // number of teeth
-          m = 1.7,   // module
+          m = gear_modulus,   // module
           w = 7,   // tooth width
           cone_angle     = 45,
           pressure_angle = 25,
@@ -895,17 +899,19 @@ module shaft_bearing_retainer(orientation) {
 
 
 
-module bearing_shaft_coupling(orient_for_build, cl_hex=0.5, cl_tri=1.0, h = 14) {
+module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.8, h = 18) {
     a_lot = 100;
+    d_body = 12;
     color(PART_11) {
         render(convexity=10) difference() {
-            can(d=14, h=h);
+            can(d=d_body, h=h);
             can(d=7 + 2*cl_hex, h=a_lot, $fn=6, center=ABOVE);
             can(d=8 + 2*cl_tri, h=a_lot, $fn=3, center=BELOW);
-            center_reflect([0, 0, 1]) translate([0, 0, 3]) rotate([90, 0, 0]) hole_through("M2", $fn=12);
-            center_reflect([0, 0, 1]) can(d=0, taper=10, h=h/2, $fn=20, center=ABOVE);
+            translate([0, 0, 3]) rotate([90, 0, 0]) hole_through("M2", $fn=12);
+            translate([0, 0, -3]) rotate([90, 0, -30]) hole_through("M2", $fn=12);
+            center_reflect([0, 0, 1]) can(d=0, taper=9, h=h/2, $fn=20, center=ABOVE);
         }
-        can(d=14, h=0.5);
+        can(d=d_body, h=0.5);
     }
     
 }
@@ -952,4 +958,61 @@ if (build_bearing_shaft_coupling) {
     translate([100, 100, 0]) bearing_shaft_coupling();
 }
 
+module drive_gear(orient_for_build=true, show_vitamins=false) {
+    module rider(as_clearance=false) {
+        if (as_clearance) {
+            scale([0.99, 0.99, 1]) 
+                hull() 
+                    translate([0, 0, -a_lot/2])
+                        shaft_rider(h=a_lot);
+        } else {
+            dz = -gear_height/2;
+            translate([0, 0, dz]) 
+                shaft_rider(
+                    h=gear_height, 
+                    orient_for_build=false, 
+                    show_vitamins=show_vitamins);
+            color("Coral") {
+                translate([0, 0, dz]) {
+                    scale([1.2, 1.2, 1]) 
+                        shaft_rider(
+                            h=0.5, 
+                            orient_for_build=false, 
+                            show_vitamins=true);
+                }
+            }
+        }
+        
+  
 
+    }
+    module shape() {
+        render(convexity=10) difference() {
+            spur_gear(
+                n = 13,  // number of teeth, just enough to clear rider.
+                m = gear_modulus,   // module
+                z = gear_height,   // thickness
+                pressure_angle = 25,
+                helix_angle    = 0,   // the sign gives the handiness, can be a list
+                backlash       = 0.1 // in module units
+            );
+            rider(as_clearance=true);
+        }
+        rider(as_clearance=false);
+        
+    }
+    if (orient_for_build) {
+        // Move origin to the bottom of the gear
+        dz = gear_height/2;
+        translate([0, 0, dz]) shape();
+    } else {
+        // Origin is at center of gear vertically
+        translate([0, 0, 0])  shape();
+    }
+}
+
+
+if (build_drive_gear) {
+    drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
+}
+        

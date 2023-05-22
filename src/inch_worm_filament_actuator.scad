@@ -899,7 +899,7 @@ module shaft_bearing_retainer(orientation) {
 
 
 
-module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.8, h = 18) {
+module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.6, h = 16) {
     a_lot = 100;
     d_body = 12;
     color(PART_11) {
@@ -907,9 +907,10 @@ module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.8, h = 18) 
             can(d=d_body, h=h);
             can(d=7 + 2*cl_hex, h=a_lot, $fn=6, center=ABOVE);
             can(d=8 + 2*cl_tri, h=a_lot, $fn=3, center=BELOW);
-            translate([0, 0, 3]) rotate([90, 0, 0]) hole_through("M2", $fn=12);
-            translate([0, 0, -3]) rotate([90, 0, -30]) hole_through("M2", $fn=12);
-            center_reflect([0, 0, 1]) can(d=0, taper=9, h=h/2, $fn=20, center=ABOVE);
+            translate([0, 0, 5]) rotate([90, 0, 0]) hole_through("M2", $fn=12);
+            translate([0, 0, -5]) rotate([90, 0, -30]) hole_through("M2", $fn=12);
+            can(d=0, taper=9, h=h/2, $fn=20, center=ABOVE);
+            translate([0, 0, -h/2]) can(d=9.5, taper=0, h=2, $fn=20, center=ABOVE);
         }
         can(d=d_body, h=0.5);
     }
@@ -958,7 +959,7 @@ if (build_bearing_shaft_coupling) {
     translate([100, 100, 0]) bearing_shaft_coupling();
 }
 
-module drive_gear(orient_for_build=true, show_vitamins=false) {
+module drive_gear(orient_for_build=true, show_vitamins=false, h_rider=8) {
     module rider(as_clearance=false) {
         if (as_clearance) {
             scale([0.99, 0.99, 1]) 
@@ -966,21 +967,12 @@ module drive_gear(orient_for_build=true, show_vitamins=false) {
                     translate([0, 0, -a_lot/2])
                         shaft_rider(h=a_lot);
         } else {
-            dz = -gear_height/2;
+            dz = +gear_height/2;
             translate([0, 0, dz]) 
                 shaft_rider(
-                    h=gear_height, 
+                    h=h_rider, 
                     orient_for_build=false, 
                     show_vitamins=show_vitamins);
-            color("Coral") {
-                translate([0, 0, dz]) {
-                    scale([1.2, 1.2, 1]) 
-                        shaft_rider(
-                            h=0.5, 
-                            orient_for_build=false, 
-                            show_vitamins=true);
-                }
-            }
         }
         
   
@@ -989,14 +981,15 @@ module drive_gear(orient_for_build=true, show_vitamins=false) {
     module shape() {
         render(convexity=10) difference() {
             spur_gear(
-                n = 13,  // number of teeth, just enough to clear rider.
+                n = 9,  // number of teeth, just enough to clear rider.
                 m = gear_modulus,   // module
                 z = gear_height,   // thickness
                 pressure_angle = 25,
                 helix_angle    = 0,   // the sign gives the handiness, can be a list
                 backlash       = 0.1 // in module units
             );
-            rider(as_clearance=true);
+            //rider(as_clearance=true);
+            slider_shaft(as_clearance=true);
         }
         rider(as_clearance=false);
         

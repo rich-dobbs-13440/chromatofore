@@ -11,6 +11,8 @@ use <PolyGear/PolyGear.scad>
 use <servo_horn_cavity.scad>
 use <triangular_bearing_shaft.scad>
 use <skate_bearing_fittings.scad>
+use <small_servo_cam.scad>
+
 
 a_lot = 100;
 
@@ -38,6 +40,7 @@ orient_for_build = orientation == ORIENT_FOR_BUILD;
 show_vitamins = true;
 show_filament = true;
 
+
 build_bearing_shaft_coupling = true;
 build_alt_shaft_gearing = true;
 build_drive_gear = true;
@@ -61,7 +64,7 @@ build_traveller = false; // Old implementation is being incrementally replaced
 build_shaft_bearing_retainer = false;
 build_clamp_skate_bearing_holder = false;
 build_traveller_pivot_arms = false;
-
+build_servo_hubbed_gear = false;
 
 
 clamping_lift = 0; // [0: 0.1: 1]
@@ -542,14 +545,16 @@ module filament_clamp(
     module platform_mount() {
         dz = include_bearing_mounting_adapter ? 14 : -z/2;
         z_wings = include_bearing_mounting_adapter ? 28 : z;
-        color(PART_31) hull() {
+        color("RED") hull() { // PART_28
             nut_block();
             if (include_servo_attachment) {
                 pivot_attachment();
             }
             block([x_clamp_nut_block, y_clamp_nut_block, 14], center=BELOW);
         }
-        color(PART_34) translate([0, 0, -dz]) block([x_clamp_nut_block, 28, screw_wall]); 
+        color(PART_34) 
+            translate([0, 0, -dz]) 
+                block([x_clamp_nut_block, 28, screw_wall]); 
         if (include_servo_attachment) {
             color("indigo")
             center_reflect([0, 1, 0]) {
@@ -1002,6 +1007,38 @@ module drive_gear(orient_for_build=true, show_vitamins=false, h_rider=8) {
         // Origin is at center of gear vertically
         translate([0, 0, 0])  shape();
     }
+}
+
+
+module servo_hubbed_gear() {
+    module shape() {
+        render(convexity=10) difference() {
+            spur_gear(
+                n = 25,  // number of teeth, just enough to clear rider.
+                m = gear_modulus,   // module
+                z = gear_height,   // thickness
+                pressure_angle = 25,
+                helix_angle    = 0,   // the sign gives the handiness, can be a list
+                backlash       = 0.1 // in module units
+            );
+            can(d=30, h=a_lot);
+            
+        }
+        hub(horn_thickness=small_servo_cam_horn_thickness(), hub_diameter=small_servo_cam_hub_diameter()); 
+        
+    }
+    color(PART_34)
+        shape(); 
+}
+
+
+module zip_tie_attached_gear() {
+    
+    
+}
+
+if (build_servo_hubbed_gear) {
+    servo_hubbed_gear();
 }
 
 

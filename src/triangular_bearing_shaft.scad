@@ -15,25 +15,32 @@ id_bearing = 8.0 + 0;
 h_bearing = 7.0 + 0;
 md_bearing = 14.0 + 0;
 
+
+
 /* [Clearances] */ 
 ptfe_snap_clearance = 0.17;
 ptfe_slide_clearance = 0.5; // [0.5:Actual, 1:test]
+
 
 
 /* [Output] */ 
 
 orient_for_build = true;
 show_vitamins = true;
-build_prong_assembly = true;
+
+build_shaft = true;  // blue
+build_shaft_rider = true; // orange
 build_ziptie_bearing_attachment = true;
-build_shaft = true;
+build_ziptie_attached_spur_gear = true;
+build_prong_assembly = true;
 build_screw_clutch = true;
-build_shaft_rider = true;
+
+
 
 /* [Shaft Design] */
-
 shaft_length = 100; // [0:100]
 shaft_clearance = 0.4;
+
 
 
 /* [Rider Design] */
@@ -43,12 +50,20 @@ r_shaft = id_bearing/2;
 r_rider = 4.2; // [1: .1 : 10]
 
 
+
+/* [Spur Gear Design] */
+n_teeth = 15; // [15 : 40]
+
 // 0.15 was pretty tight, 0.2 was loose, might be interaction with r_rider though
+
+
 
 /* [Clutch Design] */
 n_thumb_wheel_teeth = 15; //[1:30]
-
 m_thumb_wheel = 1.9; // [1.5: .1 :2]
+
+
+
 /* [Prong Design] */
 prong_locked = true;
 h_prong_clip = 4;
@@ -56,15 +71,43 @@ h_prong_assembly_gap = 10; // [7: 20]
 dz_bearing_prong_mocks = 2; // [-5:0.1:5]
 dz_shaft_gear_prong_mocks = 0; // [-5:0.1:5]
 
+
+
 module end_of_customization() {}
 
+
+
+if (build_shaft) {
+    if (orient_for_build) {
+        translate([10, 0, 0]) slider_shaft(length=shaft_length, orient_for_build=true);
+    } else {
+        slider_shaft(length=shaft_length, orient_for_build=false);
+    }    
+}
+
 if (build_shaft_rider) {
-    shaft_rider(h=5, orient_for_build=true, show_vitamins=false);
+    translation = orient_for_build ? [20, -20, 0] : [0, 0, 0];
+    translate(translation) shaft_rider(h=5, orient_for_build=true, show_vitamins=false);
+}
+
+if (build_ziptie_bearing_attachment) {
+    translation = orient_for_build ? [30, 0, 0] : [0, 0, 0];
+    translate(translation) ziptie_bearing_attachment();
+}
+
+if (build_ziptie_attached_spur_gear) {
+    translation = orient_for_build ? [40, 50, 0] : [0, 0, 0];
+    translate(translation) ziptie_attached_spur_gear(n_teeth=n_teeth, orient_for_build=orient_for_build);  
+} 
+
+if (build_screw_clutch) {
+    translation = orient_for_build ? [50, -40, 0] : [0, 0, 0];
+    translate(translation) screw_clutch();
 }
 
 if (build_prong_assembly) {
     if (orient_for_build) {
-        translate([20, -20, 0]) prong_assembly(orient_for_build=true);
+        translate([60, 10, 0]) prong_assembly(orient_for_build=true);
     } else {
         prong_assembly(locked=prong_locked, show_mocks=show_vitamins, h_gap=h_prong_assembly_gap);
     }     
@@ -72,13 +115,138 @@ if (build_prong_assembly) {
 
 
 
-if (build_ziptie_bearing_attachment) {
-    ziptie_bearing_attachment();
+module slider_shaft(
+        length = 0,
+        orient_for_build = false, 
+        as_clearance = false,
+        as_gear_clearance = false,
+        as_circular_clearance = false,
+        clearance = ptfe_slide_clearance) {
+    a_lot = 300;      
+    shaft_length = 
+        as_clearance ? a_lot :
+        as_gear_clearance ? a_lot :
+        length;
+      
+    actual_clearance = 
+        as_clearance ? clearance :
+        as_gear_clearance ? clearance :
+        0;
+            
+    assert(is_num(shaft_length));
+
+    z_clearance = as_clearance ? a_lot : 0.01;    
+
+    translation = orient_for_build ? [0, 0, shaft_length/2] : [0, 0, 0];    
+    module blank() {
+        d_end = 
+            as_clearance ? 2 * r_shaft_end  + 2 * actual_clearance : 
+            as_gear_clearance ? 2 * r_shaft_end  + 2 * shaft_clearance :
+            2 * r_shaft_end;
+        r_arm = as_gear_clearance ? r_shaft + sqrt(3) * shaft_clearance : r_shaft;
+        hull() {
+            triangle_placement(r=r_arm) can(d=d_end, h=shaft_length, $fn=50);
+        }
+    }
+    module shape() {
+        color(PART_1) { // Blue
+            render(convexity=10) intersection() { 
+                blank();
+                can(d=2*r_shaft - 2*shaft_clearance, h=a_lot);
+            }
+        }       
+    }
+    if (as_gear_clearance) {
+        blank();
+    } else if (as_circular_clearance) {
+        d_shaft_clearance = 2 * (r_shaft + r_shaft_end + shaft_clearance);
+        can(d=d_shaft_clearance , h=a_lot); 
+    } else if (orient_for_build) {
+        translate([0, 0, shaft_length/2]) shape();
+    } else {
+        translate(translation) shape();
+    } 
 }
 
-if (build_screw_clutch) {
-    screw_clutch();
+
+module shaft_rider(h, orient_for_build, show_vitamins) {
+    a_lot = 200; 
+    module blank() {
+        can(d=md_bearing + 1, h=h, center=ABOVE);
+    }
+    module shape() {    
+        render(convexity=10) difference() {
+            blank();
+            slider_shaft(as_gear_clearance=true);
+            rotate([0, 0, 60]) triangle_placement(r=r_rider) 
+                ptfe_tube(as_clearance=true, h=a_lot, clearance=ptfe_snap_clearance);            
+        }
+    }
+    if (show_vitamins) {
+        translate([0, 0, h/2]) 
+            rotate([0, 0, 60]) triangle_placement(r=r_rider) 
+                ptfe_tube(as_clearance=true, h=h, clearance=ptfe_snap_clearance);         
+        //translate([0, 0, -5]) ball_bearing(BB608);
+        //slider_shaft(orient_for_build=true);
+    }  
+    color(PART_2) // Orange
+    if (orient_for_build) {
+        translate([0, 0, 0]) rotate([0, 0, 0]) shape();
+    } else {
+        translation = [0, 0, 0];  
+        translate(translation) shape();
+    } 
 }
+
+
+module ziptie_bearing_attachment(h=4)  {
+    a_lot = 100;
+    color(PART_3) // Green
+    render(convexity=10) difference() {
+        union() {
+            if ($children > 0) {
+                // Use the children as the body
+                children();
+            } 
+            can(d=md_bearing, h=h, center=ABOVE);
+        }
+
+        slider_shaft(as_gear_clearance=true);
+        triangle_placement(0) 
+            translate([-id_bearing/2, 0, 0]) 
+                rotate([0, -45, 0]) 
+                    block(1.5*[1.2, 2.5, a_lot], center=FRONT); 
+    }
+}
+
+
+module ziptie_attached_spur_gear(n_teeth=25, gear_modulus=1.7, gear_height=4, orient_for_build=false) {
+    // Designed so that origin is at the face of the bearing.
+    
+    z_hub = 2; // To clear outer rim of bearing
+    module shape() {
+        ziptie_bearing_attachment(h=gear_height+z_hub) {
+            translate([0, 0, gear_height/2+z_hub]) // Align with the top of the attachment
+                spur_gear(
+                    n =n_teeth,  // number of teeth, just enough to clear rider.
+                    m = gear_modulus,   // module
+                    z = gear_height,   // thickness
+                    pressure_angle = 25,
+                    helix_angle    = 0,   // the sign gives the handiness, can be a list
+                    backlash       = 0.1 // in module units
+                );
+        }
+    }
+    color(PART_4) {  //Pink
+        if (orient_for_build) {
+            translate([0, 0, 1.5*gear_height]) rotate([180, 0, 0]) shape();
+        } else {
+            shape();
+        }
+    }
+    
+}
+
 
 module screw_clutch() {
     
@@ -94,13 +262,13 @@ module screw_clutch() {
     total_bolt_length = length+z_nut;
     
     module left_handed_hollow_bolt() {
-        color("lightpink") {
+        color(PART_5) { // brown
             mirror([0, 0, 1]) right_handed_hollow_bolt();
         }
     }
     
     module right_handed_hollow_bolt() {
-        color("red") {
+        color(PART_6) {  // purple
             translate([0, 0, -length-z_nut]) {
                 render(convexity = 10) difference() {
                     translate([0, 0, -original_z_nut+z_nut]) MetricBolt(diameter, length, tolerance=0.4);
@@ -116,7 +284,7 @@ module screw_clutch() {
     }
     
     module thumb_wheel() {
-        color("orange") {
+        color(PART_7) { // turquoise
             render(convexity = 10) {
                 center_reflect([0, 0, 1]) {
                     MetricNut(diameter, z_thumb_wheel/2, tolerance=0.4);
@@ -134,9 +302,9 @@ module screw_clutch() {
     }
     if (orient_for_build) {
         spacing = 2.5*diameter;
-        translate([+spacing, 0, total_bolt_length]) //rotate([180, 0, 0]) 
+        translate([0, +spacing, total_bolt_length]) //rotate([180, 0, 0]) 
         right_handed_hollow_bolt();
-        translate([-spacing, 0, total_bolt_length]) rotate([180, 0, 0]) left_handed_hollow_bolt();
+        translate([0, -spacing, total_bolt_length]) rotate([180, 0, 0]) left_handed_hollow_bolt();
         translate([0, 0, z_thumb_wheel/2]) thumb_wheel();
     } else {
         right_handed_hollow_bolt();
@@ -145,8 +313,6 @@ module screw_clutch() {
     }
     
 }
-
-
 
 module ptfe_tube(as_clearance, h, clearance) {
     d = as_clearance ? 4 + 2*clearance : 4;
@@ -166,13 +332,7 @@ module prong_screws(as_clearance=false, dz=0) {
     }
 } 
 
-if (build_shaft) {
-    if (orient_for_build) {
-        translate([40, 0, 0]) slider_shaft(length=shaft_length, orient_for_build=true);
-    } else {
-        slider_shaft(length=shaft_length, orient_for_build=false);
-    }    
-}
+
 
 
 
@@ -207,7 +367,7 @@ module prong_assembly(locked=true, orient_for_build=false, show_mocks=false, h_g
                 block([6, 8, h_prong_clip], center=ABOVE+BEHIND);
             rotate([0, 0, 30]) plane_clearance(FRONT);
             rotate([0, 0, -30]) plane_clearance(FRONT);
-            #prong_screws(as_clearance=true, dz=dz_screws); 
+            prong_screws(as_clearance=true, dz=dz_screws); 
         }                  
     }
     module pronate_prong() {
@@ -226,6 +386,7 @@ module prong_assembly(locked=true, orient_for_build=false, show_mocks=false, h_g
             shaft_gear(orient_to_center_of_rotation=true,  show_vitamins=false);
         prong_screws(as_clearance=false, dz=dz_screws);
     }
+    color(PART_8) // salmon
     if (orient_for_build) {
         pronate_prong();
         //translate([0, dy_prong_spacing, 0]) pronate_prong();
@@ -267,6 +428,7 @@ module old_prong_assembly(locked=true, orient_for_build=false, show_vitamins=fal
     if (show_vitamins && !orient_for_build) {
         ball_bearing(BB608);
     }
+    color(PART_7)
     if (orient_for_build) {
         pronate_prong();
         translate([0, 10, 0]) pronate_prong();
@@ -278,19 +440,6 @@ module old_prong_assembly(locked=true, orient_for_build=false, show_vitamins=fal
         translate([dx_prong, 0, 0]) prong();
         rotate([0, 0, prong_angle]) prong();
         rotate([0, 0, -prong_angle]) prong();
-    }
-}
-
-
-module ziptie_bearing_attachment()  {
-    a_lot = 100;
-    render(convexity=10) difference() {
-        can(d=md_bearing, h=4, center=ABOVE);
-        slider_shaft(as_gear_clearance=true);
-        triangle_placement(0) 
-            translate([-id_bearing/2, 0, 0]) 
-                rotate([0, -45, 0]) 
-                    block(1.5*[1.2, 2.5, a_lot], center=FRONT); 
     }
 }
 
@@ -309,91 +458,6 @@ module bearing_insert_splinter(h) {
     }   
     shape(); 
 }
-
-
-
-module shaft_rider(h, orient_for_build, show_vitamins) {
-    a_lot = 200; 
-    module blank() {
-        can(d=md_bearing + 1, h=h, center=ABOVE);
-    }
-    module shape() {    
-        render(convexity=10) difference() {
-            blank();
-            slider_shaft(as_gear_clearance=true);
-            rotate([0, 0, 60]) triangle_placement(r=r_rider) 
-                ptfe_tube(as_clearance=true, h=a_lot, clearance=ptfe_snap_clearance);            
-        }
-    }
-    if (show_vitamins) {
-        translate([0, 0, h/2]) 
-            rotate([0, 0, 60]) triangle_placement(r=r_rider) 
-                ptfe_tube(as_clearance=true, h=h, clearance=ptfe_snap_clearance);         
-        //translate([0, 0, -5]) ball_bearing(BB608);
-        //slider_shaft(orient_for_build=true);
-    }    
-    if (orient_for_build) {
-        translate([0, 0, 0]) rotate([0, 0, 0]) shape();
-    } else {
-        translation = [0, 0, 0];  
-        translate(translation) shape();
-    } 
-}
-
-
-module slider_shaft(
-        length = 0,
-        orient_for_build = false, 
-        as_clearance = false,
-        as_gear_clearance = false,
-        as_circular_clearance = false,
-        clearance = ptfe_slide_clearance) {
-    a_lot = 300;      
-    shaft_length = 
-        as_clearance ? a_lot :
-        as_gear_clearance ? a_lot :
-        length;
-      
-    actual_clearance = 
-        as_clearance ? clearance :
-        as_gear_clearance ? clearance :
-        0;
-            
-    assert(is_num(shaft_length));
-
-    z_clearance = as_clearance ? a_lot : 0.01;    
-
-    translation = orient_for_build ? [0, 0, shaft_length/2] : [0, 0, 0];    
-    module blank() {
-        d_end = 
-            as_clearance ? 2 * r_shaft_end  + 2 * actual_clearance : 
-            as_gear_clearance ? 2 * r_shaft_end  + 2 * shaft_clearance :
-            2 * r_shaft_end;
-        r_arm = as_gear_clearance ? r_shaft + sqrt(3) * shaft_clearance : r_shaft;
-        hull() {
-            triangle_placement(r=r_arm) can(d=d_end, h=shaft_length, $fn=50);
-        }
-    }
-    module shape() {
-        color("green") {
-            render(convexity=10) intersection() { 
-                blank();
-                can(d=2*r_shaft - 2*shaft_clearance, h=a_lot);
-            }
-        }       
-    }
-    if (as_gear_clearance) {
-        blank();
-    } else if (as_circular_clearance) {
-        d_shaft_clearance = 2 * (r_shaft + r_shaft_end + shaft_clearance);
-        can(d=d_shaft_clearance , h=a_lot); 
-    } else if (orient_for_build) {
-        translate([0, 0, shaft_length/2]) shape();
-    } else {
-        translate(translation) shape();
-    } 
-}
-
 
 
 module slider_shaft_bearing_insert(

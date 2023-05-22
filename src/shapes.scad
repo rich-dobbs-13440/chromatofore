@@ -564,7 +564,8 @@ clearance = 1;
 
 t_rail_slide(size, thickness, clearance);
 
-module t_rail_slide(rail_size, rail_thickness, rail_mounting_y, clearance, slide_thickness) {
+module t_rail_slide(rail_size, rail_thickness, rail_mounting_y, clearance=0, slide_thickness=0) {
+    echo("rail_size", rail_size);
     inner = [
         rail_size.x, 
         rail_size.y - 2*clearance - rail_thickness - rail_mounting_y,  

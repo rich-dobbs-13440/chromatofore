@@ -1070,19 +1070,20 @@ if (build_bearing_plate) {
 
 
 module gear_1_big() {
-    dx_gear = gear_height/2+2;
+    h_hub = 4;
+    dx_gear = gear_height/2 + h_hub;
     translate([0, 0, dx_gear]) spur_gear(
-        n = 24,  // number of teeth, just enough to clear rider.
-        m = 1.696,   // module
+        n = 16,  // number of teeth, just enough to clear rider.
+        m = 2.2,   // module
         z = gear_height,   // thickness
         pressure_angle = 25,
         helix_angle    = 0,   // the sign gives the handiness, can be a list
         backlash       = 0.1 // in module units
     );
-   can(d=md_bearing, h=2, center=ABOVE, $fn=12);
-   can(d=id_bearing, h=h_bearing, center=BELOW, $fn=12);
+   #can(d=md_bearing, h=h_hub, center=ABOVE, $fn=12);
+   can(d=id_bearing, h=h_bearing+1, center=BELOW, $fn=12);
    intersection() {
-       translate([0, 0, -h_bearing]) block([6, 6, gear_height+4], center=BELOW);
+       translate([0, 0, -h_bearing-1]) block([6, 6, h_hub+ gear_height+4], center=BELOW);
         can(d=8, h=a_lot);
     }   
         

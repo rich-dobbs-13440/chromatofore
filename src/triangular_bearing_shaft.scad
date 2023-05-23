@@ -212,7 +212,7 @@ module ziptie_bearing_attachment(h=4, zip_angle=45)  {
                 // Use the children as the body
                 children();
             } 
-            #can(d=md_bearing, h=h, center=ABOVE);
+            can(d=md_bearing, h=h, center=ABOVE);
         }
 
         slider_shaft(as_gear_clearance=true);

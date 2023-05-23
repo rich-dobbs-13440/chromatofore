@@ -52,7 +52,8 @@ r_rider = 4.2; // [1: .1 : 10]
 
 
 /* [Spur Gear Design] */
-n_teeth = 15; // [15 : 40]
+n_teeth = 11; // [9 : 40]
+gear_modulus  = 2.2; // [1: .1: 5]
 
 // 0.15 was pretty tight, 0.2 was loose, might be interaction with r_rider though
 
@@ -75,7 +76,7 @@ dz_shaft_gear_prong_mocks = 0; // [-5:0.1:5]
 
 module end_of_customization() {}
 
-
+function calculateGearDiameter(gear_module, teeth) = gear_module * teeth;
 
 if (build_shaft) {
     if (orient_for_build) {
@@ -97,7 +98,10 @@ if (build_ziptie_bearing_attachment) {
 
 if (build_ziptie_attached_spur_gear) {
     translation = orient_for_build ? [40, 50, 0] : [0, 0, 0];
-    translate(translation) ziptie_attached_spur_gear(n_teeth=n_teeth, orient_for_build=orient_for_build);  
+    translate(translation) ziptie_attached_spur_gear(
+        n_teeth = n_teeth, 
+        gear_modulus = gear_modulus,
+        orient_for_build = orient_for_build);  
 } 
 
 if (build_screw_clutch) {
@@ -199,7 +203,7 @@ module shaft_rider(h, orient_for_build, show_vitamins) {
 }
 
 
-module ziptie_bearing_attachment(h=4)  {
+module ziptie_bearing_attachment(h=4, zip_angle=45)  {
     a_lot = 100;
     color(PART_3) // Green
     render(convexity=10) difference() {
@@ -208,25 +212,29 @@ module ziptie_bearing_attachment(h=4)  {
                 // Use the children as the body
                 children();
             } 
-            can(d=md_bearing, h=h, center=ABOVE);
+            #can(d=md_bearing, h=h, center=ABOVE);
         }
 
         slider_shaft(as_gear_clearance=true);
         triangle_placement(0) 
             translate([-id_bearing/2, 0, 0]) 
-                rotate([0, -45, 0]) 
+                rotate([0, -zip_angle, 0]) 
                     block(1.5*[1.2, 2.5, a_lot], center=FRONT); 
     }
 }
 
 
-module ziptie_attached_spur_gear(n_teeth=25, gear_modulus=1.7, gear_height=4, orient_for_build=false) {
+module ziptie_attached_spur_gear(
+        n_teeth = 25, 
+        gear_modulus = 1.7, 
+        gear_height = 4, 
+        hub_height = 4,
+        orient_for_build = false) {
     // Designed so that origin is at the face of the bearing.
-    
-    z_hub = 2; // To clear outer rim of bearing
+    dz = gear_height/2 + hub_height;
     module shape() {
-        ziptie_bearing_attachment(h=gear_height+z_hub) {
-            translate([0, 0, gear_height/2+z_hub]) // Align with the top of the attachment
+        ziptie_bearing_attachment(h= gear_height + hub_height, zip_angle=20) {
+            translate([0, 0, dz]) // Align with the top of the attachment
                 spur_gear(
                     n =n_teeth,  // number of teeth, just enough to clear rider.
                     m = gear_modulus,   // module
@@ -239,7 +247,7 @@ module ziptie_attached_spur_gear(n_teeth=25, gear_modulus=1.7, gear_height=4, or
     }
     color(PART_4) {  //Pink
         if (orient_for_build) {
-            translate([0, 0, 1.5*gear_height]) rotate([180, 0, 0]) shape();
+            translate([0, 0, gear_height+hub_height]) rotate([180, 0, 0]) shape();
         } else {
             shape();
         }

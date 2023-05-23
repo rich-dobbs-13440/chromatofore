@@ -40,7 +40,7 @@ orient_for_build = orientation == ORIENT_FOR_BUILD;
 show_vitamins = true;
 show_filament = true;
 
-
+build_bearing_plate  = true;
 build_bearing_shaft_coupling = true;
 build_alt_shaft_gearing = true;
 build_drive_gear = true;
@@ -90,6 +90,8 @@ include_servo_attachment = false;
 
 //*********************************************
 /* [Bearing Holder Design] */ 
+
+
 test_bearing_block = false;
 include_shaft_bearing_block_base = true;
 include_clamp_bearing_block_base = false;
@@ -173,7 +175,8 @@ bearing_block_wall = z_traveller;
 dx_traveller = dx_end_cap;
 z_bearing_engagement = 2.5; //[0.5:"Test fit", 1:"Prototype", 2.5:"Production"]
 
-
+// 
+wall_skate_bearing_retainer = 2;
 
 /* [Colors] */
 
@@ -746,7 +749,6 @@ module traveller(orient_for_build, show_vitamins) {
             filament(as_clearance=true); 
             //ptfe_glides(glide_length=a_lot, orient_for_build = false, as_traveller_clearance = true, clearance=ptfe_slide_clearance); 
             //clamp_screw_clearance();
-            
         }
         translate([dx_glides, 0, -z_traveller]) 
             triangle_placement(r=r_glide_mod) block([1,4, 10], center=FRONT+ABOVE);  
@@ -1045,4 +1047,48 @@ if (build_servo_hubbed_gear) {
 if (build_drive_gear) {
     drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
 }
+
+
+
+module bearing_plate(orient_for_build) {
+    module shape() {
+        for (i = [0:2]) {
+            translate([i*28, 0, 0]) 
+                skate_bearing_retainer(
+                    wall = wall_skate_bearing_retainer, orient_for_build=true, show_mock=false, as_screw_clearance=false);
+        }
+    }
+    translation = orient_for_build ? [0, 0, wall_skate_bearing_retainer] : [0, 0, wall_skate_bearing_retainer];
+    color(PART_33) translate(translation) shape();
+}
+
+
+if (build_bearing_plate) {
+    translation = orient_for_build ? [100, 0, 0] : [0, 0, z_end_cap + 5];
+    translate(translation) bearing_plate(orient_for_build);
+}
+
+
+module gear_1_big() {
+    dx_gear = gear_height/2+2;
+    translate([0, 0, dx_gear]) spur_gear(
+        n = 24,  // number of teeth, just enough to clear rider.
+        m = 1.696,   // module
+        z = gear_height,   // thickness
+        pressure_angle = 25,
+        helix_angle    = 0,   // the sign gives the handiness, can be a list
+        backlash       = 0.1 // in module units
+    );
+   can(d=md_bearing, h=2, center=ABOVE, $fn=12);
+   can(d=id_bearing, h=h_bearing, center=BELOW, $fn=12);
+   intersection() {
+       translate([0, 0, -h_bearing]) block([6, 6, gear_height+4], center=BELOW);
+        can(d=8, h=a_lot);
+    }   
+        
+    
+}
+
+
+gear_1_big();
         

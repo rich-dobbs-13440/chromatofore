@@ -22,7 +22,12 @@ show_mocks = true;
 
 /* [Design] */
 
+s_bearing_block = 28;
+wall_skate_bearing_retainer = 1; // [0.5, 1, 1.5, 2] 
+
 default_clearance = 0.3;
+
+screw_offset = s_bearing_block/2 - 3;
 
 
 module end_of_customization() {}
@@ -136,7 +141,7 @@ module skate_bearing_holder(
             // Add attachment block
             z = h + (cap ? 2 : 0);
             difference() {
-                block([28, 28, h], center=ABOVE);
+                block([s_bearing_block, s_bearing_block, h], center=ABOVE);
                 holder_clearance(); 
                 mounting_screws(as_clearance=true);
             }
@@ -149,7 +154,6 @@ module skate_bearing_holder(
 
 
 module skate_bearing_retainer(wall = 1, orient_for_build=false, color_code="Crimson", show_mock=true, as_screw_clearance=false) {
-    screw_offset = 10;
     module screw_holes(as_mocks=false) {
         z_offset = as_mocks ? 0 : 0;
         center_reflect([1, 0, 0]) {
@@ -159,7 +163,7 @@ module skate_bearing_retainer(wall = 1, orient_for_build=false, color_code="Crim
                     if (as_mocks) {
                         color(BLACK_IRON) screw("M2x6");
                     } else {
-                        center_reflect([0, 0, 1]) hole_through("M2", $fn=12); 
+                        center_reflect([0, 0, 1]) hole_through("M2", cld=0.4, $fn=12); 
                     }
                 }
             }
@@ -174,7 +178,7 @@ module skate_bearing_retainer(wall = 1, orient_for_build=false, color_code="Crim
         }      
         color(color_code) {
             render() difference() {
-                block([25, 25, wall], center=BELOW);
+                block([s_bearing_block, s_bearing_block, wall], center=BELOW);
                 skate_bearing_holder(as_retaining_clearance=true);
                 screw_holes();
             }
@@ -188,7 +192,7 @@ if (build_bearing_holder) {
 }
 
 if (build_retainer) {
-    skate_bearing_retainer(orient_for_build = orient_for_build);
+    skate_bearing_retainer(wall=wall_skate_bearing_retainer, orient_for_build = orient_for_build);
 }
 
 if (show_skate_bearing_retainer_clearance) {

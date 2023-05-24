@@ -13,18 +13,31 @@ int ledState = LOW;                   // Initial LED state
 
 bool serialIsAvailable = false;
 
+static const char* logPrefix = "-- debug --";
+
+template <typename T, typename... Args>
+void debugLog(T first, Args... args) {
+  Serial.print(logPrefix);
+  Serial.print(" ");
+  Serial.print(first);
+  ((Serial.print(" "), Serial.print(args)), ...);
+  Serial.println();
+}
+
+
+
 void setup() {
   Serial.begin(baudRate);
-  Serial.println();
-  Serial.println("--------------");
-  Serial.println("Sketch Version: 1.0");
-  Serial.print("Upload Date: ");
-  Serial.println(__DATE__);
-  Serial.print("Upload Time: ");
-  Serial.println(__TIME__);
-  Serial.print("Baud Rate: ");
-  Serial.println(baudRate);
-  Serial.println();
+
+
+
+  debugLog();
+  debugLog("--------------");
+  debugLog("Sketch Version: 1.0");
+  debugLog("Upload Date: ", __DATE__);
+  debugLog("Upload Time: ", __TIME__);
+  debugLog("Baud Rate: ", baudRate);
+
   // Initialize the digital pin as an output
   pinMode(redLedPin, OUTPUT);
   pinMode(blueLedPin, OUTPUT);
@@ -56,8 +69,8 @@ void loop() {
 
   if (currentMillis - previousMillisSerial >= intervalSerial) {
     previousMillisSerial = currentMillis;  // Update the previousMillis value
-    //writePeriodicMessage();
-    digitalWrite(blueLedPin, LOW);  //
+    writePeriodicMessage();
+    //digitalWrite(blueLedPin, LOW);  //
 
 
     // Other code to be executed periodically...
@@ -65,10 +78,10 @@ void loop() {
   if (Serial.available() > 0) {
     //serialIsAvailable = true;
     digitalWrite(blueLedPin, HIGH);
-    String gcodeCommand = Serial.readStringUntil('\n');
+    String gcodeCommand = readCommand(); // Receive the command from the host
     Serial.println(gcodeCommand);
     processCommand(gcodeCommand);
-    writePeriodicMessage();
+    
     delay(2000);
     digitalWrite(blueLedPin, LOW);
   }
@@ -83,15 +96,7 @@ void writePeriodicMessage() {
   int currentSecond = second();
 
   // Display the periodic message with the current time
-  Serial.print("Current time: ");
-  Serial.print(currentHour);
-  Serial.print(":");
-  Serial.print(currentMinute);
-  Serial.print(":");
-  Serial.println(currentSecond);
-  // Serial.print("Serial available: ");
-  // Serial.println(serialIsAvailable);
-  Serial.println("Periodic message!");
+  debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, "Periodic message!" );
 }
 
 
@@ -109,15 +114,39 @@ void processCommand(String gcodeCommand) {
 
     // Perform extrusion based on the extrusion amount
     // (Add your extrusion logic here)
-    Serial.print("Extruding ");
-    Serial.print(extrusionAmount);
-    Serial.println(" mm");
+    debugLog("Extruding ", extrusionAmount, " mm");
     //what G10 X[retract distance] Y[retract speed]
 
     // cold extrusion is M302 or M302 S0, while the command to enable cold retraction is M207 or M207 S1.
 
   } else {
-    Serial.print("Unknown command: ");
-    Serial.println(gcodeCommand);
+    debugLog("Unknown command: ", gcodeCommand);
   }
+}
+
+
+String readCommand() {
+  String command = Serial.readStringUntil('\n'); // Read the command from the host
+
+  // Calculate the checksum
+  byte checksum = calculateChecksum(command);
+
+  // Send the "ok" response with the checksum
+  sendResponse("ok", checksum);
+
+  return command;
+}
+
+byte calculateChecksum(const String& command) {
+  byte checksum = 0;
+  for (size_t i = 0; i < command.length(); i++) {
+    checksum ^= command[i];
+  }
+  return checksum;
+}
+
+void sendResponse(const String& response, byte checksum) {
+  Serial.print(response);
+  Serial.print(" ");
+  Serial.println(checksum, HEX);
 }

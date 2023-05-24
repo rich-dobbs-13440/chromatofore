@@ -51,9 +51,10 @@ r_rider = 4.2; // [1: .1 : 10]
 
 
 
-/* [Spur Gear Design] */
-n_teeth = 11; // [9 : 40]
+/* [Zip Attached Spur Gear Design] */
+n_teeth = 9; // [9 : 40]
 gear_modulus  = 2.2; // [1: .1: 5]
+zip_angle = 20; // [0:45]
 
 // 0.15 was pretty tight, 0.2 was loose, might be interaction with r_rider though
 
@@ -101,6 +102,7 @@ if (build_ziptie_attached_spur_gear) {
     translate(translation) ziptie_attached_spur_gear(
         n_teeth = n_teeth, 
         gear_modulus = gear_modulus,
+        zip_angle = zip_angle, 
         orient_for_build = orient_for_build);  
 } 
 
@@ -203,7 +205,7 @@ module shaft_rider(h, orient_for_build, show_vitamins) {
 }
 
 
-module ziptie_bearing_attachment(h=4, zip_angle=45)  {
+module ziptie_bearing_attachment(h=4, zip_angle=45, d=md_bearing)  {
     a_lot = 100;
     color(PART_3) // Green
     render(convexity=10) difference() {
@@ -212,7 +214,7 @@ module ziptie_bearing_attachment(h=4, zip_angle=45)  {
                 // Use the children as the body
                 children();
             } 
-            can(d=md_bearing, h=h, center=ABOVE);
+            can(d=d, h=h, center=ABOVE);
         }
 
         slider_shaft(as_gear_clearance=true);
@@ -229,11 +231,20 @@ module ziptie_attached_spur_gear(
         gear_modulus = 1.7, 
         gear_height = 4, 
         hub_height = 4,
-        orient_for_build = false) {
+        orient_for_build = false,
+        zip_angle=20
+    ) {
     // Designed so that origin is at the face of the bearing.
     dz = gear_height/2 + hub_height;
+    bearing_diameter = n_teeth * gear_modulus ;
+    echo("bearing_diameter", bearing_diameter);
+    root_diameter = bearing_diameter - 2 * gear_modulus;
+    core_d = min(md_bearing, root_diameter);
     module shape() {
-        ziptie_bearing_attachment(h= gear_height + hub_height, zip_angle=20) {
+        ziptie_bearing_attachment(
+                h = gear_height + hub_height, 
+                zip_angle = zip_angle,
+                d = core_d) {
             translate([0, 0, dz]) // Align with the top of the attachment
                 spur_gear(
                     n =n_teeth,  // number of teeth, just enough to clear rider.

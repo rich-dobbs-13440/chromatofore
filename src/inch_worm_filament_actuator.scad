@@ -1085,7 +1085,7 @@ function meshing_rotation_angle(n_teeth_1, n_teeth_2) = mod(n_teeth_1 + n_teeth_
 module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {  
     // Default axle spacing to separately mounted bearings as close.  Could be as small as 22, or as large as desired.
     n_teeth_small = 9;
-    d_small_minimum = 19.8; // Enough to pass through zip ties without interfering with teeth
+    d_small_minimum = 18.9; // Enough to pass through zip ties without interfering with teeth
 //    minimum_module = d_small_minimum / n_teeth_small;
 //    echo("minimum_module", minimum_module);
 //    
@@ -1102,12 +1102,28 @@ module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {
     echo("gear_module", gear_module);
     //meshing_rotation_angle = mod(n_teeth_small + n_teeth_big, 2) * 180/n_teeth_big;
     
+    echo("gear ratio", n_teeth_big/n_teeth_small);
+
+    
     module small_gear() {
         ziptie_attached_spur_gear(
             n_teeth = n_teeth_small, 
             gear_modulus = gear_module, 
-            gear_height = 4, 
-            hub_height = 4);
+            gear_height = 6, 
+            hub_height = 4,
+            zip_angle=0
+        );
+        // Something seems awry, so expand the diameter for the tip
+        adjustment = 6;
+        d_tip = (n_teeth_small * gear_modulus) + 2 * gear_modulus + adjustment;
+        echo("d_tip", d_tip);
+        translate([0, 0, 10]) {
+            rotate([0, 0, 0])
+                ziptie_bearing_attachment(h=2, zip_angle=20, d=md_bearing) {
+                    can(d=d_tip, h=6, center=ABOVE);
+                }
+        }
+        
     }
         
         
@@ -1150,6 +1166,8 @@ module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {
 
 
 triangular_shaft_gear_pair(axle_spacing=axle_spacing_shaft_to_bearing_2, orient_for_build=orient_for_build);
+
+
 
 
 //module calc_n_teeth_big(axle_spacing, n_teeth_small, d_small_minimum) {  

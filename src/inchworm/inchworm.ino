@@ -1,4 +1,25 @@
 #include <TimeLib.h>
+#include <Servo.h>
+#include <Regex.h>
+
+// Servo pins
+const int FILAMENT_MOVE_PIN = 8;
+const int FILAMENT_CLAMP_PIN = 9;
+const int FILAMENT_ROTATE_PIN = 10;
+const int EXTRUDER_ENGAGE_PIN = 11;
+
+// Servo objects
+Servo filamentMoveServo;
+Servo filamentClampServo;
+Servo filamentRotateServo;
+Servo extruderEngageServo;
+
+
+// Servo angles
+static int filamentMoveAngle = 90;
+static int filamentClampAngle = 45;
+static int filamentRotateAngle = 180;
+static int extruderEngageAngle = 0;
 
 const int redLedPin = 14;
 const int blueLedPin = 15;
@@ -44,6 +65,19 @@ void setup() {
   delay(5000);
   writePeriodicMessage();
   digitalWrite(blueLedPin, LOW);
+
+
+  filamentMoveServo.attach(FILAMENT_MOVE_PIN);
+  filamentClampServo.attach(FILAMENT_CLAMP_PIN);
+  filamentRotateServo.attach(FILAMENT_ROTATE_PIN);
+  extruderEngageServo.attach(EXTRUDER_ENGAGE_PIN); 
+
+  // Set initial servo angles
+  
+  (filamentMoveAngle);
+  updateFilamentClampAngle(filamentClampAngle);
+  updateFilamentRotateAngle(filamentRotateAngle);
+  updateExtruderEngageAngle(extruderEngageAngle);  
 }
 
 void loop() {
@@ -105,7 +139,7 @@ void writePeriodicMessage() {
 void processCommand(String gcodeCommand) {
 
   // Check if the command is an extrusion command (e.g., G1 E10)
-  if (gcodeCommand.startsWith("G1") && gcodeCommand.indexOf("E") != -1) {
+  if (gcodeCommand.startsWith("G1 ") && gcodeCommand.indexOf("E") != -1) {
     // Extract the extrusion value from the command
     float extrusionAmount = 0.0;
     int eIndex = gcodeCommand.indexOf("E");
@@ -151,4 +185,29 @@ void sendResponse(const String& response, byte checksum) {
   Serial.print(" ");
   Serial.println(checksum, HEX);
   Serial.flush();
+}
+
+
+// Function to update filament move angle
+void updateFilamentMoveAngle(int angle) {
+  filamentMoveAngle = angle;
+  filamentMoveServo.write(filamentMoveAngle);
+}
+
+// Function to update filament clamp angle
+void updateFilamentClampAngle(int angle) {
+  filamentClampAngle = angle;
+  filamentClampServo.write(filamentClampAngle);
+}
+
+// Function to update filament rotate angle
+void updateFilamentRotateAngle(int angle) {
+  filamentRotateAngle = angle;
+  filamentRotateServo.write(filamentRotateAngle);
+}
+
+// Function to update extruder engage angle
+void updateExtruderEngageAngle(int angle) {
+  extruderEngageAngle = angle;
+  extruderEngageServo.write(extruderEngageAngle);
 }

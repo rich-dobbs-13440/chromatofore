@@ -40,6 +40,7 @@ orient_for_build = orientation == ORIENT_FOR_BUILD;
 show_vitamins = true;
 show_filament = true;
 
+build_triangular_shaft_gear_pair = true;
 build_bearing_plate  = true;
 build_bearing_shaft_coupling = true;
 build_alt_shaft_gearing = true;
@@ -1050,14 +1051,53 @@ if (build_drive_gear) {
     drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
 }
 
+// ************************************************************************************
 
-
-module bearing_plate(orient_for_build) {
-    module shape() {
+module bearing_plate(orient_for_build, linear_layout=false, isosceles_layout = false) {
+    module retainer() {
+        skate_bearing_retainer(
+            wall = wall_skate_bearing_retainer, 
+            orient_for_build=true, 
+            show_mock=false, 
+            as_screw_clearance=false);
+    }
+    module linear_layout() {
         for (i = [0:2]) {
             translate([i*28, 0, 0]) 
-                skate_bearing_retainer(
-                    wall = wall_skate_bearing_retainer, orient_for_build=true, show_mock=false, as_screw_clearance=false);
+                retainer();
+        }
+    }
+    module isosceles_layout() {
+        retainer();
+        center_reflect([0, 1, 0]) {
+            translate([28, 14, 0]) {
+                retainer();
+            }
+            // Additional mounting holes
+            translate([0, 28, 0]) {
+                difference() {
+                    retainer();
+                    translate([0, -9, 0]) plane_clearance(RIGHT);
+
+                }
+            }
+            translate([0, 28+5, 0]) {
+                difference() {
+                    retainer();
+                    translate([0, -9, 0]) plane_clearance(RIGHT);
+
+                }
+            }            
+            
+        }
+    }
+    module shape() {
+        if (linear_layout) {
+            linear_layout();
+        } else if (isosceles_layout) {
+            isosceles_layout();
+        } else {
+            assert(false);
         }
     }
     translation = orient_for_build ? [0, 0, wall_skate_bearing_retainer] : [0, 0, wall_skate_bearing_retainer];
@@ -1067,7 +1107,7 @@ module bearing_plate(orient_for_build) {
 
 if (build_bearing_plate) {
     translation = orient_for_build ? [100, 0, 0] : [0, 0, z_end_cap + 5];
-    translate(translation) bearing_plate(orient_for_build);
+    translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
 }
 
 
@@ -1164,8 +1204,11 @@ module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {
     translate([layout_spacing, 0, 0]) large_gear();
 }
 
-
-triangular_shaft_gear_pair(axle_spacing=axle_spacing_shaft_to_bearing_2, orient_for_build=orient_for_build);
+if (build_triangular_shaft_gear_pair) {
+    triangular_shaft_gear_pair(
+        axle_spacing=axle_spacing_shaft_to_bearing_2, 
+        orient_for_build=orient_for_build);
+}
 
 
 

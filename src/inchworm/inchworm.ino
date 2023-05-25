@@ -286,7 +286,14 @@ void loop() {
         float g = GCode.GetWordValue('G');
         if (g == 1) {
           debugLog("Handle extrusion command.");
-          
+          updateFilamentMoveAngle(0);
+          delay(1000);
+          updateFilamentMoveAngle(180);
+          delay(1000);
+          updateFilamentMoveAngle(0);
+          delay(1000);  
+          debugLog("Done with Handle extrusion command.");        
+
         } else if (g == 10) {
           debugLog("Handle retraction command.");          
         } else {

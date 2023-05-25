@@ -1,6 +1,6 @@
 #include <TimeLib.h>
 #include <Servo.h>
-#include <Regex.h>
+#include <GCodeParser.h>
 
 // Servo pins
 const int FILAMENT_MOVE_PIN = 8;
@@ -21,6 +21,8 @@ static int filamentClampAngle = 45;
 static int filamentRotateAngle = 180;
 static int extruderEngageAngle = 0;
 
+GCodeParser GCode = GCodeParser();
+
 const int redLedPin = 14;
 const int blueLedPin = 15;
 
@@ -36,7 +38,7 @@ bool serialIsAvailable = false;
 
 static const char* logPrefix = "-- debug --";
 
-template <typename T, typename... Args>
+template<typename T, typename... Args>
 void debugLog(T first, Args... args) {
   Serial.print(logPrefix);
   Serial.print(" ");
@@ -44,6 +46,169 @@ void debugLog(T first, Args... args) {
   ((Serial.print(" "), Serial.print(args)), ...);
   Serial.println();
 }
+
+
+// Function to update filament move angle
+void updateFilamentMoveAngle(int angle) {
+  filamentMoveAngle = angle;
+  filamentMoveServo.write(filamentMoveAngle);
+}
+
+// Function to update filament clamp angle
+void updateFilamentClampAngle(int angle) {
+  filamentClampAngle = angle;
+  filamentClampServo.write(filamentClampAngle);
+}
+
+// Function to update filament rotate angle
+void updateFilamentRotateAngle(int angle) {
+  filamentRotateAngle = angle;
+  filamentRotateServo.write(filamentRotateAngle);
+}
+
+// Function to update extruder engage angle
+void updateExtruderEngageAngle(int angle) {
+  extruderEngageAngle = angle;
+  extruderEngageServo.write(extruderEngageAngle);
+}
+
+
+
+// void handleExtrusionCommand(const String& command, bool& handled) {
+//   // Check if the command has already been handled
+//   if (handled) {
+//     return;
+//   }
+//   MatchState ms;
+//   ms
+//   ms.Target(command);
+//   char result = ms.Match ("^G1\\s+E([\\d.]+)(?:\\s+F([\\d.]+))?(?:\\s*;.*)?$");
+//   if (result > 0) {}
+//     // Extract the values
+//     float amount = 12.0; // atof(extrusionPattern.matched(1));
+//     float feedrate = 13.0; //extrusionPattern.matched(2) ? atof(extrusionPattern.matched(2)) : 0.0;
+//     String comment = "The comment"; //  command.substring(command.indexOf(';') + 1);
+
+//     // Log the extrusion command details
+//     String logMessage = "Extrusion command detected. Amount: " + String(amount) + " mm";
+//     if (feedrate > 0.0) {
+//       logMessage += ", Feedrate: " + String(feedrate) + " mm/min";
+//     }
+//     if (comment.length() > 0) {
+//       logMessage += ", Comment: " + comment;
+//     }
+//     debugLog(logMessage);
+
+//     // Set handled to true
+//     handled = true;
+//   }
+// }
+
+// Code provided by ChatGPT
+// void handleExtrusionCommand(const String& command, bool& handled) {
+//   // Check if the command has already been handled
+//   if (handled) {
+//     return;
+//   }
+
+//   // Regular expression pattern for extrusion command
+//   Regexp extrusionPattern("^G1\\s+E([\\d.]+)(?:\\s+F([\\d.]+))?(?:\\s*;.*)?$");
+
+//   // Check if the command matches the extrusion pattern
+//   if (extrusionPattern.match(command)) {
+//     // Extract the values
+//     float amount = atof(extrusionPattern.matched(1));
+//     float feedrate = extrusionPattern.matched(2) ? atof(extrusionPattern.matched(2)) : 0.0;
+//     String comment = command.substring(command.indexOf(';') + 1);
+
+//     // Log the extrusion command details
+//     String logMessage = "Extrusion command detected. Amount: " + String(amount) + " mm";
+//     if (feedrate > 0.0) {
+//       logMessage += ", Feedrate: " + String(feedrate) + " mm/min";
+//     }
+//     if (comment.length() > 0) {
+//       logMessage += ", Comment: " + comment;
+//     }
+//     debugLog(logMessage);
+
+//     // Set handled to true
+//     handled = true;
+//   }
+// }
+
+// // Function to parse extrusion command
+// void handleExtrusionCommand(const String& command, bool& handled) {
+//   // Check if the command has already been handled
+//   if (handled) {
+//     return;
+//   }
+
+//   // Regular expression pattern for extrusion command
+//   std::regex extrusionPattern(R"(^G1\s+E([\d.]+)(?:\s+F([\d.]+))?(?:\s*;.*)?$)");
+
+//   // Match object to store extracted values
+//   std::smatch match;
+
+//   // Check if the command matches the extrusion pattern
+//   if (std::regex_match(command.c_str(), match, extrusionPattern)) {
+//     // Extract the values
+//     float amount = std::stof(match[1].str());
+//     float feedrate = match[2].matched ? std::stof(match[2].str()) : 0.0;
+//     String comment = command.substring(command.indexOf(';') + 1);
+
+//     // Log the extrusion command details
+//     String logMessage = "Extrusion command detected. Amount: " + String(amount) + " mm";
+//     if (feedrate > 0.0) {
+//       logMessage += ", Feedrate: " + String(feedrate) + " mm/min";
+//     }
+//     if (comment.length() > 0) {
+//       logMessage += ", Comment: " + comment;
+//     }
+//     debugLog(logMessage);
+
+//     // Set handled to true
+//     handled = true;
+//   }
+// }
+
+
+// void processCommand(String gcodeCommand) {
+//   bool handled = false;
+//   handleExtrusionCommand(gcodeCommand, handled);
+//   if (!handled)
+//     debugLog("Unknown command: ", gcodeCommand);
+//   }
+// }
+
+
+String readCommand() {
+  String command = Serial.readStringUntil('\n');  // Read the command from the host
+  Serial.flush();
+  // Calculate the checksum
+  byte checksum = calculateChecksum(command);
+
+  // Send the "ok" response with the checksum
+  sendResponse("ok", checksum);
+
+  return command;
+}
+
+byte calculateChecksum(const String& command) {
+  byte checksum = 0;
+  for (size_t i = 0; i < command.length(); i++) {
+    checksum ^= command[i];
+  }
+  return checksum;
+}
+
+void sendResponse(const String& response, byte checksum) {
+  Serial.print(response);
+  Serial.print(" ");
+  Serial.println(checksum, HEX);
+  Serial.flush();
+}
+
+
 
 
 
@@ -70,15 +235,17 @@ void setup() {
   filamentMoveServo.attach(FILAMENT_MOVE_PIN);
   filamentClampServo.attach(FILAMENT_CLAMP_PIN);
   filamentRotateServo.attach(FILAMENT_ROTATE_PIN);
-  extruderEngageServo.attach(EXTRUDER_ENGAGE_PIN); 
+  extruderEngageServo.attach(EXTRUDER_ENGAGE_PIN);
 
   // Set initial servo angles
-  
+
   (filamentMoveAngle);
   updateFilamentClampAngle(filamentClampAngle);
   updateFilamentRotateAngle(filamentRotateAngle);
-  updateExtruderEngageAngle(extruderEngageAngle);  
+  updateExtruderEngageAngle(extruderEngageAngle);
 }
+
+
 
 void loop() {
   unsigned long currentMillis = millis();
@@ -110,12 +277,30 @@ void loop() {
   if (Serial.available() > 0) {
     //serialIsAvailable = true;
     digitalWrite(blueLedPin, HIGH);
+    char serialChar = Serial.read();
+    debugLog("serialChar", serialChar);
+    if (GCode.AddCharToLine(serialChar)) {
+      debugLog("GCode.line", GCode.line);
+      GCode.ParseLine();
+      if (GCode.HasWord('G')) {
+        float g = GCode.GetWordValue('G');
+        if (g == 1) {
+          debugLog("Handle extrusion command.");
+          
+        } else if (g == 10) {
+          debugLog("Handle retraction command.");          
+        } else {
+          debugLog("GWordValue", g);
+        }
+      }
+      // Code to process the line of G-Code here…
+    }
 
-    String gcodeCommand = readCommand(); // Receive the command from the host
-    debugLog("gcodeCommand: ", gcodeCommand);
-    processCommand(gcodeCommand);
-    
-    
+    // String gcodeCommand = readCommand(); // Receive the command from the host
+    // debugLog("gcodeCommand: ", gcodeCommand);
+    // processCommand(gcodeCommand);
+
+
     delay(2000);
     digitalWrite(blueLedPin, LOW);
   }
@@ -130,84 +315,30 @@ void writePeriodicMessage() {
   int currentSecond = second();
 
   // Display the periodic message with the current time
-  debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, "Periodic message!" );
+  debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, "Periodic message!");
   Serial.flush();
 }
 
 
 
-void processCommand(String gcodeCommand) {
-
-  // Check if the command is an extrusion command (e.g., G1 E10)
-  if (gcodeCommand.startsWith("G1 ") && gcodeCommand.indexOf("E") != -1) {
-    // Extract the extrusion value from the command
-    float extrusionAmount = 0.0;
-    int eIndex = gcodeCommand.indexOf("E");
-    if (eIndex != -1) {
-      extrusionAmount = gcodeCommand.substring(eIndex + 1).toFloat();
-    }
-
-    // Perform extrusion based on the extrusion amount
-    // (Add your extrusion logic here)
-    debugLog("Extruding ", extrusionAmount, " mm");
-    //what G10 X[retract distance] Y[retract speed]
-
-    // cold extrusion is M302 or M302 S0, while the command to enable cold retraction is M207 or M207 S1.
-
-  } else {
-    debugLog("Unknown command: ", gcodeCommand);
-  }
-}
 
 
-String readCommand() {
-  String command = Serial.readStringUntil('\n'); // Read the command from the host
-  Serial.flush();
-  // Calculate the checksum
-  byte checksum = calculateChecksum(command);
+// // Example usage
+// void setup() {
+//   Serial.begin(9600);
 
-  // Send the "ok" response with the checksum
-  sendResponse("ok", checksum);
+//   // Test extrusion command
+//   String command = "G1 E10 F1800 ; Extrude 10 mm of filament at 1800 mm/min";
+//   bool handled = false;
+//   parseExtrusionCommand(command, handled);
 
-  return command;
-}
+//   // Check if the command was handled
+//   if (!handled) {
+//     // Handle other commands
+//     // ...
+//   }
+// }
 
-byte calculateChecksum(const String& command) {
-  byte checksum = 0;
-  for (size_t i = 0; i < command.length(); i++) {
-    checksum ^= command[i];
-  }
-  return checksum;
-}
-
-void sendResponse(const String& response, byte checksum) {
-  Serial.print(response);
-  Serial.print(" ");
-  Serial.println(checksum, HEX);
-  Serial.flush();
-}
-
-
-// Function to update filament move angle
-void updateFilamentMoveAngle(int angle) {
-  filamentMoveAngle = angle;
-  filamentMoveServo.write(filamentMoveAngle);
-}
-
-// Function to update filament clamp angle
-void updateFilamentClampAngle(int angle) {
-  filamentClampAngle = angle;
-  filamentClampServo.write(filamentClampAngle);
-}
-
-// Function to update filament rotate angle
-void updateFilamentRotateAngle(int angle) {
-  filamentRotateAngle = angle;
-  filamentRotateServo.write(filamentRotateAngle);
-}
-
-// Function to update extruder engage angle
-void updateExtruderEngageAngle(int angle) {
-  extruderEngageAngle = angle;
-  extruderEngageServo.write(extruderEngageAngle);
-}
+// void loop() {
+//   // Your code here
+// }

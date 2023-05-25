@@ -40,7 +40,8 @@ orient_for_build = orientation == ORIENT_FOR_BUILD;
 show_vitamins = true;
 show_filament = true;
 
-build_triangular_shaft_gear_pair = true;
+build_base_gear_pair = true;
+build_leg_gear_pair = true;
 build_bearing_plate  = true;
 build_bearing_shaft_coupling = true;
 build_alt_shaft_gearing = true;
@@ -139,7 +140,13 @@ dz_clamp_screw = od_bearing/2 + traveller_bearing_clearance;
     
 /* [Triangular Transmission Design] */
 
-axle_spacing_shaft_to_bearing_2 = 28; // [22:35]
+isosceles_base_shaft_spacing  = 28; // [22:35]
+// The default altitude isthe same as the isosceles base shaft spacing.  This allows the same bearing holder to be used
+isosceles_altitude = 28; // [22:35]
+isosceles_leg_shaft_spacing = 
+    right_triangle_hypotenuse(
+        isosceles_base_shaft_spacing/2, 
+        isosceles_altitude);
     
 /* [Shaft Gear Design] */
 // 19 teeth => 35.1, 22 teeth => 41, 17 teeth  = 31.6
@@ -189,13 +196,20 @@ alpha_shaft_gear = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 
 
 filament_clamp_show_parts = false;
-color_filament_clamp = "brown";
+color_filament_clamp = PART_10;
 filament_clamp_visualization = visualize_info(color_filament_clamp, alpha_filament_clamp); 
 
-color_coupling = PART_1;  // Turquoise
+color_coupling = PART_11;
+
+color_base_small_gear = PART_12;
+color_base_large_gear = PART_13;
+color_leg_small_gear = PART_14;
+color_leg_large_gear = PART_15;
 
 
 module end_of_customization() {}
+
+function right_triangle_hypotenuse(a, b) = sqrt(a * a + b * b);
 
 
 function mod(a, b) = a - b * floor(a / b);
@@ -801,6 +815,7 @@ if (build_end_caps) {
     }
 }
 
+
 if (build_ptfe_glides) {
     if (orient_for_build) {
         translate([30, 0, 0]) ptfe_glides(orient_for_build=true, show_vitamins=false);
@@ -809,6 +824,7 @@ if (build_ptfe_glides) {
     }
 }
 
+
 if (build_shaft) {
     if (orient_for_build) {
         translate([40, 0, 0]) slider_shaft(orient_for_build=true);
@@ -816,6 +832,7 @@ if (build_shaft) {
         slider_shaft(orient_for_build=false);
     }    
 }
+
 
 if (build_shaft_gear) {
     if (orient_for_build) {
@@ -831,9 +848,11 @@ if (build_clamp_slide) {
     translate(translation) clamp_slide(orientation=orientation, show_vitamins=show_vitamins);   
 }
 
+
 if (build_filament_clamp) {
     filament_clamp(include_servo_attachment=include_servo_attachment);
 }
+
 
 if (build_traveller_pivot_arms) {
     translation = orient_for_build ? [100, 0, 0] : [0, 0, 0]; 
@@ -844,8 +863,6 @@ if (build_traveller_pivot_arms) {
 }
 
 
-
-
 if (build_clamp_gear) {
     if (orient_for_build) {
         translate([60, 30, 0]) clamp_gear(orient_for_build=true, show_vitamins=false);
@@ -853,6 +870,7 @@ if (build_clamp_gear) {
         clamp_gear(orient_for_build=false, show_vitamins=false); //show_vitamins);
     }    
 }
+
 
 if (build_slider_shaft_bearing_insert) {
     if (orient_for_build) {
@@ -871,8 +889,47 @@ if (build_traveller) {
     }    
 }
 
+
 if (build_clamp_skate_bearing_holder) {
     clamp_skate_bearing_holder();
+}
+
+
+if (build_servo_hubbed_gear) {
+    servo_hubbed_gear();
+}
+
+
+if (build_drive_gear) {
+    drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
+}
+
+
+if (build_bearing_plate) {
+    translation = orient_for_build ? [100, 0, 0] : [0, 0, z_end_cap + 5];
+    translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
+}
+
+
+if (build_base_gear_pair) {
+    rotation = [0, 0, 0];
+    rotate(rotation) 
+    triangular_shaft_gear_pair(
+        axle_spacing = isosceles_base_shaft_spacing,
+        small_gear_color = color_base_small_gear, 
+        large_gear_color = color_base_large_gear, 
+        orient_for_build=orient_for_build);
+}
+
+
+if (build_leg_gear_pair) {
+    rotation = [180, 0, 0];
+    rotate(rotation) 
+    triangular_shaft_gear_pair(
+        axle_spacing=isosceles_leg_shaft_spacing, 
+        small_gear_color  = color_leg_small_gear,
+        large_gear_color = color_leg_large_gear, 
+        orient_for_build=orient_for_build);
 }
 
 
@@ -1042,14 +1099,7 @@ module zip_tie_attached_gear() {
     
 }
 
-if (build_servo_hubbed_gear) {
-    servo_hubbed_gear();
-}
 
-
-if (build_drive_gear) {
-    drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
-}
 
 // ************************************************************************************
 
@@ -1105,10 +1155,7 @@ module bearing_plate(orient_for_build, linear_layout=false, isosceles_layout = f
 }
 
 
-if (build_bearing_plate) {
-    translation = orient_for_build ? [100, 0, 0] : [0, 0, z_end_cap + 5];
-    translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
-}
+
 
 
 function maximum_matching_gear_teeth(n_teeth_small, d_small_minimum, axle_spacing) = let(
@@ -1120,9 +1167,12 @@ function maximum_matching_gear_teeth(n_teeth_small, d_small_minimum, axle_spacin
 
 function calc_gear_module(n_teeth_1, n_teeth_2, axle_spacing) = 2*axle_spacing/(n_teeth_1 + n_teeth_2);
 
+
 function meshing_rotation_angle(n_teeth_1, n_teeth_2) = mod(n_teeth_1 + n_teeth_2, 2) * 180/n_teeth_2;
 
-module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {  
+
+module triangular_shaft_gear_pair(axle_spacing, small_gear_color, large_gear_color, orient_for_build=false) { 
+   assert(is_num(axle_spacing));
     // Default axle spacing to separately mounted bearings as close.  Could be as small as 22, or as large as desired.
     n_teeth_small = 9;
     d_small_minimum = 18.9; // Enough to pass through zip ties without interfering with teeth
@@ -1151,12 +1201,14 @@ module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {
             gear_modulus = gear_module, 
             gear_height = 6, 
             hub_height = 4,
-            zip_angle=0
+            zip_angle = 0,
+            color_code = small_gear_color
         );
         // Something seems awry, so expand the diameter for the tip
         adjustment = 6;
         d_tip = (n_teeth_small * gear_modulus) + 2 * gear_modulus + adjustment;
         echo("d_tip", d_tip);
+        color(small_gear_color)
         translate([0, 0, 10]) {
             rotate([0, 0, 0])
                 ziptie_bearing_attachment(h=2, zip_angle=20, d=md_bearing) {
@@ -1174,69 +1226,18 @@ module triangular_shaft_gear_pair(axle_spacing=28, orient_for_build=false) {
                 n_teeth = n_teeth_big, 
                 gear_modulus = gear_module, 
                 gear_height = 4, 
-                hub_height = 4);  
+                hub_height = 4, 
+                color_code = large_gear_color
+            );  
         }      
     }
-    
 
-
-    module gear_1_big() {
-        h_hub = 4;
-        dx_gear = gear_height/2 + h_hub;
-        translate([0, 0, dx_gear]) 
-        spur_gear(
-            n = 16,  // number of teeth, just enough to clear rider.
-            m = 2.2,   // module
-            z = gear_height,   // thickness
-            pressure_angle = 25,
-            helix_angle    = 0,   // the sign gives the handiness, can be a list
-            backlash       = 0.1 // in module units
-        );
-       #can(d=md_bearing, h=h_hub, center=ABOVE, $fn=12);
-       can(d=id_bearing, h=h_bearing+1, center=BELOW, $fn=12);
-       intersection() {
-           translate([0, 0, -h_bearing-1]) block([6, 6, h_hub+ gear_height+4], center=BELOW);
-            can(d=8, h=a_lot);
-        }    
-    }
     small_gear();
     layout_spacing = orient_for_build ? axle_spacing + 3 : axle_spacing;
     translate([layout_spacing, 0, 0]) large_gear();
 }
 
-if (build_triangular_shaft_gear_pair) {
-    triangular_shaft_gear_pair(
-        axle_spacing=axle_spacing_shaft_to_bearing_2, 
-        orient_for_build=orient_for_build);
-}
 
 
 
-
-//module calc_n_teeth_big(axle_spacing, n_teeth_small, d_small_minimum) {  
-//
-//    minimum_module = d_small_minimum / n_teeth_small;
-//    echo("minimum_module", minimum_module);
-//    
-//    d_big_maximum = 2*axle_spacing - d_small_minimum;
-//    echo("d_big_maximum", d_big_maximum);
-//    maximum_teeth_big = d_big_maximum / minimum_module;
-//    echo("maximum_teeth_big", maximum_teeth_big);
-//    n_teeth_big = floor(maximum_teeth_big);
-//}
-//    
-//    
-//    echo("n_teeth_big", n_teeth_big);
-//    gear_module = 2*axle_spacing/(n_teeth_small + n_teeth_big);
-//    echo("gear_module", gear_module);
-//    meshing_rotation_angle = mod(n_teeth_small + n_teeth_big, 2) * 180/n_teeth_big;
-//}
-
-
-//
-//
-//gear_1_big();
-//
-//
-//gear_2_small();
         

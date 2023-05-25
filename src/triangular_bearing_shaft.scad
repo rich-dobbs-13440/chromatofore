@@ -232,7 +232,8 @@ module ziptie_attached_spur_gear(
         gear_height = 4, 
         hub_height = 4,
         orient_for_build = false,
-        zip_angle=20
+        zip_angle = 20,
+        color_code = PART_4 //Pink
     ) {
     // Designed so that origin is at the face of the bearing.
     dz = gear_height/2 + hub_height;
@@ -256,7 +257,7 @@ module ziptie_attached_spur_gear(
                 );
         }
     }
-    color(PART_4) {  //Pink
+    color(color_code) {  
         if (orient_for_build) {
             translate([0, 0, gear_height+hub_height]) rotate([180, 0, 0]) shape();
         } else {

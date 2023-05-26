@@ -131,6 +131,8 @@ x_clamp_nut_block = 7;
 h_slide_to_bearing_offset = 0;
 h_slide_to_gear_offset = 10;
 dx_clamp_bearing = dx_clamp_bearing_to_clamp_nut_block  + x_clamp_nut_block; 
+dx_play_for_alignment = 1;
+dx_filament_to_bearing_cl = dx_clamp_bearing + h_bearing/2 + od_bearing/2 + dx_play_for_alignment;
 
 dx_clamp_gear = dx_clamp_bearing  + h_bearing;
 
@@ -178,6 +180,8 @@ shaft_length = slide_length + 2*z_end_cap +  2*gear_height; //+ 2*z_clearance
 z_traveller = 2; // [0.5:"Test fit", 2:"Prototype", 4:"Production"]
 bearing_block_wall = z_traveller;
 
+z_angle_thrust_bearing = -30; // [-50: 0]
+
 dx_traveller = dx_end_cap;
 z_bearing_engagement = 2.5; //[0.5:"Test fit", 1:"Prototype", 2.5:"Production"]
 
@@ -199,13 +203,17 @@ filament_clamp_show_parts = false;
 color_filament_clamp = PART_10;
 filament_clamp_visualization = visualize_info(color_filament_clamp, alpha_filament_clamp); 
 
-color_coupling = PART_11;
+
 
 color_base_small_gear = PART_12;
 color_base_large_gear = PART_13;
 color_leg_small_gear = PART_14;
 color_leg_large_gear = PART_15;
 
+color_bearing_holder = PART_16;
+color_bearing_shaft_coupling = PART_17;
+color_shaft_thrust_bearing = PART_18;
+color_thrust_bearing_holder = PART_19;
 
 module end_of_customization() {}
 
@@ -906,13 +914,15 @@ if (build_drive_gear) {
 
 
 if (build_bearing_plate) {
-    translation = orient_for_build ? [100, 0, 0] : [0, 0, z_end_cap + 5];
+    translation = orient_for_build ? [100, 0, 0] : [0, 0, -80];
     translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
 }
 
 
 if (build_base_gear_pair) {
-    rotation = [0, 0, 0];
+    translation = [isosceles_leg_shaft_spacing, -14, -100];
+    rotation = [0, 0, 90];
+    translate(translation)
     rotate(rotation) 
     triangular_shaft_gear_pair(
         axle_spacing = isosceles_base_shaft_spacing,
@@ -923,7 +933,9 @@ if (build_base_gear_pair) {
 
 
 if (build_leg_gear_pair) {
+    translation = [0, 0, -100];
     rotation = [180, 0, 0];
+    translate(translation)
     rotate(rotation) 
     triangular_shaft_gear_pair(
         axle_spacing=isosceles_leg_shaft_spacing, 
@@ -969,7 +981,7 @@ module shaft_bearing_retainer(orientation) {
 module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.6, h = 16) {
     a_lot = 100;
     d_body = 12;
-    color(PART_11) {
+    module shape() {
         render(convexity=10) difference() {
             can(d=d_body, h=h);
             can(d=7 + 2*cl_hex, h=a_lot, $fn=6, center=ABOVE);
@@ -979,7 +991,14 @@ module bearing_shaft_coupling(orient_for_build, cl_hex=0.6, cl_tri=0.6, h = 16) 
             can(d=0, taper=9, h=h/2, $fn=20, center=ABOVE);
             translate([0, 0, -h/2]) can(d=9.5, taper=0, h=2, $fn=20, center=ABOVE);
         }
+        
         can(d=d_body, h=0.5);
+    }
+    dz = h/2 + od_bearing/2 + h_bearing;
+ 
+    translation = orient_for_build ? [-0, 0, h] : [-dx_filament_to_bearing_cl, 0, -dz]; 
+    color(color_bearing_shaft_coupling) {
+        translate(translation) shape();
     }
     
 }
@@ -990,40 +1009,57 @@ if (build_shaft_bearing_retainer) {
 }
 
 
-module bearing_holder(show_vitamins=false) {
-    dz = -(od_bearing/2 + h_bearing);
-    translate([0, 0, dz])
-        skate_bearing_holder(cap=true, body_is_block = true, show_mocks=show_vitamins);
-    dx = (od_bearing/2);
-    translate([dx, 0, 0])    
-        rotate([0, 90, 0]) 
-            skate_bearing_holder(cap=true, body_is_block = true, show_mocks=show_vitamins);
-    dx_filament = dx_clamp_gear + clamp_gear_diameter/2;
-    difference() {
-        translate([14, 0, -14]) block([dx_clamp_gear, 28, 4], center=FRONT+BELOW);
-        translate([dx_filament, 0, 0]) {
-            filament(as_clearance=true);
-            center_reflect([0, 1, 0]) {
-                translate([0, 8, 25]) hole_through("M2", cld=0.4, $fn = 12); 
+module bearing_holder(orient_for_build = false, show_vitamins=true) {
+       
+    module shape() {
+        dz = -(od_bearing/2 + h_bearing); 
+        translate([0, 0, dz])
+            skate_bearing_holder(cap=true, body_is_block = true, show_mocks=false);
+        dx = (od_bearing/2);
+        translate([dx, 0, 0])    
+            rotate([0, 90, 0]) 
+                skate_bearing_holder(cap=true, body_is_block = true, show_mocks=false);
+        dx_filament = dx_clamp_gear + clamp_gear_diameter/2;
+        difference() {
+            translate([14, 0, -14]) block([dx_clamp_gear, 28, 4], center=FRONT+BELOW);
+            translate([dx_filament, 0, 0]) {
+                filament(as_clearance=true);
+                center_reflect([0, 1, 0]) {
+                    translate([0, 8, 25]) hole_through("M2", cld=0.4, $fn = 12); 
+                }
             }
         }
     }
+    if (show_vitamins) {
+        translate([0, 0, -od_bearing/2-h_bearing/2]) ball_bearing(BB608);
+        translate([od_bearing/2 + h_bearing/2, 0, 0]) rotate([0, 90, 0]) ball_bearing(BB608);
+    }
+    
+    color(color_bearing_holder) {
+        translation = orient_for_build ? [0, 0, 0] :  [0, 0, 0];
+        translate(translation) shape();
+    }
+}
+
+module alt_shaft_gearing(orient_for_build=false, show_vitamins=true) {
+    
+    dx = dx_clamp_gear + clamp_gear_diameter/2;
+    dz = clamp_gear_diameter/2;
+    if (show_vitamins && !orient_for_build) {
+        translate([-dx , 0, -dz]) base_gear(teeth=clamp_gear_teeth);
+    } 
+    translate([-dx, 0, 0]) bearing_holder(orient_for_build=orient_for_build, show_vitamins=show_vitamins);   
 }
 
 if (build_alt_shaft_gearing) {
-    dx = dx_clamp_gear + clamp_gear_diameter/2;
-    dz = clamp_gear_diameter/2;
-    if (!orient_for_build) {
-        translate([-dx , 0, -dz]) base_gear(teeth=clamp_gear_teeth);
-    }
-        
-    translate([-dx, 0, 0]) bearing_holder(show_vitamins=show_vitamins);
-    
+    translation = orient_for_build ? [25, 25, 0] : [0, 0, 0];
+    translate(translation) alt_shaft_gearing(orient_for_build = orient_for_build, show_vitamins=show_vitamins);
 }
 
 
 if (build_bearing_shaft_coupling) {
-    translate([100, 100, 0]) bearing_shaft_coupling();
+    translation = orient_for_build ? [0, 0, 0]: [0, 0, 0];
+    translate(translation) bearing_shaft_coupling(orient_for_build=orient_for_build);
 }
 
 module drive_gear(orient_for_build=true, show_vitamins=false, h_rider=8) {
@@ -1094,10 +1130,6 @@ module servo_hubbed_gear() {
 }
 
 
-module zip_tie_attached_gear() {
-    
-    
-}
 
 
 
@@ -1236,6 +1268,98 @@ module triangular_shaft_gear_pair(axle_spacing, small_gear_color, large_gear_col
     layout_spacing = orient_for_build ? axle_spacing + 3 : axle_spacing;
     translate([layout_spacing, 0, 0]) large_gear();
 }
+
+
+module shaft_thrust_bearing(show_vitamins = true, clearance=0.4) {
+    d_bearing = 8;
+    wall = 2;
+    z_printing_clearance = 0.35*d_bearing;
+
+    module translate_to_axle()  {
+        translate([-dx_filament_to_bearing_cl, 0, 0]) 
+            rotate([0, 0, z_angle_thrust_bearing]) 
+                translate([0, isosceles_base_shaft_spacing, 0]) children();
+    }
+    module bearing(as_clearance = false) {
+         
+        if (as_clearance) {
+            sphere(d=d_bearing + 2*clearance, $fn=50);
+        } else {
+            color(color_shaft_thrust_bearing) {
+                render(convexity=10) difference() {
+                    sphere(d=d_bearing, $fn=50);
+                    center_reflect([0, 0, 1]) hole_through("M2", cld=0.6, $fn=12);
+                    printing_clearance();
+                }
+            }
+        }
+    }
+    module printing_clearance() {
+        translate([0, 0, z_printing_clearance]) plane_clearance(ABOVE);
+    }
+    module bearing_holder() {
+        s = d_bearing + 2 * wall;
+        z_bracket = z_printing_clearance + od_bearing/2 + h_bearing;
+        //render(convexity=10) 
+            difference() {
+            
+            rotate([0, 0, -z_angle_thrust_bearing]) {
+                block([s, s, s]);
+                difference() {
+                    translate([0, -s/2, z_printing_clearance]) block([14, 4, z_bracket], center=LEFT+BELOW);
+                    translate([0, 0, -11]) rotate([-90, 0, 0]) hole_through("M2", cld=0.4, $fn=12);
+                }
+            }
+            bearing(as_clearance=true);
+            printing_clearance();
+            can(d=5, h=a_lot, center=BELOW);
+            
+        }
+        
+    }
+    
+    
+    module assembly() {
+        bearing(as_clearance=false);
+        color(color_thrust_bearing_holder) {
+            bearing_holder();
+        }
+        
+        
+    }
+    
+    translate_to_axle() {
+        if (show_vitamins) {
+            translate([0, 0, d_bearing/2]) color(BLACK_IRON) screw("M2x16", $fn=12);
+            l_shaft=100;
+            z_gap = 4;
+            dz_shaft = -l_shaft/2 - d_bearing/2 - z_gap;
+            h_ptfe_tube = d_bearing/2 + z_gap;
+            color(PTFE_COLOR) can(d=4, hollow=2, h=h_ptfe_tube, center=BELOW);
+            color(COPPER, alpha=0.25)
+                translate([0, 0, dz_shaft])  
+                    slider_shaft(
+                        length = l_shaft,
+                        orient_for_build = false, 
+                        as_clearance = false,
+                        as_gear_clearance = false,
+                        as_circular_clearance = false,
+                        clearance = ptfe_slide_clearance);
+        }
+
+        {
+            assembly(); 
+        }
+}
+    
+    
+}
+
+
+shaft_thrust_bearing(show_vitamins=show_vitamins);
+
+
+
 
 
 

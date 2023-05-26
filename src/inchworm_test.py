@@ -21,6 +21,6 @@ def send_command_to_arduino(command):
     ser.close()
 
 
-command = 'G1 E10\n'  # Example extrusion command
-send_command_to_arduino(command)
+extrude = 'G1 E10\n'  # Example extrusion command
+send_command_to_arduino(extrude)
 

@@ -1,17 +1,16 @@
-//include <lib/logging.scad>
-include <centerable.scad>
-// use <lib/not_included_batteries.scad>
-include <material_colors.scad>
+include <ScadStoicheia/centerable.scad>
+include <ScadApotheka//material_colors.scad>
+use <ScadApotheka/servo_horn_cavity.scad>
+use <ScadApotheka/triangular_bearing_shaft.scad>
+use <ScadApotheka/skate_bearing_fittings.scad>
+use <ScadApotheka/small_servo_cam.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
-include <MCAD/servos.scad>
+//include <MCAD/servos.scad>
 include <NopSCADlib/vitamins/ball_bearings.scad>
-include <NopSCADlib/vitamins/zipties.scad>
+//include <NopSCADlib/vitamins/zipties.scad>
 use <PolyGear/PolyGear.scad>
-use <servo_horn_cavity.scad>
-use <triangular_bearing_shaft.scad>
-use <skate_bearing_fittings.scad>
-use <small_servo_cam.scad>
+
 
 
 a_lot = 100;

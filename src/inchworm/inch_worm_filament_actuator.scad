@@ -15,9 +15,6 @@ use <ScadApotheka/ptfe_tubing_quick_connect.scad>
 
 
 
-
-//ptfe_tubing_quick_connect.usage();
-
 a_lot = 100;
 
 

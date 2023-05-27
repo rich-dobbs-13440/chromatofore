@@ -1,6 +1,8 @@
 #include <TimeLib.h>
 #include <Servo.h>
-#include <GCodeParser.h>
+#include <string.h>
+
+float nan = sqrt (-1); 
 
 // Servo pins
 const int FILAMENT_MOVE_PIN = 8;
@@ -27,23 +29,27 @@ static bool enableClampServo = false;
 static bool enableRotateServo = false;
 static bool enableEngageServo = false;
 
-GCodeParser GCode = GCodeParser();
+
 
 const int redLedPin = 14;
 const int blueLedPin = 15;
 
 unsigned long previousMillisLedHeartBeat = 0;
 unsigned long previousMillisSerial = 0;  // Update the previousMillis value
-int heartbeatPin = redLedPin;  
+int heartbeatPin = redLedPin;
 
 int baudRate = 9600;
-unsigned long ledHeartBeatInterval = 500;   // Time interval in milliseconds (1 second)
-unsigned long intervalSerial = 20000;  // Time interval in milliseconds (1 second)
-int ledHeatBeatState = LOW;                   // Initial LED state
+unsigned long ledHeartBeatInterval = 500;  // Time interval in milliseconds (1 second)
+unsigned long intervalSerial = 20000;      // Time interval in milliseconds (1 second)
+int ledHeatBeatState = LOW;                // Initial LED state
 
 bool serialIsAvailable = false;
 
 static const char* logPrefix = "-- debug --";
+
+const int BUFFER_SIZE = 256;    // Size of the input buffer
+char inputBuffer[BUFFER_SIZE];  // Input buffer to store characters
+int bufferIndex = 0;            // Index to keep track of the buffer position
 
 template<typename T, typename... Args>
 void debugLog(T first, Args... args) {
@@ -64,7 +70,7 @@ void updateFilamentMoveAngle(int angle) {
 }
 
 // Function to update filament clamp angle
-void updateFilamentClampAngle(int angle) {
+void updateFilamentClampAngle(const int angle) {
   if (enableMoveServo) {
     filamentClampAngle = angle;
     filamentClampServo.write(filamentClampAngle);
@@ -72,7 +78,7 @@ void updateFilamentClampAngle(int angle) {
 }
 
 // Function to update filament rotate angle
-void updateFilamentRotateAngle(int angle) {
+void updateFilamentRotateAngle(const int angle) {
   if (enableRotateServo) {
     filamentRotateAngle = angle;
     filamentRotateServo.write(filamentRotateAngle);
@@ -80,7 +86,7 @@ void updateFilamentRotateAngle(int angle) {
 }
 
 // Function to update extruder engage angle
-void updateExtruderEngageAngle(int angle) {
+void updateExtruderEngageAngle(const int angle) {
   if (enableEngageServo) {
     extruderEngageAngle = angle;
     extruderEngageServo.write(extruderEngageAngle);
@@ -108,9 +114,6 @@ byte calculateChecksum(const String& command) {
   return checksum;
 }
 
-void sendResponse(const String& response, byte checksum) {
-
-}
 
 
 void writePeriodicMessage() {
@@ -132,7 +135,7 @@ void ledHeartBeat() {
 
   // Check if the specified interval has elapsed
   if (currentMillis - previousMillisLedHeartBeat >= ledHeartBeatInterval) {
-    previousMillisLedHeartBeat = currentMillis; 
+    previousMillisLedHeartBeat = currentMillis;
 
     // Toggle the state of the red LED
     if (ledHeatBeatState == LOW) {
@@ -154,53 +157,128 @@ void serialHeartBeat() {
   }
 }
 
+void extrude(const float mm_of_filament, const float feedrate_mm_per_minute) {
+  if (mm_of_filament > 0) {
+    updateFilamentClampAngle(15);  // Unclamp
+    delay(2000);                   // Time interval to allow  clamp to open
+    updateFilamentMoveAngle(0);
+    delay(2000);                    // Time interval to allow  traveller to get into position
+    updateFilamentClampAngle(135);  // Clamp
+    // Ignore feedrate for now!
+    updateFilamentMoveAngle(mm_of_filament);
+    delay(4000);
+  } else {
+    updateFilamentClampAngle(15);  // Unclamp
+    delay(2000);                   // Time interval to allow  clamp to open
+    updateFilamentMoveAngle(135);
+    delay(2000);                    // Time interval to allow  traveller to get into position
+    updateFilamentClampAngle(135);  // Clamp
+    // Ignore feedrate for now!
+    updateFilamentMoveAngle(135 + mm_of_filament);
+    delay(4000);
+  }
+}
+
+
+
 void handleSerial() {
   if (Serial.available() > 0) {
-    //serialIsAvailable = true;
     digitalWrite(blueLedPin, HIGH);
     char serialChar = Serial.read();
-    debugLog("serialChar", serialChar);
-    if (GCode.AddCharToLine(serialChar)) {
-      debugLog("GCode.line", GCode.line);
-      acknowledgeCommand(GCode.line);
-      GCode.ParseLine();
-      if (GCode.HasWord('G')) {
-        float g = GCode.GetWordValue('G');
-        if (g == 1) {
-          debugLog("Handle extrusion command.");
-          updateFilamentMoveAngle(0);
-          delay(1000);
-          updateFilamentMoveAngle(180);
-          delay(1000);
-          updateFilamentMoveAngle(0);
-          delay(1000);  
-          debugLog("Done with Handle extrusion command.");        
 
-        } else if (g == 10) {
-          debugLog("Handle retraction command."); 
-          updateFilamentMoveAngle(45);         
-        } else {
-          debugLog("GWordValue", g);
-        }
+    if (serialChar != '\n' && serialChar != '\r') {
+      // Add character to the buffer
+      inputBuffer[bufferIndex] = serialChar;
+      bufferIndex++;
+
+      // Check if buffer is full
+      if (bufferIndex >= BUFFER_SIZE - 1) {
+        inputBuffer[bufferIndex] = '\0';  // Null-terminate the buffer
+        bufferIndex = 0;                  // Reset buffer index
+        processInputBuffer();             // Process the received line
       }
+    } else {
+      // Line ending character encountered
+      inputBuffer[bufferIndex] = '\0';  // Null-terminate the buffer
+      bufferIndex = 0;                  // Reset buffer index
+      processInputBuffer();             // Process the received line
     }
-    if (GCode.HasWord('C')) {
-      debugLog("Invoking C as a fake close servo command"); 
-      updateFilamentMoveAngle(15);
-      updateFilamentClampAngle(15);
-      updateFilamentRotateAngle(15);
-      updateExtruderEngageAngle(15);
-    }    
-    if (GCode.HasWord('O')) {
-      debugLog("Invoking O as a fake open servo command"); 
-      updateFilamentMoveAngle(135);
-      updateFilamentClampAngle(135);
-      updateFilamentRotateAngle(135);
-      updateExtruderEngageAngle(135);
-    }
-    delay(1000);
     digitalWrite(blueLedPin, LOW);
   }
+}
+
+
+
+
+void processInputBuffer() {
+  String gcode_line(inputBuffer);
+  acknowledgeCommand(gcode_line);
+  debugLog("Received ", gcode_line);
+  char *token;
+  char delimiter = " ";
+  token = strtok(inputBuffer, &delimiter); 
+  String word;
+  float g = nan;
+  float e = nan;
+  float f = nan;
+  debugLog("e", e);
+  while (token != NULL) {
+    word = token; 
+    debugLog("word", word);
+    if (word.startsWith("G")) {
+      g = word.substring(1).toFloat(); 
+    } else if(word.startsWith("E")) {
+      e = word.substring(1).toFloat(); 
+    } else if(word.startsWith("F")) {
+      f = word.substring(1).toFloat(); 
+    }
+    token = strtok(NULL, &delimiter);
+  }
+  
+  switch (int(g)) {
+  case 1:
+    if (e!=0) {
+      debugLog("Handle extrusion command.");
+      float mm_of_filament = e;
+      float feedrate_mm_per_minute = f;
+      extrude(mm_of_filament, feedrate_mm_per_minute);
+    }
+    break;
+  case 10:
+    // Code to execute when g is 10.0
+    debugLog("Value of g is 10");
+    break;
+  default:
+    // Code to execute when g doesn't match any case
+    debugLog("Value of g doesn't match any case");
+    break;
+}
+
+  // if (parser.HasWord('G')) {
+  //   float g = 0.0;
+  //   g = parser.GetWordValue('G');
+  //   if (g == 1.0) {
+  //     if (parser.HasWord('E')) {
+  //       // Example G1 E10 F120 ;
+  //       float mm_of_filament = 0;
+  //       {
+  //         mm_of_filament = parser.GetWordValue('E');
+  //       }
+  //       float feedrate_mm_per_minute = 0;
+  //       if (parser.HasWord('F')) {
+  //         feedrate_mm_per_minute = parser.GetWordValue('F');
+  //       }
+  //       acknowledgeCommand(parser.line);
+  //       debugLog("Handle extrusion command.");
+  //       extrude(mm_of_filament, feedrate_mm_per_minute);
+
+  //       debugLog("Done with Handle extrusion command.");
+  //     }
+
+  //   } else {
+  //     debugLog("Value for g", g);
+  //   }
+  // }
 }
 
 void setupServos() {
@@ -221,7 +299,7 @@ void setupServos() {
   updateFilamentMoveAngle(filamentMoveAngle);
   updateFilamentClampAngle(filamentClampAngle);
   updateFilamentRotateAngle(filamentRotateAngle);
-  updateExtruderEngageAngle(extruderEngageAngle);  
+  updateExtruderEngageAngle(extruderEngageAngle);
 
   delay(10000);
 }
@@ -235,9 +313,10 @@ void setupSerial() {
   debugLog("Upload Time: ", __TIME__);
   debugLog("Baud Rate: ", baudRate);
   debugLog("Millis: ", millis());
+
 }
 
-void setupLedHeartBeat(int pin) {
+void setupLedHeartBeat(const int pin) {
   heartbeatPin = pin;
   pinMode(heartbeatPin, OUTPUT);
 }
@@ -261,7 +340,6 @@ void setup() {
   enableEngageServo = false;
   setupServos();
   digitalWrite(blueLedPin, LOW);
-
 }
 
 void loop() {
@@ -269,8 +347,3 @@ void loop() {
   serialHeartBeat();
   handleSerial();
 }
-
-
-
-
-

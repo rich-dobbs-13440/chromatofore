@@ -1,17 +1,22 @@
 include <ScadStoicheia/centerable.scad>
-include <ScadApotheka//material_colors.scad>
+use <ScadStoicheia/visualization.scad>
+include <ScadApotheka/material_colors.scad>
 use <ScadApotheka/servo_horn_cavity.scad>
 use <ScadApotheka/triangular_bearing_shaft.scad>
 use <ScadApotheka/skate_bearing_fittings.scad>
 use <ScadApotheka/small_servo_cam.scad>
+use <ScadApotheka/small_servo_cam.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
-//include <MCAD/servos.scad>
 include <NopSCADlib/vitamins/ball_bearings.scad>
 //include <NopSCADlib/vitamins/zipties.scad>
 use <PolyGear/PolyGear.scad>
+use <ScadApotheka/ptfe_tubing_quick_connect.scad> 
 
 
+
+
+//ptfe_tubing_quick_connect.usage();
 
 a_lot = 100;
 
@@ -32,12 +37,17 @@ ORIENT_AS_DESIGNED = 2 + 0;
 
 /* [Output Control] */
 
-orientation = 0; // [0:"As assembled", 1:"For build", 2: "As designed"]
+visualization_mode = 0; // [0:"As assembled", 1:"For build", 2: "As designed", 3: "Hidden"]
+orientation = visualization_mode; // Orientation is deprecated.  But keep around as code is updated.
 
-orient_for_build = orientation == ORIENT_FOR_BUILD;
+orient_for_build = visualization_mode == ORIENT_FOR_BUILD;
 
 show_vitamins = true;
 show_filament = true;
+
+build_small_gear = true;
+build_shaft_thrust_bearing = true;
+build_outlet = true;
 
 build_base_gear_pair = true;
 build_leg_gear_pair = true;
@@ -55,8 +65,8 @@ build_clamp_gear = true;
 build_clamp_slide = true;
 build_filament_clamp = true;
 
-build_end_caps = true;
-build_both_end_caps = true;
+build_end_caps = false;
+build_both_end_caps = false;
 build_ptfe_glides = false;
 
 build_bearing_holder = false;
@@ -199,22 +209,166 @@ alpha_shaft_gear = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 
 
 filament_clamp_show_parts = false;
-color_filament_clamp = PART_10;
-filament_clamp_visualization = visualize_info(color_filament_clamp, alpha_filament_clamp); 
+
+module end_of_customization() {}
 
 
+filament_clamp_visualization = 
+    visualize_info(
+        "Filament Clamp", PART_10, alpha_filament_clamp, visualization_mode, filament_clamp_show_parts); 
+small_gear_visualization = visualize_info("Base Small Gear", PART_12, alpha = build_small_gear, mode=visualization_mode);
 
-color_base_small_gear = PART_12;
 color_base_large_gear = PART_13;
 color_leg_small_gear = PART_14;
 color_leg_large_gear = PART_15;
-
 color_bearing_holder = PART_16;
 color_bearing_shaft_coupling = PART_17;
-color_shaft_thrust_bearing = PART_18;
+//color_shaft_thrust_bearing = PART_18;
+shaft_thrust_bearing_visualization = visualize_info(
+    "Shaft Thrust Bearing", PART_18, alpha=build_shaft_thrust_bearing, mode=visualization_mode, show_part_colors=true);
 color_thrust_bearing_holder = PART_19;
+color_outlet_connection = PART_20;
+color_outlet = PART_21;
 
-module end_of_customization() {}
+outlet_visualization = visualize_info("Outlet", PART_21, alpha=build_outlet, mode=visualization_mode, show_part_colors=true);
+
+
+
+
+function part_color(visualization) = visualization[1];
+
+visualize(shaft_thrust_bearing_visualization) shaft_thrust_bearing(show_vitamins=show_vitamins);
+visualize(outlet_visualization) outlet();
+
+if (build_end_caps) {
+    translation = orient_for_build ? [100, 100, 0] : [0, 0, 0];
+    translate(translation) end_cap(orient_for_build=orient_for_build);
+}
+
+
+if (build_ptfe_glides) {
+    if (orient_for_build) {
+        translate([30, 0, 0]) ptfe_glides(orient_for_build=true, show_vitamins=false);
+    } else {
+        ptfe_glides(orient_for_build=false, show_vitamins=show_vitamins);
+    }
+}
+
+
+if (build_shaft) {
+    if (orient_for_build) {
+        translate([40, 0, 0]) slider_shaft(orient_for_build=true);
+    } else {
+        slider_shaft(orient_for_build=false);
+    }    
+}
+
+
+if (build_shaft_gear) {
+    if (orient_for_build) {
+        translate([70, 0, 0]) shaft_gear(orient_for_build=true, show_vitamins=show_vitamins);
+    } else {
+        shaft_gear(orient_for_build=false, show_vitamins=show_vitamins);
+    }    
+}
+
+
+if (build_clamp_slide) {
+    translation = orient_for_build ? [40, 20, 0] : [-2, 0, 0];
+    translate(translation) clamp_slide(orientation=orientation, show_vitamins=show_vitamins);   
+}
+
+
+if (build_filament_clamp) {
+    filament_clamp(include_servo_attachment=include_servo_attachment);
+}
+
+
+if (build_traveller_pivot_arms) {
+    translation = orient_for_build ? [100, 0, 0] : [0, 0, 0]; 
+    translate(translation) 
+        traveller_pivot_arms(
+            orientation=orientation, 
+            show_vitamins = show_vitamins && ! orient_for_build);
+}
+
+
+if (build_clamp_gear) {
+    if (orient_for_build) {
+        translate([60, 30, 0]) clamp_gear(orient_for_build=true, show_vitamins=false);
+    } else {
+        clamp_gear(orient_for_build=false, show_vitamins=false); //show_vitamins);
+    }    
+}
+
+
+if (build_slider_shaft_bearing_insert) {
+    if (orient_for_build) {
+        translate([60, -30, 0]) slider_shaft_bearing_insert(orient_for_build=true, show_vitamins=false);
+    } else {
+        //Is placed as a vitamin for the traveller
+    }      
+}
+
+
+if (build_traveller) {
+    if (orient_for_build) {
+        translate([0, -20, 0]) traveller(orient_for_build=true, show_vitamins=false);
+    } else {
+        traveller(orient_for_build=false, show_vitamins=show_vitamins);
+    }    
+}
+
+
+if (build_clamp_skate_bearing_holder) {
+    clamp_skate_bearing_holder();
+}
+
+
+if (build_servo_hubbed_gear) {
+    servo_hubbed_gear();
+}
+
+
+if (build_drive_gear) {
+    drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
+}
+
+
+if (build_bearing_plate) {
+    translation = orient_for_build ? [100, 0, 0] : [0, 0, -80];
+    translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
+}
+
+
+if (build_base_gear_pair) {
+    translation = [isosceles_leg_shaft_spacing, -14, -100];
+    rotation = [0, 0, 90];
+    translate(translation)
+    rotate(rotation) 
+    triangular_shaft_gear_pair(
+        axle_spacing = isosceles_base_shaft_spacing,
+        small_gear_color = part_color(filament_clamp_visualization), 
+        large_gear_color = color_base_large_gear, 
+        orient_for_build=orient_for_build);
+}
+
+
+if (build_leg_gear_pair) {
+    translation = [0, 0, -100];
+    rotation = [180, 0, 0];
+    translate(translation)
+    rotate(rotation) 
+    triangular_shaft_gear_pair(
+        axle_spacing=isosceles_leg_shaft_spacing, 
+        small_gear_color = color_leg_small_gear,
+        large_gear_color = color_leg_large_gear, 
+        orient_for_build=orient_for_build);
+}
+
+
+
+
 
 function right_triangle_hypotenuse(a, b) = sqrt(a * a + b * b);
 
@@ -227,7 +381,20 @@ function mod(a, b) = a - b * floor(a / b);
                                                     //and optionally through panel thickness `t`
 
 
+ptfe_tubing_quick_connect();
 
+module outlet(assembled=false) {
+    translation = [0, 0, -50]; 
+    translate(translation) {
+        quick_connect_body() {
+             translate([0, 0, 7.5]) block([20, 20, 4], center=ABOVE);
+        }
+        t_collet = assembled ? [0, 0, 0] : [0, 0, -10];
+        translate(t_collet) quick_connect_collet();
+        t_clip = assembled ? [0, 0, 0] : [0, -15, 0];
+        translate(t_clip) quick_connect_c_clip();
+    }
+}
 
 
 module filament(as_clearance) {
@@ -645,7 +812,7 @@ module filament_clamp(
         if (include_vitamins && !orient_for_build) {
             vitamins();
         }
-        visualize(filament_clamp_visualization, filament_clamp_show_parts) { 
+        visualize(filament_clamp_visualization) { 
             shape();
         }
     }
@@ -814,134 +981,6 @@ module clamp_skate_bearing_holder() {
 }
 
 
-if (build_end_caps) {
-    if (orient_for_build) {
-        translate([0, 0, 0]) end_cap(orient_for_build=true);
-    } else {
-        end_cap(orient_for_build=false);
-    }
-}
-
-
-if (build_ptfe_glides) {
-    if (orient_for_build) {
-        translate([30, 0, 0]) ptfe_glides(orient_for_build=true, show_vitamins=false);
-    } else {
-        ptfe_glides(orient_for_build=false, show_vitamins=show_vitamins);
-    }
-}
-
-
-if (build_shaft) {
-    if (orient_for_build) {
-        translate([40, 0, 0]) slider_shaft(orient_for_build=true);
-    } else {
-        slider_shaft(orient_for_build=false);
-    }    
-}
-
-
-if (build_shaft_gear) {
-    if (orient_for_build) {
-        translate([70, 0, 0]) shaft_gear(orient_for_build=true, show_vitamins=show_vitamins);
-    } else {
-        shaft_gear(orient_for_build=false, show_vitamins=show_vitamins);
-    }    
-}
-
-
-if (build_clamp_slide) {
-    translation = orient_for_build ? [40, 20, 0] : [0, 0, 0];
-    translate(translation) clamp_slide(orientation=orientation, show_vitamins=show_vitamins);   
-}
-
-
-if (build_filament_clamp) {
-    filament_clamp(include_servo_attachment=include_servo_attachment);
-}
-
-
-if (build_traveller_pivot_arms) {
-    translation = orient_for_build ? [100, 0, 0] : [0, 0, 0]; 
-    translate(translation) 
-        traveller_pivot_arms(
-            orientation=orientation, 
-            show_vitamins = show_vitamins && ! orient_for_build);
-}
-
-
-if (build_clamp_gear) {
-    if (orient_for_build) {
-        translate([60, 30, 0]) clamp_gear(orient_for_build=true, show_vitamins=false);
-    } else {
-        clamp_gear(orient_for_build=false, show_vitamins=false); //show_vitamins);
-    }    
-}
-
-
-if (build_slider_shaft_bearing_insert) {
-    if (orient_for_build) {
-        translate([60, -30, 0]) slider_shaft_bearing_insert(orient_for_build=true, show_vitamins=false);
-    } else {
-        //Is placed as a vitamin for the traveller
-    }      
-}
-
-
-if (build_traveller) {
-    if (orient_for_build) {
-        translate([0, -20, 0]) traveller(orient_for_build=true, show_vitamins=false);
-    } else {
-        traveller(orient_for_build=false, show_vitamins=show_vitamins);
-    }    
-}
-
-
-if (build_clamp_skate_bearing_holder) {
-    clamp_skate_bearing_holder();
-}
-
-
-if (build_servo_hubbed_gear) {
-    servo_hubbed_gear();
-}
-
-
-if (build_drive_gear) {
-    drive_gear(orient_for_build=orient_for_build, show_vitamins=show_vitamins);
-}
-
-
-if (build_bearing_plate) {
-    translation = orient_for_build ? [100, 0, 0] : [0, 0, -80];
-    translate(translation) bearing_plate(orient_for_build, isosceles_layout=true);
-}
-
-
-if (build_base_gear_pair) {
-    translation = [isosceles_leg_shaft_spacing, -14, -100];
-    rotation = [0, 0, 90];
-    translate(translation)
-    rotate(rotation) 
-    triangular_shaft_gear_pair(
-        axle_spacing = isosceles_base_shaft_spacing,
-        small_gear_color = color_base_small_gear, 
-        large_gear_color = color_base_large_gear, 
-        orient_for_build=orient_for_build);
-}
-
-
-if (build_leg_gear_pair) {
-    translation = [0, 0, -100];
-    rotation = [180, 0, 0];
-    translate(translation)
-    rotate(rotation) 
-    triangular_shaft_gear_pair(
-        axle_spacing=isosceles_leg_shaft_spacing, 
-        small_gear_color  = color_leg_small_gear,
-        large_gear_color = color_leg_large_gear, 
-        orient_for_build=orient_for_build);
-}
 
 
 module shaft_bearing_retainer(orientation) {
@@ -1284,7 +1323,7 @@ module shaft_thrust_bearing(show_vitamins = true, clearance=0.4) {
         if (as_clearance) {
             sphere(d=d_bearing + 2*clearance, $fn=50);
         } else {
-            color(color_shaft_thrust_bearing) {
+            color(part_color(shaft_thrust_bearing_visualization)) {
                 render(convexity=10) difference() {
                     sphere(d=d_bearing, $fn=50);
                     center_reflect([0, 0, 1]) hole_through("M2", cld=0.6, $fn=12);
@@ -1305,7 +1344,7 @@ module shaft_thrust_bearing(show_vitamins = true, clearance=0.4) {
             rotate([0, 0, -z_angle_thrust_bearing]) {
                 block([s, s, s]);
                 difference() {
-                    translate([0, -s/2, z_printing_clearance]) block([14, 4, z_bracket], center=LEFT+BELOW);
+                    translate([0, -s/2, z_printing_clearance]) block([14, 5, z_bracket], center=LEFT+BELOW);
                     translate([0, 0, -11]) rotate([-90, 0, 0]) hole_through("M2", cld=0.4, $fn=12);
                 }
             }
@@ -1326,6 +1365,9 @@ module shaft_thrust_bearing(show_vitamins = true, clearance=0.4) {
         
         
     }
+    build_from_bottom = true;
+    rotation = build_from_bottom ? [180, 0, z_angle_thrust_bearing-90] : [0, 0, 0];
+    translation = build_from_bottom ? [0, 0, -15.2] : [0, 0, 0];
     
     translate_to_axle() {
         if (show_vitamins) {
@@ -1347,15 +1389,14 @@ module shaft_thrust_bearing(show_vitamins = true, clearance=0.4) {
         }
 
         {
-            assembly(); 
+            translate(translation) rotate(rotation) assembly(); 
         }
-}
+    }
     
     
 }
 
 
-shaft_thrust_bearing(show_vitamins=show_vitamins);
 
 
 

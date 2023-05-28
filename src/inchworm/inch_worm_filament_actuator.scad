@@ -15,6 +15,9 @@ use <ScadApotheka/ptfe_tubing_quick_connect.scad>
 
 
 
+
+//ptfe_tubing_quick_connect.usage();
+
 a_lot = 100;
 
 
@@ -399,8 +402,7 @@ module filament(as_clearance) {
     alpha = as_clearance ? 0 : 1;
     color("red", alpha) {
         can(d=d, h=slide_length + 40, $fn=12);
-    }
-    
+    } 
 }
 
 

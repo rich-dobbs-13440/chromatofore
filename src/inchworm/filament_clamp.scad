@@ -1,0 +1,574 @@
+include <ScadStoicheia/centerable.scad>
+use <ScadStoicheia/visualization.scad>
+include <ScadApotheka/material_colors.scad>
+include <ScadApotheka/m2_helper.scad>
+include <nutsnbolts-master/cyl_head_bolt.scad>
+include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
+use <PolyGear/PolyGear.scad>
+
+
+a_lot = 200;
+d_filament = 1.75 + 0.;
+od_ptfe_tube = 4 + 0;
+id_ptfe_tube = 2 + 0;
+
+
+AS_ASSEMBLED = 1 + 0;
+AS_DESIGNED = 2 + 0;
+
+/* [Output Control] */
+
+mode = 0; // [0:"As assembled", 1:"For build", 2: "As designed", 3: "Hidden"]
+show_parts = true;
+show_vitamins = true;
+show_filament = true;
+hide_sample_gear_keys = true;
+
+clamp_body_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+clamp_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+clamp_slot_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+small_bevel_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+big_bevel_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
+gear_mesh_keys_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+
+
+
+
+slide_length = 50; // [1 : 1 : 99.9]
+screw_lift = 0; // [-.1 : .1 : 1]
+
+/* [Design] */
+
+print_clearance = 0.1; // Just making it enough that Mesh tools can separate parts
+x_clamp_nut_block = 7;
+n_teeth_small = 9; // [9, 10, 11]
+
+
+
+
+/* [Clamp Gearing Design] */
+clamp_gear_height = 8;
+clamp_gear_module = 1;
+ptfe_insert_clearance = 0.2;
+
+
+/* [Bevel Gearing Design] */
+
+bevel_gear_module = clamp_gear_module; 
+small_bevel_gear_cone_angle = 45; // [-90:90]
+small_gear_tooth_width = 4; // [0 : 20]
+dz_small_bevel_gear = 8; // [0:15]
+dz_shaft_small_bevel_gear = 0; // [-30:30]
+h_small_bevel_shaft = 3; // [0:40]
+
+flip_small_bevel_gear = false;
+dz_plane_clearance_above_small_bevel = 6; // [-20 : 20]
+n_teeth_big_bevel = 21; //[9 : 22]
+
+use_mesh_keys_small_bevel = true;
+
+/* [Slot Gearing Design] */
+use_mesh_keys_slot_gear = true;
+n_teeth_big_slot = 21; //[9 : 22]
+
+/* [Gear Keying Design] */
+gear_key_size = 3;
+gear_key_clearance = 0.0;
+gear_key_height = 4;
+gear_key_displacement = 4;
+gear_key_bridge_height = 0.5;
+gear_key_platform_height = 2;  
+
+
+module end_of_customization() {}
+// Calcs for values that need to be shared to calculate displacements
+id_clamp_gear = (n_teeth_small - 2) * clamp_gear_module;
+od_clamp_gear  = (n_teeth_small + 2) * clamp_gear_module;
+md_clamp_gear  = (n_teeth_small) * clamp_gear_module;
+
+id_clamp_slot_gear = (n_teeth_big_slot - 2) * clamp_gear_module;
+od_clamp_slot_gear = (n_teeth_big_slot + 2) * clamp_gear_module;
+md_clamp_slot_gear = (n_teeth_big_slot) * clamp_gear_module;
+
+
+id_small_bevel_gear = (n_teeth_small - 2) * bevel_gear_module;
+od_small_bevel_gear  = (n_teeth_small + 2) * bevel_gear_module;
+md_small_bevel_gear  = (n_teeth_small) * bevel_gear_module;
+
+id_big_bevel_gear = (n_teeth_big_bevel - 2) * bevel_gear_module;
+od_big_bevel_gear  = (n_teeth_big_bevel + 2) * bevel_gear_module;
+md_big_bevel_gear  = (n_teeth_big_bevel) * bevel_gear_module;
+
+overall_gear_ratio = (n_teeth_big_slot/n_teeth_small) * (n_teeth_big_bevel/n_teeth_small);
+
+echo("Overall Gear Ratio", overall_gear_ratio);
+
+
+if (show_filament) {
+    filament(as_clearance=false);
+}
+
+module filament(as_clearance) {
+    d = as_clearance ? 2.5 : d_filament;
+    alpha = as_clearance ? 0 : 1;
+    color("red", alpha) {
+        can(d=d, h=slide_length + 40, $fn=12);
+    } 
+}
+
+clamp_visualization = 
+    visualize_info(
+        "Clamp BODY", PART_1, clamp_body_visibility, mode, show_parts); 
+
+clamp_gear_visualization = 
+    visualize_info(
+        "Clamp Gear", PART_2, clamp_gear_visibility, mode, show_parts);  
+
+clamp_slot_gear_visualization = 
+    visualize_info(
+        "Clamp Slot Gear", PART_3, clamp_slot_gear_visibility, mode, show_parts);  
+
+small_bevel_gear_visualization = 
+    visualize_info(
+        "Small Bevel Gear", PART_4, small_bevel_gear_visibility, mode, show_parts); 
+
+
+big_bevel_gear_visualization = 
+    visualize_info(
+        "Big Bevel Gear", PART_5, big_bevel_gear_visibility, mode, show_parts); 
+
+gear_mesh_keys_visualization =
+    visualize_info(
+        "Gear Mess Keys", PART_30, gear_mesh_keys_visibility, mode, show_parts); 
+
+
+
+
+
+module general_straight_spur_gear(n_teeth, gear_module, gear_height, body_child = -1, cutout_child = -1) {
+    render(convexity=10) difference() {
+        union() {
+            spur_gear(
+                n = n_teeth,  // number of teeth, just enough to clear rider.
+                m = gear_module,   // module
+                z = gear_height,   // thickness
+                pressure_angle = 25,
+                helix_angle    = 0,   // the sign gives the handiness, can be a list
+                backlash       = 0.1 // in module units
+            );
+            if (body_child >= 0 && $children > body_child) {
+                children(body_child);
+            }
+        }
+        if (cutout_child >= 0 && $children > cutout_child) {
+            children(cutout_child);
+        }  
+    }
+}
+
+
+module general_bevel_gear(n_teeth, gear_module, tooth_width, cone_angle = 45,body_child = -1, cutout_child = -1) { 
+    render(convexity=10) difference() {
+        union() {    
+            bevel_gear(
+                //basic options
+                n = n_teeth,  // number of teeth
+                m = gear_module,   // module
+                w = tooth_width,   // tooth width
+                cone_angle     = cone_angle,
+                pressure_angle = 25,
+                helix_angle    = 0,   // the sign gives the handiness
+                backlash       = 0.1 // in module units
+            );            
+            if (body_child >= 0 && $children > body_child) {
+                children(body_child);
+            }
+        }
+        if (cutout_child >= 0 && $children > cutout_child) {
+            children(cutout_child);
+        }  
+    }
+}
+
+
+clamp(show_vitamins=show_vitamins, visualization=clamp_visualization); 
+
+module clamp(
+        show_vitamins=true, 
+        include_bearing_mounting_adapter = true,
+        as_mounting_screw_clearance=false,
+        visualization=clamp_visualization, screw_lift = screw_lift) {
+    z = 8;
+    screw_wall = 2;
+    wall = 2;
+    
+    y_clamp_nut_block = 8;
+    pivot_screw_length = 16;
+    module clamp_screw(as_clearance) {
+        if (as_clearance) {
+            rotate([0, 90, 0]) {
+                hole_through("M2", $fn = 12);
+            } 
+            translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
+                 tuned_M2_nutcatch_side_cut(as_clearance=true); 
+            }
+        } else {
+            color(BLACK_IRON) {
+                translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
+                     tuned_M2_nutcatch_side_cut(as_clearance=false);
+                }
+                translate([-d_filament/2-screw_lift, 0, 0]) rotate([0, 90, 0]) {
+                    hole_through("M2", $fn = 12, l=12);
+                } 
+            }          
+        }            
+    }
+    module nut_block() {
+        block([x_clamp_nut_block, y_clamp_nut_block, z], center=BEHIND);
+        can(d=5, h=z);
+    }
+
+    module mounting_screws(as_clearance = true) {
+//        module basic_bearing_mount() {
+//            if (as_clearance) {
+//                translate([-dx_clamp_bearing_to_clamp_nut_block, od_bearing/2 + 4, 0]) {
+//                    rotate([0, 90, 0]) {
+//                        hole_through("M2", cld=0.4, $fn = 12);
+//                    } 
+//                } 
+//            } 
+//        } 
+//        module vertical_mount() {
+//            if (as_clearance) {
+//                translate([0,0, 25]) hole_through("M2", cld=0.4, $fn = 12);
+//            }
+//        }
+//        center_reflect([0, 1, 0]) {
+//            basic_bearing_mount();
+//            translate([0, 4, 0]) basic_bearing_mount();
+//            translate([0,0, -4]) basic_bearing_mount();
+//            // Just in case holes
+//            translate([0 , 8, 0]) vertical_mount();
+//            translate([-6 , 9, 0]) vertical_mount();
+//            translate([-14 , 11, 0]) vertical_mount();
+//        }
+
+        
+    }
+//    
+//    module pivot_attachment() {
+//        color(PART_30) {
+//            center_reflect([0, 1, 0]) rotate([0, 0, 90]) nut_block();
+//        }        
+//    }
+    
+//    module platform_mount() {
+//        dz = include_bearing_mounting_adapter ? 14 : -z/2;
+//        z_wings = include_bearing_mounting_adapter ? 28 : z;
+//        color("RED") hull() { // PART_28
+//            nut_block();
+//            if (include_servo_attachment) {
+//                pivot_attachment();
+//            }
+//            block([x_clamp_nut_block, y_clamp_nut_block, 14], center=BELOW);
+//        }
+//        color(PART_34) 
+//            translate([0, 0, -dz]) 
+//                block([x_clamp_nut_block, 28, screw_wall]); 
+//        if (include_servo_attachment) {
+//            color("indigo")
+//            center_reflect([0, 1, 0]) {
+//                rotate([0, 0, 90]) nut_block();
+//                translate([0, 3+pivot_screw_length, 0]) 
+//                    block([x_clamp_nut_block, screw_wall, z_wings], center=LEFT); 
+//                translate([6, 0, -dz]) 
+//                    block([15, 3+pivot_screw_length, screw_wall], center=ABOVE+RIGHT+BEHIND); 
+//            }
+//            
+//        }
+//
+//        
+//    }
+    module pivot_screws(as_clearance = false) {
+        center_reflect([0, 1, 0]) {
+            translate([0, 3, 0]) { 
+                if (as_clearance) {
+                     rotate([90, 0, 0]) hole_through("M2", $fn=12, cld=0.4);
+                     rotate([0, -90, 90]) tuned_M2_nutcatch_side_cut(as_clearance=true);  
+                } else {
+                    color(BLACK_IRON) {
+                        rotate([0, -90, -90]) 
+                            translate([0, 0, pivot_screw_length]) 
+                                screw(str("M2x", pivot_screw_length));
+                        //rotate([0, -90, 90]) 
+                        //   tuned_M2_nutcatch_side_cut(as_clearance=false);  
+                    }
+                    
+                }
+            }
+        }
+    }
+    
+    
+    module shape() {
+        difference() {
+            union() {
+                nut_block();
+                //platform_mount();
+            }
+            filament(as_clearance=true);
+            clamp_screw(as_clearance=true);
+            mounting_screws(as_clearance = true); 
+            pivot_screws(as_clearance = true);
+            translate([0, 0, 3]) plane_clearance(ABOVE); 
+        }
+            
+    } 
+    module vitamins() {
+        mounting_screws(as_clearance = false);
+        //pivot_screws(as_clearance = false);
+        clamp_screw(as_clearance=false);
+    }
+    if (show_vitamins) {
+        visualize_vitamins(visualization) vitamins();
+    }
+    visualize(visualization) { 
+        shape();
+    }
+    
+}  
+
+if (!hide_sample_gear_keys) {
+    gear_mesh_keys(as_clearance = false);
+}
+
+module gear_mesh_keys(
+        as_clearance = true, 
+        clearance = gear_key_clearance,
+        key_height = gear_key_height,
+        platform_height = gear_key_platform_height,
+        bridge_height = gear_key_bridge_height,
+        center = CENTER) {
+    module item() {
+        if (as_clearance) {
+            d = gear_key_size*sqrt(2) + 2 * clearance;
+            can(d=d, h=a_lot);
+        } else {
+            block([gear_key_size,gear_key_size, key_height], center=BELOW);
+        }        
+    }
+    module keys() {
+        center_reflect([1, 0, 0]) 
+            center_reflect([0, 1, 0]) 
+                translate([gear_key_displacement, gear_key_displacement, 0]) 
+                    item();
+    }
+    module bridging() {
+        center_reflect([1, 0, 0]) 
+            hull() 
+                center_reflect([0, 1, 0]) 
+                    translate([gear_key_displacement, gear_key_displacement, 0])
+                        block([gear_key_size,gear_key_size, bridge_height], center=ABOVE);
+    }
+    module platform() {
+        hull() 
+            center_reflect([1, 0, 0]) 
+                center_reflect([0, 1, 0]) 
+                    translate([gear_key_displacement, gear_key_displacement, bridge_height])
+                        block([gear_key_size, gear_key_size, platform_height], center=ABOVE);        
+    }
+    if (as_clearance) {
+        keys();
+    } else {
+        translation = 
+            center == CENTER ? [0, 0, 0] :
+            center == BELOW ? [0, 0, -(bridge_height + platform_height)] :  
+            center == ABOVE ? [0, 0, key_height] : 
+            assert(false, "The argument center can only be CENTER, BELOW, or ABOVE");
+        visualize(gear_mesh_keys_visualization) {
+            translate(translation) {
+                keys();
+                bridging();
+                platform();
+            }
+        }
+    }
+    
+}
+
+
+
+clamp_gear(orient_for_build=false, orient_to_center_of_rotation=false, show_vitamins=true);
+
+module clamp_gear(orient_for_build, orient_to_center_of_rotation=false, show_vitamins=false) {
+    module shape() {
+
+        h_bottom = 1;
+        h_top = 2;
+        h_total = h_bottom + clamp_gear_height + h_top;
+        h_hold_screw = 6;
+        dz_nut_cut = -clamp_gear_height/2 - h_bottom + 2;
+        general_straight_spur_gear(
+                n_teeth_small, 
+                clamp_gear_module, 
+                clamp_gear_height, 
+                body_child = 0, 
+                cutout_child = 1) {
+            union() {
+                translate([0, 0, -clamp_gear_height/2]) can(d=od_clamp_gear, h=h_bottom, center=BELOW);
+                translate([0, 0, clamp_gear_height/2]) can(d=id_clamp_gear-0.5, h=h_top, center=ABOVE);
+            }
+            union() {
+                translate([0, 0, clamp_gear_height/2+h_top+h_hold_screw]) 
+                   hole_through("M2", h=h_total, cld=0.4, $fn=12); 
+                translate([0, 0, dz_nut_cut]) nutcatch_parallel("M2", clh=10, clk=0.2);
+                
+            }
+        }
+    }
+    rotation = (mode == AS_DESIGNED) ? [0, 0, 0] : [90, 0, 0];
+    visualize(clamp_gear_visualization) 
+        rotate(rotation)
+            shape(); 
+}
+
+clamp_slot_gear();
+
+module clamp_slot_gear() {
+    // This drives the clamp gear, and provides a slot for it to slide in
+    // Print it from the top
+    module shape() {
+        print_from_top = false;
+        h_bottom = 5;
+        dz_bottom = print_from_top ? 0 : -clamp_gear_height/2 - h_bottom/2;
+        d1_bottom = print_from_top ? 10 : id_clamp_slot_gear;
+        d2_bottom = print_from_top ? 10 : id_clamp_slot_gear;
+        d2_top = print_from_top ? 0 : od_clamp_slot_gear;
+        h_top = print_from_top ? od_clamp_slot_gear/3: 1;
+        h_total = h_bottom + clamp_gear_height + h_top;
+        h_hold_screw = 6;
+        //dz_nut_cut = -clamp_gear_height/2 - h_bottom + 2;
+        general_straight_spur_gear(
+                n_teeth_big_slot, 
+                clamp_gear_module, 
+                clamp_gear_height, 
+                body_child = 0, 
+                cutout_child = 1) {
+            union() {
+                translate([0, 0, dz_bottom]) 
+                    cylinder(d1=d1_bottom, d2=d2_bottom, h=h_bottom, center=true);
+                translate([0, 0, clamp_gear_height/2+h_top/2]) 
+                    cylinder(d1=od_clamp_slot_gear, d2=d2_top, h=h_top, center=true);
+            }
+            union() {
+                // Axle, rotates around an M2 with ptfe tubing around it.
+                can(d=od_ptfe_tube+ptfe_insert_clearance, h=a_lot);
+                if (use_mesh_keys_slot_gear) {
+                    // Keys for attaching with the beveled gear
+                    gear_mesh_keys(as_clearance = true);
+                }
+                if (!print_from_top) {
+                    // Trim from bottom of teeth so that the teeth build
+                    // from inner diameter
+                    h_trim = (od_clamp_slot_gear - id_clamp_slot_gear)/2;
+                    translate([0, 0, -clamp_gear_height/2])
+                    difference() {
+                        cylinder(d = od_clamp_slot_gear + 1, h = h_trim);
+                        cylinder(
+                            d1 = id_clamp_slot_gear, 
+                            d2 = od_clamp_slot_gear, 
+                            h = h_trim);
+                        
+                    }
+                }                
+            }
+
+        }
+    }
+    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
+    rotation = mode == AS_DESIGNED ? [0, 0, 0] : [90, 0, 0];
+    translation = mode == AS_DESIGNED ? [dx_slot, 0, 1] : [90, 0, 0];
+    visualize(clamp_slot_gear_visualization) 
+        translate(translation) 
+            rotate(rotation)
+                shape(); 
+}
+
+
+
+
+small_bevel_gear();
+
+module small_bevel_gear(use_mesh_keys=use_mesh_keys_small_bevel) {
+    // Should calculate this, but eyeball for now 
+    use_plane_clearance_small_bevel = false;
+    module shape() {
+        
+        general_bevel_gear(
+                n_teeth_small, 
+                bevel_gear_module, 
+                small_gear_tooth_width, 
+                cone_angle = small_bevel_gear_cone_angle, 
+                body_child = 0, cutout_child = 1) {
+            union() {
+                translate([0, 0, dz_shaft_small_bevel_gear]) can(d = od_ptfe_tube + 4, h=h_small_bevel_shaft, center=BELOW);
+                if (use_mesh_keys) {
+                    translate([0, 0, -h_small_bevel_shaft]) gear_mesh_keys(as_clearance = false, center=BELOW);
+                }  
+            }
+            union() {
+                can(d=od_ptfe_tube+ptfe_insert_clearance, h=a_lot);
+                // Need to consider flipping
+                if (use_plane_clearance_small_bevel) {
+                    direction = flip_small_bevel_gear ? BELOW : ABOVE;
+                    translate([0, 0, dz_plane_clearance_above_small_bevel]) plane_clearance(direction);
+                }
+            }            
+        }
+    }   
+    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
+    ax = flip_small_bevel_gear ? 180 : 0;
+    rotation = mode == AS_DESIGNED ? [ax, 0, 0] : [90, 0, 0];
+    translation = mode == AS_DESIGNED ? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
+    visualize(small_bevel_gear_visualization) 
+        translate(translation) 
+            rotate(rotation)
+                shape(); 
+}
+
+big_bevel_gear();
+
+module big_bevel_gear() {
+    
+    module shape() {
+        
+        general_bevel_gear(
+                n_teeth_big_bevel, 
+                bevel_gear_module, 
+                small_gear_tooth_width, 
+                cone_angle = 90-small_bevel_gear_cone_angle, 
+                body_child = 0, cutout_child = 1) {
+            union() {
+ //               translate([0, 0, dz_shaft_small_bevel_gear]) can(d = od_ptfe_tube + 4, h=h_small_bevel_shaft, center=BELOW);
+//                if (use_mesh_keys) {
+//                    translate([0, 0, -h_small_bevel_shaft]) gear_mesh_keys(as_clearance = false, center=BELOW);
+//                }  
+            }
+            union() {
+                hole_through("M2", h=a_lot, cld=0.4, $fn=12); 
+//                // Need to consider flipping
+//                direction = flip_large_bevel_gear ? BELOW : ABOVE;
+//                translate([0, 0, dz_plane_clearance_above_large_bevel]) plane_clearance(direction);
+            }            
+        }
+    }   
+    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
+    //ax = flip_small_bevel_gear ? 180 : 0;
+    ax = 90;
+    rotation = mode == AS_DESIGNED ? [ax, 0, 0] : [90, 0, 0];
+    translation = mode == AS_DESIGNED ? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
+    visualize(big_bevel_gear_visualization) 
+        translate(translation) 
+            rotate(rotation)
+                shape(); 
+}

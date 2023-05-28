@@ -13,12 +13,26 @@ od_ptfe_tube = 4 + 0;
 id_ptfe_tube = 2 + 0;
 
 
-AS_ASSEMBLED = 1 + 0;
-AS_DESIGNED = 2 + 0;
+NEW_DEVELOPMENT = 0 + 0;
+DESIGNING = 1 + 0;
+MESHING_GEARS = 2 + 0;
+ASSEMBLE_SUBCOMPONENTS = 3 + 0;
+PRINTING = 4 + 0;
+
+
 
 /* [Output Control] */
 
-mode = 0; // [0:"As assembled", 1:"For build", 2: "As designed", 3: "Hidden"]
+mode = 0; // [0:"New development, hide other parts", 1:"Designing, no rotation or translation", 2:"Meshing gears", 3: "assembly", 4: "Printing"]
+
+function layout_from_mode(mode) = 
+    mode == NEW_DEVELOPMENT ? "hidden" :
+    mode == DESIGNING ? "as_designed" :
+    mode == MESHING_GEARS ? "mesh_gears" :
+    mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
+    mode == PRINTING ? "printing" :
+    "unknown";
+    
 show_parts = true;
 show_vitamins = true;
 show_filament = true;
@@ -54,12 +68,12 @@ ptfe_insert_clearance = 0.2;
 
 /* [Bevel Gearing Design] */
 
-bevel_gear_module = clamp_gear_module; 
+bevel_gear_module = 1.2; 
 small_bevel_gear_cone_angle = 45; // [-90:90]
 small_gear_tooth_width = 4; // [0 : 20]
-dz_small_bevel_gear = 8; // [0:15]
-dz_shaft_small_bevel_gear = 0; // [-30:30]
-h_small_bevel_shaft = 3; // [0:40]
+dz_small_bevel_gear = 7; // [0:15]
+dz_shaft_small_bevel_gear = -0.5; // [-30:30]
+h_small_bevel_shaft = 2; // [0:40]
 
 flip_small_bevel_gear = false;
 dz_plane_clearance_above_small_bevel = 6; // [-20 : 20]
@@ -108,38 +122,52 @@ if (show_filament) {
     filament(as_clearance=false);
 }
 
+rotate_to_cl_clamp_gear = [0, 90, 0];
+translate_to_cl_clamp_gear =  [0, 0, -16];
+
+function filament_and_clamp_rotation() = 
+    (mode == MESHING_GEARS) ? rotate_to_cl_clamp_gear : [0, 0, 0];    
+
+function filament_and_clamp_translation() = 
+    (mode == MESHING_GEARS) ? translate_to_cl_clamp_gear : [0, 0, 0];
+
 module filament(as_clearance) {
     d = as_clearance ? 2.5 : d_filament;
     alpha = as_clearance ? 0 : 1;
-    color("red", alpha) {
-        can(d=d, h=slide_length + 40, $fn=12);
-    } 
+    translate(filament_and_clamp_translation() ) rotate(filament_and_clamp_rotation()) 
+        color("red", alpha) {
+            can(d=d, h=slide_length + 40, $fn=12);
+        }
+    
 }
+
+layout = layout_from_mode(mode);
+echo("mode", mode, "layout", layout);
 
 clamp_visualization = 
     visualize_info(
-        "Clamp BODY", PART_1, clamp_body_visibility, mode, show_parts); 
+        "Clamp BODY", PART_1, clamp_body_visibility, layout, show_parts); 
 
 clamp_gear_visualization = 
     visualize_info(
-        "Clamp Gear", PART_2, clamp_gear_visibility, mode, show_parts);  
+        "Clamp Gear", PART_2, clamp_gear_visibility, layout, show_parts);  
 
 clamp_slot_gear_visualization = 
     visualize_info(
-        "Clamp Slot Gear", PART_3, clamp_slot_gear_visibility, mode, show_parts);  
+        "Clamp Slot Gear", PART_3, clamp_slot_gear_visibility, layout, show_parts);  
 
 small_bevel_gear_visualization = 
     visualize_info(
-        "Small Bevel Gear", PART_4, small_bevel_gear_visibility, mode, show_parts); 
+        "Small Bevel Gear", PART_4, small_bevel_gear_visibility, layout, show_parts); 
 
 
 big_bevel_gear_visualization = 
     visualize_info(
-        "Big Bevel Gear", PART_5, big_bevel_gear_visibility, mode, show_parts); 
+        "Big Bevel Gear", PART_5, big_bevel_gear_visibility, layout, show_parts); 
 
 gear_mesh_keys_visualization =
     visualize_info(
-        "Gear Mess Keys", PART_30, gear_mesh_keys_visibility, mode, show_parts); 
+        "Gear Mess Keys", PART_30, gear_mesh_keys_visibility, layout, show_parts); 
 
 
 
@@ -324,16 +352,19 @@ module clamp(
         }
             
     } 
+    
     module vitamins() {
         mounting_screws(as_clearance = false);
         //pivot_screws(as_clearance = false);
         clamp_screw(as_clearance=false);
     }
-    if (show_vitamins) {
-        visualize_vitamins(visualization) vitamins();
-    }
-    visualize(visualization) { 
-        shape();
+    translate(filament_and_clamp_translation() ) rotate(filament_and_clamp_rotation()) {
+        if (show_vitamins) {
+            visualize_vitamins(visualization) vitamins();
+        }
+        visualize(visualization) { 
+            shape();
+        }
     }
     
 }  
@@ -426,7 +457,7 @@ module clamp_gear(orient_for_build, orient_to_center_of_rotation=false, show_vit
             }
         }
     }
-    rotation = (mode == AS_DESIGNED) ? [0, 0, 0] : [90, 0, 0];
+    rotation = (mode == MESHING_GEARS) ? [0, 0, 0] : [90, 0, 0];
     visualize(clamp_gear_visualization) 
         rotate(rotation)
             shape(); 
@@ -486,8 +517,8 @@ module clamp_slot_gear() {
         }
     }
     dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
-    rotation = mode == AS_DESIGNED ? [0, 0, 0] : [90, 0, 0];
-    translation = mode == AS_DESIGNED ? [dx_slot, 0, 1] : [90, 0, 0];
+    rotation = mode == MESHING_GEARS ? [0, 0, 0] : [90, 0, 0];
+    translation = mode == MESHING_GEARS ? [dx_slot, 0, 1] : [90, 0, 0];
     visualize(clamp_slot_gear_visualization) 
         translate(translation) 
             rotate(rotation)
@@ -528,8 +559,8 @@ module small_bevel_gear(use_mesh_keys=use_mesh_keys_small_bevel) {
     }   
     dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
     ax = flip_small_bevel_gear ? 180 : 0;
-    rotation = mode == AS_DESIGNED ? [ax, 0, 0] : [90, 0, 0];
-    translation = mode == AS_DESIGNED ? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
+    rotation = mode == MESHING_GEARS ? [ax, 0, 0] : [90, 0, 0];
+    translation = mode == MESHING_GEARS ? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
     visualize(small_bevel_gear_visualization) 
         translate(translation) 
             rotate(rotation)
@@ -565,8 +596,8 @@ module big_bevel_gear() {
     dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
     //ax = flip_small_bevel_gear ? 180 : 0;
     ax = 90;
-    rotation = mode == AS_DESIGNED ? [ax, 0, 0] : [90, 0, 0];
-    translation = mode == AS_DESIGNED ? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
+    rotation = mode == MESHING_GEARS ? [ax, 0, 0] : [90, 0, 0];
+    translation = mode == MESHING_GEARS? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
     visualize(big_bevel_gear_visualization) 
         translate(translation) 
             rotate(rotation)

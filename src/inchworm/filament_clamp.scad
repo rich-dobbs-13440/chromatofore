@@ -68,16 +68,16 @@ ptfe_insert_clearance = 0.2;
 
 /* [Bevel Gearing Design] */
 
-bevel_gear_module = 1.2; 
+bevel_gear_module = 2.; 
 small_bevel_gear_cone_angle = 45; // [-90:90]
-small_gear_tooth_width = 4; // [0 : 20]
-dz_small_bevel_gear = 7; // [0:15]
-dz_shaft_small_bevel_gear = -0.5; // [-30:30]
+small_gear_tooth_width = 6; // [0 : 20]
+dz_small_bevel_gear = 7.4; // [7:0.1: 9]
+dz_shaft_small_bevel_gear = 0; // [-5:0.1:5]
 h_small_bevel_shaft = 2; // [0:40]
 
 flip_small_bevel_gear = false;
 dz_plane_clearance_above_small_bevel = 6; // [-20 : 20]
-n_teeth_big_bevel = 21; //[9 : 22]
+n_teeth_big_bevel = 21; //[9 : 23]
 
 use_mesh_keys_small_bevel = true;
 
@@ -123,7 +123,7 @@ if (show_filament) {
 }
 
 rotate_to_cl_clamp_gear = [0, 90, 0];
-translate_to_cl_clamp_gear =  [0, 0, -16];
+translate_to_cl_clamp_gear =  [0, 0, -14];
 
 function filament_and_clamp_rotation() = 
     (mode == MESHING_GEARS) ? rotate_to_cl_clamp_gear : [0, 0, 0];    
@@ -134,10 +134,15 @@ function filament_and_clamp_translation() =
 module filament(as_clearance) {
     d = as_clearance ? 2.5 : d_filament;
     alpha = as_clearance ? 0 : 1;
-    translate(filament_and_clamp_translation() ) rotate(filament_and_clamp_rotation()) 
-        color("red", alpha) {
-            can(d=d, h=slide_length + 40, $fn=12);
+    if (as_clearance) {
+        can(d=d, h=slide_length + 40, $fn=12); 
+    } else {
+            translate(filament_and_clamp_translation() ) rotate(filament_and_clamp_rotation()) { 
+            color("red", alpha) {
+                can(d=d, h=slide_length + 40, $fn=12);
+            }
         }
+    }
     
 }
 
@@ -257,66 +262,8 @@ module clamp(
     }
 
     module mounting_screws(as_clearance = true) {
-//        module basic_bearing_mount() {
-//            if (as_clearance) {
-//                translate([-dx_clamp_bearing_to_clamp_nut_block, od_bearing/2 + 4, 0]) {
-//                    rotate([0, 90, 0]) {
-//                        hole_through("M2", cld=0.4, $fn = 12);
-//                    } 
-//                } 
-//            } 
-//        } 
-//        module vertical_mount() {
-//            if (as_clearance) {
-//                translate([0,0, 25]) hole_through("M2", cld=0.4, $fn = 12);
-//            }
-//        }
-//        center_reflect([0, 1, 0]) {
-//            basic_bearing_mount();
-//            translate([0, 4, 0]) basic_bearing_mount();
-//            translate([0,0, -4]) basic_bearing_mount();
-//            // Just in case holes
-//            translate([0 , 8, 0]) vertical_mount();
-//            translate([-6 , 9, 0]) vertical_mount();
-//            translate([-14 , 11, 0]) vertical_mount();
-//        }
 
-        
     }
-//    
-//    module pivot_attachment() {
-//        color(PART_30) {
-//            center_reflect([0, 1, 0]) rotate([0, 0, 90]) nut_block();
-//        }        
-//    }
-    
-//    module platform_mount() {
-//        dz = include_bearing_mounting_adapter ? 14 : -z/2;
-//        z_wings = include_bearing_mounting_adapter ? 28 : z;
-//        color("RED") hull() { // PART_28
-//            nut_block();
-//            if (include_servo_attachment) {
-//                pivot_attachment();
-//            }
-//            block([x_clamp_nut_block, y_clamp_nut_block, 14], center=BELOW);
-//        }
-//        color(PART_34) 
-//            translate([0, 0, -dz]) 
-//                block([x_clamp_nut_block, 28, screw_wall]); 
-//        if (include_servo_attachment) {
-//            color("indigo")
-//            center_reflect([0, 1, 0]) {
-//                rotate([0, 0, 90]) nut_block();
-//                translate([0, 3+pivot_screw_length, 0]) 
-//                    block([x_clamp_nut_block, screw_wall, z_wings], center=LEFT); 
-//                translate([6, 0, -dz]) 
-//                    block([15, 3+pivot_screw_length, screw_wall], center=ABOVE+RIGHT+BEHIND); 
-//            }
-//            
-//        }
-//
-//        
-//    }
     module pivot_screws(as_clearance = false) {
         center_reflect([0, 1, 0]) {
             translate([0, 3, 0]) { 
@@ -470,7 +417,7 @@ module clamp_slot_gear() {
     // Print it from the top
     module shape() {
         print_from_top = false;
-        h_bottom = 5;
+        h_bottom = 3;
         dz_bottom = print_from_top ? 0 : -clamp_gear_height/2 - h_bottom/2;
         d1_bottom = print_from_top ? 10 : id_clamp_slot_gear;
         d2_bottom = print_from_top ? 10 : id_clamp_slot_gear;
@@ -516,7 +463,7 @@ module clamp_slot_gear() {
 
         }
     }
-    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
+    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2 + print_clearance;
     rotation = mode == MESHING_GEARS ? [0, 0, 0] : [90, 0, 0];
     translation = mode == MESHING_GEARS ? [dx_slot, 0, 1] : [90, 0, 0];
     visualize(clamp_slot_gear_visualization) 
@@ -586,18 +533,16 @@ module big_bevel_gear() {
 //                }  
             }
             union() {
-                hole_through("M2", h=a_lot, cld=0.4, $fn=12); 
-//                // Need to consider flipping
-//                direction = flip_large_bevel_gear ? BELOW : ABOVE;
-//                translate([0, 0, dz_plane_clearance_above_large_bevel]) plane_clearance(direction);
+               translate([0, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
+               gear_mesh_keys(as_clearance = true); 
             }            
         }
     }   
-    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2+print_clearance;
+    dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2 + md_small_bevel_gear/2 + 15* print_clearance;
     //ax = flip_small_bevel_gear ? 180 : 0;
-    ax = 90;
-    rotation = mode == MESHING_GEARS ? [ax, 0, 0] : [90, 0, 0];
-    translation = mode == MESHING_GEARS? [dx_slot, 0, dz_small_bevel_gear] : [90, 0, 0];
+    dz_meshing = dz_small_bevel_gear + md_big_bevel_gear/2 + 4*print_clearance;
+    rotation = mode == MESHING_GEARS ? [0, -90, 0] : [90, 0, 0];
+    translation = mode == MESHING_GEARS? [dx_slot, 0, dz_meshing] : [90, 0, 0];
     visualize(big_bevel_gear_visualization) 
         translate(translation) 
             rotate(rotation)

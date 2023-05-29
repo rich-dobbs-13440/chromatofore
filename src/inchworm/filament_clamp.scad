@@ -38,7 +38,8 @@ show_vitamins = true;
 show_filament = true;
 hide_sample_gear_keys = true;
 
-clamp_body_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+traveller_body_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+gear_holder_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 clamp_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 clamp_slot_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 small_bevel_gear_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -62,18 +63,20 @@ n_teeth_small = 9; // [9, 10, 11]
 
 /* [Clamp Gearing Design] */
 clamp_gear_height = 8;
+h_bottom_clamp_gear = 1;
 clamp_gear_module = 1;
 ptfe_insert_clearance = 0.2;
 
 
 /* [Bevel Gearing Design] */
 
-bevel_gear_module = 2.; 
+bevel_gear_module = 1.5; //[1:0.1:2]
 small_bevel_gear_cone_angle = 45; // [-90:90]
 small_gear_tooth_width = 6; // [0 : 20]
 dz_small_bevel_gear = 7.4; // [7:0.1: 9]
 dz_shaft_small_bevel_gear = 0; // [-5:0.1:5]
 h_small_bevel_shaft = 2; // [0:40]
+l_bevel_shaft_bearing = 10;
 
 flip_small_bevel_gear = false;
 dz_plane_clearance_above_small_bevel = 6; // [-20 : 20]
@@ -117,13 +120,20 @@ overall_gear_ratio = (n_teeth_big_slot/n_teeth_small) * (n_teeth_big_bevel/n_tee
 
 echo("Overall Gear Ratio", overall_gear_ratio);
 
+z_traveller = md_clamp_gear/2 + od_clamp_slot_gear + l_bevel_shaft_bearing;
+
+
+l_filament_to_cl_big_bevel = dz_small_bevel_gear + md_big_bevel_gear/2;
 
 if (show_filament) {
     filament(as_clearance=false);
 }
 
 rotate_to_cl_clamp_gear = [0, 90, 0];
-translate_to_cl_clamp_gear =  [0, 0, -14];
+translate_to_cl_clamp_gear =  [
+    0, 
+    0, 
+    -x_clamp_nut_block - clamp_gear_height/2-2]; //-14];
 
 function filament_and_clamp_rotation() = 
     (mode == MESHING_GEARS) ? rotate_to_cl_clamp_gear : [0, 0, 0];    
@@ -149,9 +159,9 @@ module filament(as_clearance) {
 layout = layout_from_mode(mode);
 echo("mode", mode, "layout", layout);
 
-clamp_visualization = 
+gear_holder_visualization = 
     visualize_info(
-        "Clamp BODY", PART_1, clamp_body_visibility, layout, show_parts); 
+        "Gear Holder", PART_1, gear_holder_visibility, layout, show_parts); 
 
 clamp_gear_visualization = 
     visualize_info(
@@ -169,6 +179,11 @@ small_bevel_gear_visualization =
 big_bevel_gear_visualization = 
     visualize_info(
         "Big Bevel Gear", PART_5, big_bevel_gear_visibility, layout, show_parts); 
+        
+        
+traveller_body_visualization  = 
+    visualize_info(
+        "Traveller Body", PART_6, traveller_body_visibility, layout, show_parts);       
 
 gear_mesh_keys_visualization =
     visualize_info(
@@ -224,86 +239,132 @@ module general_bevel_gear(n_teeth, gear_module, tooth_width, cone_angle = 45,bod
 }
 
 
-clamp(show_vitamins=show_vitamins, visualization=clamp_visualization); 
+module clamp_screw(as_clearance) {
+    if (as_clearance) {
+        rotate([0, 90, 0]) {
+            hole_through("M2", $fn = 12);
+        } 
+        translate([-2.2, 0, 0]) rotate([0, 90, 0]) {  //[0, -90, 180]
+             tuned_M2_nutcatch_side_cut(as_clearance=true); 
+        }
+    } else {
+        color(BLACK_IRON) {
+            translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
+                 tuned_M2_nutcatch_side_cut(as_clearance=false);
+            }
+            translate([-d_filament/2-screw_lift, 0, 0]) rotate([0, 90, 0]) {
+                hole_through("M2", $fn = 12, l=12);
+            } 
+        }          
+    }            
+}
 
-module clamp(
+module slot_gear_pivot_screw(as_clearance=false) {
+    l_screw = 20;
+    dz = md_clamp_gear/2 + md_clamp_slot_gear/2;
+    translate([0, 0, dz]) {
+        rotate([0, 90, 0]) {
+            if (as_clearance) {
+                translate([0, 0, -2]) hole_through("M2", $fn = 12);
+            } else {
+                color(COPPER) {
+                    translate([0, 0, -2-l_screw]) rotate([180, 0, 0]) screw("M2x20", $fn=12);
+                }
+            }
+        }
+    }
+}
+
+module big_bevel_bearing(as_clearance=false) {
+    dz = md_clamp_gear/2 + od_clamp_slot_gear + 4;
+    dx = -42; // -l_filament_to_cl_big_bevel + 2; 
+    if (as_clearance) {
+        translate([dx, 0, 0]) block([12, 12, a_lot]);
+        #translate([dx, 0, dz]) block([16, 16, a_lot], center=BELOW);
+    } else {
+    }
+}
+
+
+module gear_holder_clearances() {
+    filament(as_clearance=true);
+    clamp_screw(as_clearance=true);
+    slot_gear_pivot_screw(as_clearance=true);
+    big_bevel_bearing(as_clearance=true);
+}
+
+traveller_body();
+
+module traveller_body() {
+    triangle_placement(r=-2*x_clamp_nut_block) {
+        rotate([0, -90, 0]) 
+            gear_holder(
+            show_vitamins=false, 
+            visualization=traveller_body_visualization,
+            standalone = false);
+    }
+    
+}
+
+
+gear_holder(show_vitamins=show_vitamins, visualization=gear_holder_visualization); 
+
+
+//        hull() {
+//            translate([-l_filament_to_cl_big_bevel, 0, z_traveller]) can(d=24, h=l_bevel_shaft_bearing, center=BELOW);
+//            translate([0, 0, z_traveller]) can(d=5, h=l_bevel_shaft_bearing-2, center=BELOW);
+//        }
+   
+#big_bevel_holder();
+
+module big_bevel_holder() {
+    
+    x = x_clamp_nut_block + dz_small_bevel_gear +  od_big_bevel_gear/2 + 10;
+    translate([0, 0, z_traveller]) block([x, 14, 4], center=BEHIND+BELOW);
+}
+        
+module gear_holder(
         show_vitamins=true, 
         include_bearing_mounting_adapter = true,
         as_mounting_screw_clearance=false,
-        visualization=clamp_visualization, screw_lift = screw_lift) {
-    z = 8;
+        visualization=gear_holder_visualization, 
+        screw_lift = screw_lift,
+        standalone = true) {
+            
+    
     screw_wall = 2;
     wall = 2;
     
     y_clamp_nut_block = 8;
     pivot_screw_length = 16;
-    module clamp_screw(as_clearance) {
-        if (as_clearance) {
-            rotate([0, 90, 0]) {
-                hole_through("M2", $fn = 12);
-            } 
-            translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
-                 tuned_M2_nutcatch_side_cut(as_clearance=true); 
-            }
-        } else {
-            color(BLACK_IRON) {
-                translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
-                     tuned_M2_nutcatch_side_cut(as_clearance=false);
-                }
-                translate([-d_filament/2-screw_lift, 0, 0]) rotate([0, 90, 0]) {
-                    hole_through("M2", $fn = 12, l=12);
-                } 
-            }          
-        }            
-    }
+
     module nut_block() {
-        block([x_clamp_nut_block, y_clamp_nut_block, z], center=BEHIND);
-        can(d=5, h=z);
-    }
-
-    module mounting_screws(as_clearance = true) {
-
-    }
-    module pivot_screws(as_clearance = false) {
-        center_reflect([0, 1, 0]) {
-            translate([0, 3, 0]) { 
-                if (as_clearance) {
-                     rotate([90, 0, 0]) hole_through("M2", $fn=12, cld=0.4);
-                     rotate([0, -90, 90]) tuned_M2_nutcatch_side_cut(as_clearance=true);  
-                } else {
-                    color(BLACK_IRON) {
-                        rotate([0, -90, -90]) 
-                            translate([0, 0, pivot_screw_length]) 
-                                screw(str("M2x", pivot_screw_length));
-                        //rotate([0, -90, 90]) 
-                        //   tuned_M2_nutcatch_side_cut(as_clearance=false);  
-                    }
-                    
-                }
-            }
+        d_filament_wrap = standalone ? 5 : d_filament;
+        hull() {
+            translate([-x_clamp_nut_block, 0, 0]) block([5, y_clamp_nut_block, 2.5], center=FRONT+BELOW);
+            can(d=d_filament_wrap, h=2.5, center=BELOW);
         }
+        hull() {    
+            translate([-x_clamp_nut_block, 0, 0]) block([5, y_clamp_nut_block, z_traveller], center=FRONT+ABOVE);
+            can(d=d_filament_wrap, h=z_traveller, center=ABOVE);
+        }
+
     }
-    
-    
+
     module shape() {
         difference() {
             union() {
                 nut_block();
-                //platform_mount();
             }
-            filament(as_clearance=true);
-            clamp_screw(as_clearance=true);
-            mounting_screws(as_clearance = true); 
-            pivot_screws(as_clearance = true);
-            translate([0, 0, 3]) plane_clearance(ABOVE); 
+            gear_holder_clearances();
         }
             
     } 
     
     module vitamins() {
-        mounting_screws(as_clearance = false);
-        //pivot_screws(as_clearance = false);
         clamp_screw(as_clearance=false);
+        slot_gear_pivot_screw(as_clearance=false);
+        
     }
     translate(filament_and_clamp_translation() ) rotate(filament_and_clamp_rotation()) {
         if (show_vitamins) {
@@ -381,11 +442,11 @@ clamp_gear(orient_for_build=false, orient_to_center_of_rotation=false, show_vita
 module clamp_gear(orient_for_build, orient_to_center_of_rotation=false, show_vitamins=false) {
     module shape() {
 
-        h_bottom = 1;
+
         h_top = 2;
-        h_total = h_bottom + clamp_gear_height + h_top;
+        h_total = h_bottom_clamp_gear + clamp_gear_height + h_top;
         h_hold_screw = 6;
-        dz_nut_cut = -clamp_gear_height/2 - h_bottom + 2;
+        dz_nut_cut = -clamp_gear_height/2 - h_bottom_clamp_gear + 2;
         general_straight_spur_gear(
                 n_teeth_small, 
                 clamp_gear_module, 
@@ -393,8 +454,10 @@ module clamp_gear(orient_for_build, orient_to_center_of_rotation=false, show_vit
                 body_child = 0, 
                 cutout_child = 1) {
             union() {
-                translate([0, 0, -clamp_gear_height/2]) can(d=od_clamp_gear, h=h_bottom, center=BELOW);
-                translate([0, 0, clamp_gear_height/2]) can(d=id_clamp_gear-0.5, h=h_top, center=ABOVE);
+                translate([0, 0, -clamp_gear_height/2]) 
+                    can(d=od_clamp_gear, h=h_bottom_clamp_gear, center=BELOW);
+                translate([0, 0, clamp_gear_height/2]) 
+                    can(d=id_clamp_gear-0.5, h=h_top, center=ABOVE);
             }
             union() {
                 translate([0, 0, clamp_gear_height/2+h_top+h_hold_screw]) 
@@ -460,7 +523,6 @@ module clamp_slot_gear() {
                     }
                 }                
             }
-
         }
     }
     dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2 + print_clearance;
@@ -489,9 +551,11 @@ module small_bevel_gear(use_mesh_keys=use_mesh_keys_small_bevel) {
                 cone_angle = small_bevel_gear_cone_angle, 
                 body_child = 0, cutout_child = 1) {
             union() {
-                translate([0, 0, dz_shaft_small_bevel_gear]) can(d = od_ptfe_tube + 4, h=h_small_bevel_shaft, center=BELOW);
+                translate([0, 0, dz_shaft_small_bevel_gear]) 
+                    can(d = od_ptfe_tube + 4, h=h_small_bevel_shaft, center=BELOW);
                 if (use_mesh_keys) {
-                    translate([0, 0, -h_small_bevel_shaft]) gear_mesh_keys(as_clearance = false, center=BELOW);
+                    translate([0, 0, -h_small_bevel_shaft]) 
+                        gear_mesh_keys(as_clearance = false, center=BELOW);
                 }  
             }
             union() {
@@ -499,7 +563,8 @@ module small_bevel_gear(use_mesh_keys=use_mesh_keys_small_bevel) {
                 // Need to consider flipping
                 if (use_plane_clearance_small_bevel) {
                     direction = flip_small_bevel_gear ? BELOW : ABOVE;
-                    translate([0, 0, dz_plane_clearance_above_small_bevel]) plane_clearance(direction);
+                    translate([0, 0, dz_plane_clearance_above_small_bevel]) 
+                        plane_clearance(direction);
                 }
             }            
         }
@@ -540,9 +605,9 @@ module big_bevel_gear() {
     }   
     dx_slot = md_clamp_gear/2 + md_clamp_slot_gear/2 + md_small_bevel_gear/2 + 15* print_clearance;
     //ax = flip_small_bevel_gear ? 180 : 0;
-    dz_meshing = dz_small_bevel_gear + md_big_bevel_gear/2 + 4*print_clearance;
+    
     rotation = mode == MESHING_GEARS ? [0, -90, 0] : [90, 0, 0];
-    translation = mode == MESHING_GEARS? [dx_slot, 0, dz_meshing] : [90, 0, 0];
+    translation = mode == MESHING_GEARS? [dx_slot, 0, l_filament_to_cl_big_bevel] : [90, 0, 0];
     visualize(big_bevel_gear_visualization) 
         translate(translation) 
             rotate(rotation)

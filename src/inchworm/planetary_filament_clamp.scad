@@ -35,8 +35,8 @@ function layout_from_mode(mode) =
     mode == PRINTING ? "printing" :
     "unknown";
   
-
-explode  = true;  
+assert_for_not_implemented = false;
+explode  = false;  
     
 nut_block_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -90,7 +90,7 @@ d_drive_gear_retainer_shaft = 8;
 od_drive_gear_retainer = 10;
 retainer_screw_offset = 5;
 d_retainer_screw_circle = 2 * sqrt(2) * retainer_screw_offset;
-h_retainer_clip = 3;
+h_retainer_clip = 2;  // 3 mm was too tight.  2 mm is minimum.   
 od_retainer_clip = 25;
 
 module end_of_customization() {}
@@ -252,17 +252,17 @@ module drive_gear_retainer() {
 
 
 module retainer_clip() {
-    id_ring = d_retainer_screw_circle + 6;
-
-    echo("od_retainer_clip", od_retainer_clip);
+    id_ring = d_retainer_screw_circle + 5;
     gap = 0.5;
     module pivot_cutouts() {
-        d = (id_ring - d_drive_gear_retainer_shaft)/2;
+        d_cutout = (id_ring - d_drive_gear_retainer_shaft)/2;
+        r_axis = d_drive_gear_retainer_shaft /2 + d_cutout/2;
+        offset_axis = r_axis/sqrt(2);
         for (angle = [0 : 90 : 270]) {
             rotate([0, 0, angle]) {
-                translate([retainer_screw_offset, retainer_screw_offset, 0]) {
+                translate([offset_axis, offset_axis, 0]) {
                     difference() {
-                        can(d=d+gap, hollow = d, h=a_lot);
+                        can(d = d_cutout+2*gap, hollow = d_cutout, h = a_lot);
                         rotate([0, 0, -45]) plane_clearance(FRONT);
                     }
                 }
@@ -271,11 +271,19 @@ module retainer_clip() {
     }
     module shape() {
         render(convexity=10) difference() {
-            can(d=id_ring-gap, hollow = d_drive_gear_retainer_shaft, h=h_retainer_clip, center=ABOVE);
-            translate([0, 0, 10]) retainer_screws(as_clearance=true);
+            can(
+                d=id_ring-gap, 
+                hollow = d_drive_gear_retainer_shaft, 
+                h = h_retainer_clip, 
+                center = ABOVE);
+            translate([0, 0, 10]) retainer_screws(as_clearance = true);
             pivot_cutouts();
         }
-        can(d=od_retainer_clip, hollow = id_ring + gap, h=h_retainer_clip, center=ABOVE);
+        can(
+            d=od_retainer_clip, 
+            hollow = id_ring + gap, 
+            h = h_retainer_clip, 
+            center = ABOVE);
     }
     visualize(visualization_retainer_clip) {
         translate([0, 0, dz_top_drive_gear]) { 
@@ -353,8 +361,8 @@ module clamp_gear_slide(as_clearance=false) {
         slide = [s_nut_block, s_nut_block, 1.6*s_nut_block];
         block(slide + clearances);
     } else {
-    }
-    
+        assert(!assert_for_not_implemented, "Not implemented");
+    }   
 }
 
 
@@ -412,7 +420,6 @@ module clamp_gear() {
 }
 
 
-
 module nut_block(show_vitamins=true, visualization=visualization_nut_block, as_clearance=false, clearance=0) {
     nut_block = [s_nut_block, s_nut_block, s_nut_block];
     if (as_clearance) {
@@ -434,20 +441,13 @@ module nut_block(show_vitamins=true, visualization=visualization_nut_block, as_c
 }
 
 
-
-
-
 module nut_blocks(show_vitamins=true) {
     triangle_placement(r=0) {
         nut_block(show_vitamins=show_vitamins);
-    }
-
-    
+    } 
 }
 
 
-
-//clamp_screw(as_clearance=true);
 module clamp_screw(as_clearance) {
     if (as_clearance) {
         rotate([0, 90, 0]) {

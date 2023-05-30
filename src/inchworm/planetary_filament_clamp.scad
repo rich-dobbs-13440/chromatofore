@@ -251,12 +251,13 @@ module drive_gear_retainer() {
 
 
 
-module retainer_clip() {
-    id_ring = d_retainer_screw_circle + 5;
+module retainer_clip(shaft_clearance=0.4) {
+    id_ring = d_retainer_screw_circle + 4;
+    id_cams =  d_drive_gear_retainer_shaft + 2*shaft_clearance;
     gap = 0.5;
     module pivot_cutouts() {
-        d_cutout = (id_ring - d_drive_gear_retainer_shaft)/2;
-        r_axis = d_drive_gear_retainer_shaft /2 + d_cutout/2;
+        d_cutout = (id_ring - id_cams)/2;
+        r_axis = d_drive_gear_retainer_shaft /2 + d_cutout/2 + shaft_clearance;
         offset_axis = r_axis/sqrt(2);
         for (angle = [0 : 90 : 270]) {
             rotate([0, 0, angle]) {
@@ -273,7 +274,7 @@ module retainer_clip() {
         render(convexity=10) difference() {
             can(
                 d=id_ring-gap, 
-                hollow = d_drive_gear_retainer_shaft, 
+                hollow = id_cams, 
                 h = h_retainer_clip, 
                 center = ABOVE);
             translate([0, 0, 10]) retainer_screws(as_clearance = true);

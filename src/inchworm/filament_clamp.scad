@@ -215,6 +215,28 @@ module general_straight_spur_gear(n_teeth, gear_module, gear_height, body_child 
 }
 
 
+module general_straight_spur_gear(n_teeth, gear_module, gear_height, body_child = -1, cutout_child = -1) {
+    render(convexity=10) difference() {
+        union() {
+            spur_gear(
+                n = n_teeth,  // number of teeth, just enough to clear rider.
+                m = gear_module,   // module
+                z = gear_height,   // thickness
+                pressure_angle = 25,
+                helix_angle    = 0,   // the sign gives the handiness, can be a list
+                backlash       = 0.1 // in module units
+            );
+            if (body_child >= 0 && $children > body_child) {
+                children(body_child);
+            }
+        }
+        if (cutout_child >= 0 && $children > cutout_child) {
+            children(cutout_child);
+        }  
+    }
+}
+
+
 module general_bevel_gear(n_teeth, gear_module, tooth_width, cone_angle = 45,body_child = -1, cutout_child = -1) { 
     render(convexity=10) difference() {
         union() {    

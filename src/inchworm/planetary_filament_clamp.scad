@@ -1,7 +1,7 @@
 include <ScadStoicheia/centerable.scad>
 use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
-include <ScadApotheka/m2_helper.scad>
+use <ScadApotheka/m2_helper.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
 use <PolyGear/PolyGear.scad>
@@ -45,14 +45,13 @@ hide_sample_gear_keys = true;
 assert_for_not_implemented = false;
 explode  = false;  
     
-nut_block_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+/* [Visibility] */
 
-/* [Clamp Visibility] */
-
+hub_visibility = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 gear_for_clamp  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_for_clamp   = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 drive_gear_for_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-
+drive_gear_retainer =1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 shaft_for_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
    
 slide_length = 50; // [1 : 1 : 99.9]
@@ -63,10 +62,9 @@ clamp_slide_clearance = 0.2;
 /* [Clamp Gearing Design] */
 
 module_clamp_gear = 1.2;
-n_teeth_clamp_gear = 12; // [9, 10, 11, 12, 13]
-
+n_teeth_clamp_gear = 9; // [9, 10, 11, 12, 13]
 cone_angle_clamp_gear = 5; // [-90:5:85]
-tooth_width_clamp_gear = 7;
+tooth_width_clamp_gear = 8;
 
 
 /* [Drive Gear_Retainer Design] */
@@ -75,7 +73,7 @@ od_drive_gear_retainer = 10;
 clearance_drive_gear_retainer_shaft = 0.5;
 
 h_clamp_drive_gear_flange = 2;
-
+flange_screw_padding = 6; //[4, 6, 8]
 
 
 
@@ -87,14 +85,14 @@ cone_angle_clamp_drive_gear = 90 - cone_angle_clamp_gear;
 
 module_clamp_drive_gear = module_clamp_gear;
 
-
-
-
-h_base_clamp_drive_gear = 2;
+h_base_clamp_drive_gear = 4; // Provide clearance for retention screw versus clamp gear
 h_bottom_clamp_gear = 1;
 
-/* [Nut Block Design] */
-s_nut_block = 6;
+/* [Hub Design] */
+r_hub = 9;
+s_nut_block = 5;
+r_nut_cut_clamp_screw = 4;
+r_hub_attachment_screw = 3;
 
 
 /* [Clamp Drive Shaft Design] */
@@ -113,9 +111,9 @@ module end_of_customization() {}
 layout = layout_from_mode(mode);
 //echo("mode", mode, "layout", layout);
 
-visualization_nut_block = 
+visualization_clamp_hub = 
     visualize_info(
-        "Nut Block", PART_1, nut_block_visibility, layout, show_parts); 
+        "Clamp Hub", PART_1, hub_visibility, layout, show_parts); 
 
 visualization_slide = 
     visualize_info(
@@ -129,11 +127,15 @@ visualization_clamp_gear =
     visualize_info(
         "Clamp Gear", PART_4, gear_for_clamp, layout_from_mode(layout), show_parts); 
 
-
         
 visualization_clamp_drive_shaft = 
     visualize_info(
-        "Clamp Drive Shaft", PART_6, shaft_for_clamp, layout_from_mode(layout), show_parts);
+        "Clamp Drive Shaft", PART_5, shaft_for_clamp, layout_from_mode(layout), show_parts);
+        
+        
+visualization_clamp_drive_retainer = 
+    visualize_info(
+        "Clamp Drive Gear Retainer", PART_6, drive_gear_retainer, layout_from_mode(layout), show_parts);
               
         
 /* Gear Calculations */
@@ -175,7 +177,7 @@ md_clamp_gear  = (n_teeth_clamp_gear) * module_clamp_gear;
 // The calculations for id are a bit off, so adjustment is desired.
 
 
-target_id_drive_gear = 2 * s_nut_block + 4;
+target_id_drive_gear = 2 * r_hub + 2;
 
 
 
@@ -227,11 +229,11 @@ if (show_filament) {
 
 clamp_gear_slide();
 clamp_gear(show_vitamins=show_vitamins);
-nut_blocks(show_vitamins=show_vitamins);
+clamp_hub(show_vitamins=show_vitamins);
 //retainer_clip();
 clamp_drive_gear(show_vitamins=show_vitamins);
 clamp_gear_drive_shaft(show_vitamins = true);
-
+drive_gear_retainer();
 
 module filament(as_clearance=false) {
     d = as_clearance ? 2.5 : d_filament;
@@ -321,34 +323,48 @@ module drive_gear_retainer(as_clearance=false, clearance=1) {
     // rotates if the filament gets stuck on something and filament
     // rotation is used to get past the obstacle(. 
     h_drive_gear_total_base = 3;
-    h_width_of_m2_screw_head = 3.8; 
-    allowance_for_screw = 2;
-    h_shaft = od_clamp_gear/2 - s_nut_block/2 + h_drive_gear_total_base + h_width_of_m2_screw_head/2 + allowance_for_screw;
+    h_width_of_m2_screw_head = 3.8;
+    retainer_clearance = 0.5;
+    h_shaft = 
+        od_clamp_gear/2 
+        - s_nut_block/2 
+        + h_drive_gear_total_base 
+        + h_width_of_m2_screw_head/2 + retainer_clearance;
+    
+    module filament_entrance() {
+        translate([0, 0, h_shaft]) can(d=d_ptfe_insertion, h=4, center=BELOW, rank = 10);
+        translate([0, 0, h_shaft-4]) can(d=d_filament, taper= d_ptfe_insertion, h=2, center=BELOW);        
+    }
+    
+    module shape() {
+        difference() {
+            union() {
+                // printing support to attach to gear retariner
+                // #can(d = 2*r_hub, taper = 6, h=4, center=ABOVE);
+                // Shaft to retain gear
+                can(d=d_drive_gear_retainer_shaft, h=h_shaft, center=ABOVE);
+                translate([0, 0, h_shaft]) 
+                    can(d = d_drive_gear_retainer_shaft + 4, h=2, center=BELOW);
+                
+            }
+            filament(as_clearance=true);
+            filament_entrance();
+            
+        }         
+}
     
     if (as_clearance) {
         can(d = d_drive_gear_retainer_shaft + 2 * clearance, h=h_shaft + od_drive_gear_retainer, center=ABOVE);
         can(d = d_ptfe_insertion, h = h_shaft + od_drive_gear_retainer + 4, center=ABOVE);
     } else {
-        translate([0, 0, s_nut_block/2]) {
+        pop = explode ? 20 : 0;
+        translate([0, 0, s_nut_block/2 + pop]) {
             if (show_vitamins) {
                 // rotate([0, 0, 45])  rotate([90, 0, 0]) translate([0, 0, 5]) 
-                 translate([4, -4, 0] ) translate([0, 0, h_shaft-2]) rotate([90, 0, 0]) #screw("M2x6", $fn=12); 
+                 //translate([4, -4, 0] ) translate([0, 0, h_shaft-2]) rotate([90, 0, 0]) #screw("M2x6", $fn=12); 
             }
-            difference() {
-                union() {
-                    // printing support to attach to gear retariner
-                    can(d = 2*s_nut_block, taper = 6, h=4, center=ABOVE);
-                    // Shaft to retain gear
-                    can(d=d_drive_gear_retainer_shaft, h=h_shaft, center=ABOVE);
-                    translate([0, 0, h_shaft]) 
-                        can(d = d_drive_gear_retainer_shaft, taper = od_drive_gear_retainer, h=2, center=BELOW);
-                    
-                }
-                filament(as_clearance=true);
-                translate([0, 0, h_shaft]) can(d=d_ptfe_insertion, h=4, center=BELOW, rank = 10);
-                translate([0, 0, h_shaft-4]) can(d=d_filament, taper= d_ptfe_insertion, h=2, center=BELOW);
-                
-            } 
+            shape();
+
         }
     }
 }
@@ -380,7 +396,7 @@ module retainer_screws(as_clearance=false, include_head = false) {
 
 
 module clamp_drive_gear_flange(center=ABOVE) {
-    s = 2 * retainer_screw_offset + 4;
+    s = 2 * retainer_screw_offset + flange_screw_padding;
     difference() {
         block([s, s, h_clamp_drive_gear_flange], center=center);
         retainer_screws(as_clearance=true, include_head = false);
@@ -395,19 +411,22 @@ function dz_total_of_clamp_drive_gear() = 2 + h_clamp_drive_gear_flange;
 
 
 module clamp_drive_gear(show_vitamins=true) {
-    d_inner_hub = 2 * s_nut_block + 4;
+    d_inner_hub = d_drive_gear_retainer_shaft + 4;
     h_inner_hub = 2.5;
     id_clip_ring = d_inner_hub - 2;
     dz_base = module_clamp_drive_gear/sin(cone_angle_clamp_drive_gear);
     module additions() {
         can(d=d_inner_hub, h=h_inner_hub, center=ABOVE, $fn=30);
-        translate([0, 0, -dz_base]) can(d=od_clamp_drive_gear, h=h_base_clamp_drive_gear, center=BELOW);
         can(d=d_inner_hub, h=module_clamp_drive_gear, center=BELOW);
-        translate([0, 0, -2]) clamp_drive_gear_flange(BELOW);
+        
+            translate([0, 0, -dz_base]) can(d=od_clamp_drive_gear, h=h_base_clamp_drive_gear, center=BELOW); 
+            translate([0, 0, -4]) clamp_drive_gear_flange(BELOW);
+
+        
     }
     module removals() {
         can(d = d_drive_gear_retainer_shaft + 2*clearance_drive_gear_retainer_shaft,  h = a_lot, $fn=24);
-        
+        retainer_screws(as_clearance=true, include_head = false);
     }
     module shape() { 
         rotate([180, 0, 0]) {
@@ -485,13 +504,15 @@ module clamp_gear_slide(as_clearance=false, extra_slide_clearance = 0, screw_len
 }
 
 
-module clamp_gear(show_vitamins = true, include_outer_hub = false) {
-    h_inner_hub_clamp_gear = (od_clamp_drive_gear + 2 - 2*tooth_width_clamp_gear - 2*s_nut_block)/2;   // 7;
+module clamp_gear(show_vitamins = true, include_outer_hub = true, screw_length=16) {
+    
+    h_inner_hub_clamp_gear = 1; 
     dz_outer_hub = 0.2;  // Offset because of the printing support for the gear;
     z_slide_padding = 2;
     dz_nut_block = dz_outer_hub - z_slide_padding;
-    h_outer_hub = 2;
-    d_inner_hub = s_nut_block;
+    h_outer_hub = 4;
+    d_inner_hub = r_hub;
+    screw_name = str("M2x", screw_length);
     
     module additions() {
         translate([0, 0, tooth_width_clamp_gear]) 
@@ -503,7 +524,7 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false) {
     module removals() {
         translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
         translate([0, 0, -4]) clamp_gear_slide(as_clearance=true);
-        plane_clearance(BELOW);
+        //translate() plane_clearance(BELOW);
     }
     module shape() {
         general_bevel_gear(
@@ -516,8 +537,9 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false) {
             removals();
         }
     }
-    module vitamins() {
-        color(GOLD) rotate([180, 0, 0]) screw("M2x20", $fn=12);
+    module vitamins(dx) {
+        net_dx = -screw_length + dx - d_filament/2 + 0.1;
+        color(STAINLESS_STEEL) translate([0, 0, net_dx]) rotate([180, 0, 0]) screw(screw_name, $fn=12);
     }
     rotation = 
         mode == PRINTING ? [0, 0, 0] :
@@ -526,7 +548,7 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false) {
         mode == NEW_DEVELOPMENT ? [0, 0, 0] :
         assert(false, "Not determined");
     pop = explode ? 10 : 0;
-    dx = s_nut_block + tooth_width_clamp_gear + h_inner_hub_clamp_gear + pop;
+    dx = r_hub + tooth_width_clamp_gear + h_inner_hub_clamp_gear + pop;
     translation =  
         mode == PRINTING ? [0, 0, 0] :
         mode == DESIGNING ? [0, 0, 0] :
@@ -539,7 +561,7 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false) {
         rotate(rotation) {
             if (show_vitamins) {
                 visualize_vitamins(visualization_clamp_gear) 
-                    vitamins();
+                    vitamins(dx);
             }
             visualize(visualization_clamp_gear)
                 shape();
@@ -548,11 +570,25 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false) {
 }
 
 
-module nut_block(show_vitamins=true, visualization=visualization_nut_block, as_clearance=false, clearance=0) {
+
+
+module nut_block(
+        show_vitamins = true, 
+        visualization = false, 
+        as_cutouts = false,
+        clearance = 0) {
+    
     nut_block = [s_nut_block, s_nut_block, s_nut_block];
-    if (as_clearance) {
-        clearances =  2 * [clearance, clearance, clearance];
-        block(nut_block + clearances, center=FRONT);
+    module cutouts() {
+        rotate([0, 0, 180]) clamp_screw(as_clearance=true);
+        filament(as_clearance=true);        
+    }        
+//    if (as_clearance) {
+//        clearances =  2 * [clearance, clearance, clearance];
+//        block(nut_block + clearances, center=FRONT);
+//    } else 
+    if (as_cutouts) { 
+        cutouts();
     } else {
         if (show_vitamins) {
             visualize_vitamins(visualization)
@@ -561,8 +597,7 @@ module nut_block(show_vitamins=true, visualization=visualization_nut_block, as_c
         visualize(visualization) {
             difference() {
                 block(nut_block, center=FRONT);
-                rotate([0, 0, 180]) clamp_screw(as_clearance=true);
-                filament(as_clearance=true);
+                cutouts();
             }
             drive_gear_retainer();
         }
@@ -570,10 +605,16 @@ module nut_block(show_vitamins=true, visualization=visualization_nut_block, as_c
 }
 
 
-module nut_blocks(show_vitamins=true) {
-    triangle_placement(r=0) {
-        nut_block(show_vitamins=show_vitamins);
-    } 
+module clamp_hub(show_vitamins=true) {
+    visualize(visualization_clamp_hub) {
+        render(convexity=10) difference() {
+            can(d = 2 * r_hub, h = s_nut_block);
+            triangle_placement(r=0) {
+                nut_block(as_cutouts = true);
+                rotate([0, 0, 60]) translate([4, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
+            }
+        }
+    }
 }
 
 
@@ -582,12 +623,12 @@ module clamp_screw(as_clearance=false) {
         rotate([0, 90, 0]) {
             hole_through("M2", $fn = 12);
         } 
-        translate([-2.2, 0, 0]) rotate([0, 90, 0]) {  //[0, -90, 180]
+        translate([-r_nut_cut_clamp_screw, 0, 0]) rotate([0, 90, 0]) {  //[0, -90, 180]
              tuned_M2_nutcatch_side_cut(as_clearance=true); 
         }
     } else {
         color(BLACK_IRON) {
-            translate([-2.2, 0, 0]) rotate([0, -90, 180]) {
+            translate([-r_nut_cut_clamp_screw, 0, 0]) rotate([0, -90, 180]) {
                  tuned_M2_nutcatch_side_cut(as_clearance=false);
             }
             translate([-d_filament/2-screw_lift, 0, 0]) rotate([0, 90, 0]) {
@@ -605,7 +646,13 @@ module clamp_gear_drive_shaft(show_vitamins = true) {
     module shaft() {
         // will be a long sliding spur gear, but fake it for a bit
         //can(d = 6, h = 50, center = ABOVE);
-        translate([0, 0, gear_height_shaft/2]) general_straight_spur_gear(n_teeth_shaft, gear_module_shaft, gear_height_shaft, body_child = -1, cutout_child = -1);
+        translate([0, 0, gear_height_shaft/2]) 
+            general_straight_spur_gear(
+                n_teeth_shaft, 
+                gear_module_shaft, 
+                gear_height_shaft, 
+                body_child = -1, 
+                cutout_child = -1);
     }
 
     module retainer_cap() {

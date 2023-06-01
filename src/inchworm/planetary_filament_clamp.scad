@@ -197,9 +197,9 @@ od_clamp_drive_gear  = shallow_bevel_gear_od(
 md_clamp_drive_gear  = shallow_bevel_gear_md(
     n_teeth_clamp_drive_gear, module_clamp_drive_gear,  cone_angle_clamp_drive_gear, tooth_width_clamp_drive_gear);
     
-retainer_screw_offset = ceil(((od_clamp_drive_gear + 4)/2)/sqrt(2));
-echo("retainer_screw_offset", retainer_screw_offset);
-d_retainer_screw_circle = 2 * sqrt(2) * retainer_screw_offset;
+flange_screw_offset = ceil(((od_clamp_drive_gear + 4)/2)/sqrt(2));
+echo("flange_screw_offset", flange_screw_offset);
+d_retainer_screw_circle = 2 * sqrt(2) * flange_screw_offset;
 
 
 
@@ -349,7 +349,7 @@ module drive_gear_retainer(as_clearance=false, clearance=1) {
             }
             filament(as_clearance=true);
             filament_entrance();
-            
+            retention_screws(as_clearance=true);  
         }         
 }
     
@@ -373,7 +373,7 @@ module drive_gear_retainer(as_clearance=false, clearance=1) {
 
 
 
-module retainer_screws(as_clearance=false, include_head = false) {
+module flange_screws(as_clearance=false, include_head = false) {
 
     dz_screw = 0;
     head_clearance = include_head ? 25 :0;
@@ -382,7 +382,7 @@ module retainer_screws(as_clearance=false, include_head = false) {
          dz_screw;
     center_reflect([1, 0, 0]) {
         center_reflect([0, 1, 0]) {
-            translate([retainer_screw_offset, retainer_screw_offset, dz]) {
+            translate([flange_screw_offset, flange_screw_offset, dz]) {
                 if (as_clearance) {
                     hole_through("M2", h=head_clearance, cld=0.4, $fn=12);
                 } else {
@@ -396,13 +396,13 @@ module retainer_screws(as_clearance=false, include_head = false) {
 
 
 module clamp_drive_gear_flange(center=ABOVE) {
-    s = 2 * retainer_screw_offset + flange_screw_padding;
+    s = 2 * flange_screw_offset + flange_screw_padding;
     difference() {
         block([s, s, h_clamp_drive_gear_flange], center=center);
-        retainer_screws(as_clearance=true, include_head = false);
+        flange_screws(as_clearance=true, include_head = false);
     }
 //        if (show_vitamins) {
-//            retainer_screws();
+//            flange_screws();
 //        }    
 }
 
@@ -426,7 +426,7 @@ module clamp_drive_gear(show_vitamins=true) {
     }
     module removals() {
         can(d = d_drive_gear_retainer_shaft + 2*clearance_drive_gear_retainer_shaft,  h = a_lot, $fn=24);
-        retainer_screws(as_clearance=true, include_head = false);
+        flange_screws(as_clearance=true, include_head = false);
     }
     module shape() { 
         rotate([180, 0, 0]) {
@@ -570,8 +570,6 @@ module clamp_gear(show_vitamins = true, include_outer_hub = true, screw_length=1
 }
 
 
-
-
 module nut_block(
         show_vitamins = true, 
         visualization = false, 
@@ -605,13 +603,26 @@ module nut_block(
 }
 
 
+module retention_screws(as_clearance=true, cld=0.4) {
+    triangle_placement(r=0) {
+        rotate([0, 0, 60]) translate([3, 0, 25]) hole_through("M2", cld=cld, $fn=12);
+    }
+}
+
+module spokes() {
+    triangle_placement(r=0) {
+        rotate([0, 0, 60]) translate([r_hub-0.5, 0, 0]) block([25, 4, s_nut_block], center=FRONT);
+    }
+}
+spokes();
+
 module clamp_hub(show_vitamins=true) {
     visualize(visualization_clamp_hub) {
         render(convexity=10) difference() {
             can(d = 2 * r_hub, h = s_nut_block);
+            retention_screws(as_clearance=true, cld=0.4);  // Pass through easily
             triangle_placement(r=0) {
                 nut_block(as_cutouts = true);
-                rotate([0, 0, 60]) translate([4, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
             }
         }
     }

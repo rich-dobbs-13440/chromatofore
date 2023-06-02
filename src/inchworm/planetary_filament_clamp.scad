@@ -95,6 +95,7 @@ s_nut_block = 5;
 r_nut_cut_clamp_screw = 4;
 r_hub_attachment_screw = 3;
 
+y_spoke_base = 7; // [0:10]
 
 /* [Clamp Drive Shaft Design] */
 gear_height_shaft = 50;
@@ -208,6 +209,9 @@ echo("flange_screw_offset", flange_screw_offset);
 d_retainer_screw_circle = 2 * sqrt(2) * flange_screw_offset;
 
 
+d_number_ten_screw = 4.7;
+spoke_to_gear_clearance = 4;
+dx_spoke = ceil(od_clamp_drive_gear/2 + d_number_ten_screw/2 - r_hub + spoke_to_gear_clearance); // [0 : 20]
 
 echo("n_teeth_clamp_drive_gear", n_teeth_clamp_drive_gear);
 echo("Clamp drive gear - id",  id_clamp_drive_gear);
@@ -235,7 +239,7 @@ if (show_filament) {
 
 // Render from inside to outside, not by part number, for use with ghostly view
 clamp_gear_slide();
-clamp_hub(show_vitamins=show_vitamins);
+hub(show_vitamins=show_vitamins);
 clamp_gear(show_vitamins=show_vitamins);
 clamp_drive_gear(show_vitamins=show_vitamins);
 drive_gear_retainer();
@@ -317,11 +321,11 @@ module filament(as_clearance=false) {
     }  
 }
 
-module clamp_hub(show_vitamins=true) {
+module hub(show_vitamins=true) {
     visualize(visualization_clamp_hub) {
         render(convexity=10) difference() {
             can(d = 2 * r_hub, h = s_nut_block);
-            retention_screws(as_clearance=true, cld=0.4);  // Pass through easily
+            retention_screws(as_clearance=true, include_head=false, cld=0.4);  // Pass through easily
             triangle_placement(r=0) {
                 nut_block(as_cutouts = true);
             }
@@ -332,7 +336,16 @@ module clamp_hub(show_vitamins=true) {
 module spokes() {
     visualize(visualization_spokes) {
         triangle_placement(r=0) {
-            rotate([0, 0, 60]) translate([r_hub-0.5, 0, 0]) block([25, 4, s_nut_block], center=FRONT);
+            rotate([0, 0, 60]) 
+                translate([r_hub-2, 0, 0]) {
+                    difference() {
+                        hull() {
+                            block([1, y_spoke_base, s_nut_block], center=FRONT);
+                            translate([dx_spoke, 0, 0]) can(d=11, h=s_nut_block);
+                        }
+                        translate([dx_spoke, 0, 0]) can(d=4.7, h=a_lot);
+                    }
+                }
         }
     }
 }
@@ -567,9 +580,11 @@ module nut_block(
 }
 
 
-module retention_screws(as_clearance=true, cld=0.4) {
-    h = 20;
-    dz = as_clearance ? h : 0;
+module retention_screws(as_clearance=true, include_head = true, cld=0.4) {
+    h = include_head ? 20 : 0;
+    dz = as_clearance ? 
+            (include_head ? h : 25) : 
+         0;
     triangle_placement(r=0) {
         rotate([0, 0, 60]) translate([3, 0, dz]) 
         if (as_clearance) {

@@ -58,14 +58,16 @@ shaft_for_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_length = 50; // [1 : 1 : 99.9]
 screw_lift = 0; // [-.1 : .1 : 1]
 
-clamp_slide_clearance = 0.2;
+
+
+
 
 /* [Clamp Gearing Design] */
-
 module_clamp_gear = 1.2;
 n_teeth_clamp_gear = 9; // [9, 10, 11, 12, 13]
 cone_angle_clamp_gear = 5; // [-90:5:85]
 tooth_width_clamp_gear = 8;
+clamp_slide_clearance = 0.2;
 
 
 /* [Drive Gear_Retainer Design] */
@@ -434,19 +436,23 @@ module clamp_drive_gear(show_vitamins=true) {
 }
 
 
-module clamp_gear_slide(as_clearance=false, extra_slide_clearance = 0, screw_length=20) {
-    z_slide = s_nut_block;     
+module clamp_gear_slide(as_clearance=false, extra_slide_clearance = 0, screw_length=16) {
+    z_slide =12;  
+    z_base = 4;
+    h_head = z_slide;
     module shape() {
-         // adapts to existing 
- 
-        slide = [s_nut_block, s_nut_block, z_slide];        
+        // adapts to existing 
+        slide = [s_nut_block, s_nut_block, z_slide];      
         difference() {
             block(slide +  [-extra_slide_clearance, -extra_slide_clearance, 0], center=BELOW );
-            translate([0, 0, 25]) hole_through("M2", cld=0.4, $fn=12); 
+            translate([0, 0, -h_head -z_base]) rotate([180, 0, 0]) hole_through("M2", cld=0.4, h = h_head, $fn=12); 
         }
     }
     module vitamins() {
-        color(BLACK_IRON) screw(str("M2x", screw_length), $fn=12);
+        color(BLACK_IRON) {
+            translate([0, 0, -z_base]) rotate([180, 0, 0]) screw(str("M2x", screw_length), $fn=12);
+            translate([0, 0, 0]) rotate([180, 0, 0]) nut("M2", $fn=12);
+        }
     }
     if (as_clearance) {
         nut_thickness = 1.5;
@@ -462,7 +468,7 @@ module clamp_gear_slide(as_clearance=false, extra_slide_clearance = 0, screw_len
             assert(false, "Not determined");
         pop = explode ? 10 : 0;
             clamping = 0.2;
-        dx = d_filament/2 - clamping + screw_length - z_slide + pop;
+        dx = d_filament/2 - clamping + screw_length - s_nut_block + pop;
         translation =  
             mode == PRINTING ? [0, 0, 0] :
             mode == DESIGNING ? [0, 0, 0] :

@@ -47,12 +47,12 @@ explode  = false;
 hub = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 spokes = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 clamp_gear  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-slide   = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 drive_gear = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 drive_gear_retainer = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 drive_shaft = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+alt_drive_gear_retainer = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+drive_shaft_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
-clamp_gear_count = 3; //[1:3]
 include_drive_gear_spacer = true;
 include_drive_shaft_side = true;
 include_exit_side = false;
@@ -161,9 +161,9 @@ visualization_clamp_gear =
     visualize_info(
         "Clamp Gear", PART_3, clamp_gear, layout_from_mode(layout), show_parts); 
 
-visualization_slide = 
-    visualize_info(
-        "Screw Slide", PART_4, slide, layout_from_mode(DESIGNING), show_parts); 
+//visualization_slide = 
+//    visualize_info(
+//        "Screw Slide", PART_4, slide, layout_from_mode(DESIGNING), show_parts); 
 
 visualization_drive_gear = 
     visualize_info(
@@ -178,9 +178,17 @@ visualization_drive_shaft =
     visualize_info(
         "Clamp Drive Shaft", PART_7, drive_shaft, layout_from_mode(layout), show_parts);
         
-        
+visualization_alt_drive_gear_retainer = 
+    visualize_info(
+        "Alternative Drive Gear Retainer", 
+        PART_8, 
+        alt_drive_gear_retainer, 
+        layout_from_mode(layout), 
+        show_parts);        
 
-              
+visualization_drive_shaft_base = 
+    visualize_info(
+        "Drive Shaft Base", PART_9, drive_shaft_base, layout_from_mode(layout), show_parts);
         
 /* Gear Calculations */
 
@@ -283,12 +291,14 @@ echo("md_servo_transmission", md_servo_transmission);
 filament(as_clearance=false);
 pure_vitamin_slide(center=BEHIND); 
 drive_gear_retainer(show_vitamins=show_vitamins);
+alt_drive_gear_retainer();
+
 clamp_gears(show_vitamins=show_vitamins);
 hub(show_vitamins=show_vitamins);
 drive_gear(show_vitamins=show_vitamins);
 drive_shaft(show_vitamins = true);
 spokes();
-
+drive_shaft_base();
 
 
 
@@ -302,7 +312,8 @@ module filament(as_clearance=false) {
     if (as_clearance) {
         can(d=d, h=a_lot, $fn=12); 
     } else {
-        if (show_filament && mode != PRINTING) {
+        hide = (mode == PRINTING) || (mode==DESIGNING); 
+        if (show_filament && !hide) {
             color("red", alpha) {
                 can(d=d, h=slide_length + 40, $fn=12);
             }
@@ -338,7 +349,7 @@ module clamp_screw_nut(as_clearance=false) {
 
 
 
-module pure_vitamin_slide(as_clearance = false, center=ABOVE) {
+module pure_vitamin_slide(as_clearance = false, center = ABOVE, show_for_design = false) {
     
     m2_nut_height = 1.6;
     m2p5_nut_height = 2;
@@ -391,14 +402,17 @@ module pure_vitamin_slide(as_clearance = false, center=ABOVE) {
             mode == DESIGNING ? [0, 0, 0] :
             mode == MESHING_GEARS ? [dx_clamp_screw, 0, 0] :
             mode == NEW_DEVELOPMENT ? [0, 0, 0] :
-            assert(false, "Not determined");     
+            assert(false, "Not determined");  
     
+    hide = (mode == PRINTING) || (mode==DESIGNING); 
     translate(translation) {
         rotate(rotation) {
             if (as_clearance) {
                 cavity();
             } else {
-                if (show_vitamins && mode != PRINTING) {
+                if (show_vitamins && !hide) {
+                    stack();
+                } else if (show_vitamins && show_for_design && mode == DESIGNING) {
                     stack();
                 }
             }
@@ -439,8 +453,10 @@ module hub(show_vitamins=true) {
 }
 
 module spokes() {
+    dx_spoke_total = r_hub-2 + dx_spoke;
+    echo("dx_spoke_total", dx_spoke_total);
     module shape() {
-                triangle_placement(r=0) {
+        triangle_placement(r=0) {
             rotate([0, 0, 60]) {
                 translate([r_hub-2, 0, 0]) {
                     difference() {
@@ -512,6 +528,7 @@ module drive_gear(show_vitamins=true, include_bottom_gear=false) {
     }
 }
 
+
 module clamp_gears(show_vitamins = true, include_outer_hub = true, screw_length=16) {
     if (mode == PRINTING) {
         triangle_placement(r=10) {
@@ -558,7 +575,7 @@ module clamp_gear(show_vitamins = true, include_outer_hub = true, screw_length=1
     module removals() {
         translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
         //translate([0, 0, 4]) clamp_gear_slide(as_clearance=true);
-        pure_vitamin_slide(as_clearance =true);
+        translate([0, 0, dx]) pure_vitamin_slide(as_clearance = true, center = BELOW);
         translate([0, 0, dz_plane_clearance]) plane_clearance(BELOW);
     }
     module shape() {
@@ -573,8 +590,9 @@ module clamp_gear(show_vitamins = true, include_outer_hub = true, screw_length=1
         }
     }
     module vitamins(dx) {
-        net_dx = -screw_length + dx - d_filament/2 + 0.1;
-        color(STAINLESS_STEEL) translate([0, 0, net_dx]) rotate([180, 0, 0]) m2_screw(screw_length) ;
+        translate([0, 0, dx]) pure_vitamin_slide(as_clearance = false, center = BELOW, show_for_design = true);
+        //net_dx = -screw_length + dx - d_filament/2 + 0.1;
+        //color(STAINLESS_STEEL) translate([0, 0, net_dx]) rotate([180, 0, 0]) m2_screw(screw_length) ;
     }
     
     
@@ -783,6 +801,129 @@ module drive_shaft(show_vitamins = true) {
 
 
 
+module alt_drive_gear_retainer(h_spoke = 1) {
+    dx_total_spoke = 24;
+    module shape() {
+        difference() {
+            union() {
+                hull() {
+                    triangle_placement(r=dx_total_spoke) can(d=8,  h=h_spoke, center=ABOVE);
+                }
+                triangle_placement(r=dx_total_spoke) can(d=12,  h=2, center=ABOVE);
+                rotate([0, 0, 60]) triangle_placement(r=od_drive_gear/2 + 3) {
+                    block([8, 8, h_spoke],  center=BEHIND+ABOVE);
+                    rotate([0, -7, 0]) block([2, 8, dz_top_of_drive_gear+4],  center=BEHIND+ABOVE);
+                }
+                //can(d=od_drive_gear+2, h = h_spoke, center=ABOVE);
+            }
+            can(d=od_spacer + 1, h=a_lot);
+            triangle_placement(r=dx_total_spoke) can(d=8,  h=a_lot); 
+            triangle_placement(r=0) 
+                translate([0, 0, dz_top_of_drive_gear]) 
+                    scale([1, 1, 1.5]) rod(d=d_ptfe_insertion, l=a_lot, center=BEHIND);
+        }
+        
+    }
+    rotation = 
+        mode == DESIGNING ? [0, 0, 0] :
+        mode == PRINTING ? [0, 0, 0] :
+        mode == MESHING_GEARS ? [180, 0, 60] : 
+        assert(false);
+    translation = 
+        mode == DESIGNING ? [0, 0, 0] :
+        mode == PRINTING ? [0, 0, 0] :
+        mode == MESHING_GEARS ? [0, 0, dz_top_of_drive_gear + h_spoke] :     
+        assert(false);
+    visualize(visualization_alt_drive_gear_retainer) {
+        translate(translation) {
+            rotate(rotation) {
+                shape();
+            }
+        }    
+    }
+}
+
+
+
+
+module frame_rider(as_clearance = false, on_tubing = false, wall = 2, h = 2) {
+    od_tubing = 9.3;
+    od_screw = 4.7;
+    clearance = on_tubing ? 1 : 0.5;
+    id = (on_tubing ? od_tubing : od_screw) + 2*clearance;
+    od = id + 2 * wall;
+    if (as_clearance) {
+        can(d=id, h=a_lot);
+    } else {
+        difference() {
+            can(d=od, h=h, center=ABOVE);
+            can(d=id, h=a_lot);
+        }
+    } 
+}
+
+
+module shaft_rider(as_clearance=false, clearance = 0.5, wall = 2, h = 2) {
+    d_shaft = 8.3;
+    id = d_shaft + 2 * clearance;
+    od = id  + 2 * wall;
+    if (as_clearance) {
+        can(d = id, h = a_lot);
+    } else {
+        difference() {
+            can(d=od, h=h, center=ABOVE);
+            can(d=id, h=a_lot);
+        }        
+    }
+}
+
+
+
+module drive_shaft_base() {
+    dx_total_spoke = 24;
+    h = 6;
+    h_hub = h + 4;;
+    module blank() {
+        triangle_placement(r=0) {
+            hull() {
+                can(d=2, h=h, center=ABOVE); 
+                translate([dx_total_spoke, 0, 0]) can(d=4, h=h, center=ABOVE); 
+            }
+            translate([dx_total_spoke, 0, 0]) 
+                frame_rider(h=h, on_tubing=true);
+            shaft_rider(h=h_hub);
+        } 
+    }   
+    module shape() {
+        difference() {
+            blank();
+            triangle_placement(r=0) {
+                translate([dx_total_spoke, 0, 0]) 
+                    frame_rider(on_tubing=true, as_clearance=true);
+            }
+            shaft_rider(as_clearance=true);
+            
+        }
+    }
+    rotation = 
+        mode == DESIGNING ? [0, 0, 0] :
+        mode == PRINTING ? [0, 0, 0] :
+        mode == MESHING_GEARS ? [180, 0, 60] : 
+        assert(false);
+    translation = 
+        mode == DESIGNING ? [0, 0, 0] :
+        mode == PRINTING ? [0, 0, 0] :
+        mode == MESHING_GEARS ? [0, 0, slide_length] :     
+        assert(false);
+    
+    visualize(visualization_drive_shaft_base) {
+        translate(translation) {
+            rotate(rotation) {
+                shape();
+            }
+        }    
+    }
+}
 
 
 /*   General Routines */ 

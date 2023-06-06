@@ -13,7 +13,10 @@ d_filament_with_clearance = d_filament + 0.75;  // Filament can be inserted even
 od_ptfe_tube = 4 + 0;
 id_ptfe_tube = 2 + 0;
 d_ptfe_insertion = od_ptfe_tube + 0.5;
-d_m2_nut_driver = 6.0;
+d_m2_nut_driver = 6.0 + 0;
+d_number_ten_screw = 4.7 + 0;
+od_three_eighths_inch_tubing = 9.3 + 0;
+od_one_quarter_inch_tubing = 6.5 + 0;
 
 NEW_DEVELOPMENT = 0 + 0;
 DESIGNING = 1 + 0;
@@ -113,7 +116,27 @@ h_hub = s_nut_block;
 r_nut_cut_clamp_screw = 4;
 r_hub_attachment_screw = 3;
 
-y_spoke_base = 7; // [0:10]
+/* [Frame Design] */
+
+frame_slide_tubing = "3/8 inch PE"; // ["1/4 inch PE",  "3/8 inch PE"]
+od_frame_tubing = 
+    frame_slide_tubing == "1/4 inch PE" ? od_one_quarter_inch_tubing :
+    frame_slide_tubing == "3/8 inch PE" ? od_three_eighths_inch_tubing :  
+    assert(false);
+    
+frame_rod = "#10"; //"#8", "#10", "M3", "M4", "M5"]
+od_frame_rod = // Includes clearance
+    frame_rod == "#8" ? 4.37 : 
+    frame_rod == "#10" ? 5.16:
+    frame_rod == "M3" ? 3.5: 
+    frame_rod == "M4" ? 4.5:
+    frame_rod == "M5" ? 5.5:
+    assert(false);
+
+spoke_to_gear_clearance = 2;
+spoke_wall = 2;
+r_spoke = 26;
+y_spoke_base = 2; // [0:10]
 
 /* [Drive Shaft Design] */
 gear_height_shaft = 50;
@@ -249,9 +272,11 @@ flange_screw_offset = ceil(((od_drive_gear + 4)/2)/sqrt(2));
 echo("flange_screw_offset", flange_screw_offset);
 
 
-d_number_ten_screw = 4.7;
-spoke_to_gear_clearance = 4;
-dx_spoke = ceil(od_drive_gear/2 + d_number_ten_screw/2 - r_hub + spoke_to_gear_clearance); // [0 : 20]
+//r_spoke = ceil(od_drive_gear/2 + d_number_ten_screw/2 - r_hub + spoke_to_gear_clearance); // [0 : 20]
+
+minimum_r_spoke = od_drive_gear/2 + d_number_ten_screw/2 + spoke_wall + spoke_to_gear_clearance;
+echo("minimum_r_spoke", minimum_r_spoke);
+assert(r_spoke > minimum_r_spoke);
 
 echo("n_teeth_drive_gear", n_teeth_drive_gear);
 echo("Clamp drive gear - id",  id_drive_gear);
@@ -453,19 +478,40 @@ module hub(show_vitamins=true) {
 }
 
 module spokes() {
-    dx_spoke_total = r_hub-2 + dx_spoke;
-    echo("dx_spoke_total", dx_spoke_total);
+    
+//    h = 6;
+//    h_hub = h + 4;;
+//    module blank() {
+//        triangle_placement(r=0) {
+//            hull() {
+//                can(d=2, h=h, center=ABOVE); 
+//                translate([r_spoke, 0, 0]) can(d=4, h=h, center=ABOVE); 
+//            }
+//            translate([r_spoke, 0, 0]) 
+//                frame_rider(h=h, on_tubing=true);
+//            shaft_rider(h=h_hub);
+//        } 
+//    }   
+//    module shape() {
+//        difference() {
+//            blank();
+//            triangle_placement(r=0) {
+//                translate([r_spoke, 0, 0]) 
+//                    frame_rider(on_tubing=true, as_clearance=true);
+//            }
+//            shaft_rider(as_clearance=true);
+//            
+//        }
+//    }
     module shape() {
         triangle_placement(r=0) {
             rotate([0, 0, 60]) {
-                translate([r_hub-2, 0, 0]) {
-                    difference() {
-                        hull() {
-                            block([1, y_spoke_base, h_hub], center=FRONT);
-                            translate([dx_spoke, 0, 0]) can(d=11, h=h_hub);
-                        }
-                        translate([dx_spoke, 0, 0]) can(d=4.7, h=a_lot);
+                difference() {
+                    hull() {
+                        translate([r_hub-2, 0, 0]) block([1, y_spoke_base, h_hub], center=FRONT);
+                        translate([r_spoke, 0, 0]) frame_rider(as_clearance=false, on_rod=true);
                     }
+                    translate([r_spoke, 0, 0])  frame_rider(as_clearance=true, on_rod=true);
                 }
             }
         }
@@ -802,25 +848,29 @@ module drive_shaft(show_vitamins = true) {
 
 
 module alt_drive_gear_retainer(h_spoke = 1) {
-    dx_total_spoke = 24;
+    play = 2;
+    dz = dz_top_of_drive_gear + h_hub/2 + play;
     module shape() {
+        z = dz + 4;
         difference() {
             union() {
                 hull() {
-                    triangle_placement(r=dx_total_spoke) can(d=8,  h=h_spoke, center=ABOVE);
+                    triangle_placement(r=r_spoke) frame_rider(as_clearance=false, on_rod=true);
                 }
-                triangle_placement(r=dx_total_spoke) can(d=12,  h=2, center=ABOVE);
-                rotate([0, 0, 60]) triangle_placement(r=od_drive_gear/2 + 3) {
-                    block([8, 8, h_spoke],  center=BEHIND+ABOVE);
-                    rotate([0, -7, 0]) block([2, 8, dz_top_of_drive_gear+4],  center=BEHIND+ABOVE);
+                triangle_placement(r=r_spoke) can(d=12,  h=2, center=ABOVE);
+                rotate([0, 0, 60]) triangle_placement(r=od_drive_gear/2 + 5) {
+                    block([8, 8, 2],  center=BEHIND+ABOVE);
+                    translate([0, 0, 1]) rotate([0, -4, 0]) block([2, 8, z],  center=BEHIND+ABOVE);
                 }
-                //can(d=od_drive_gear+2, h = h_spoke, center=ABOVE);
             }
             can(d=od_spacer + 1, h=a_lot);
-            triangle_placement(r=dx_total_spoke) can(d=8,  h=a_lot); 
-            triangle_placement(r=0) 
-                translate([0, 0, dz_top_of_drive_gear]) 
-                    scale([1, 1, 1.5]) rod(d=d_ptfe_insertion, l=a_lot, center=BEHIND);
+            triangle_placement(r=r_spoke) frame_rider(as_clearance=true, on_rod=true);
+            rotate([0, 0, 60])  triangle_placement(r=0) 
+                    translate([0, 0, dz])
+                        hull() 
+                            center_reflect([0, 0, 1]) 
+                                translate([0, 0, play/2]) 
+                                    rod(d=d_ptfe_insertion, l=a_lot);
         }
         
     }
@@ -832,7 +882,7 @@ module alt_drive_gear_retainer(h_spoke = 1) {
     translation = 
         mode == DESIGNING ? [0, 0, 0] :
         mode == PRINTING ? [0, 0, 0] :
-        mode == MESHING_GEARS ? [0, 0, dz_top_of_drive_gear + h_spoke] :     
+        mode == MESHING_GEARS ? [0, 0, dz] :     
         assert(false);
     visualize(visualization_alt_drive_gear_retainer) {
         translate(translation) {
@@ -846,11 +896,21 @@ module alt_drive_gear_retainer(h_spoke = 1) {
 
 
 
-module frame_rider(as_clearance = false, on_tubing = false, wall = 2, h = 2) {
-    od_tubing = 9.3;
-    od_screw = 4.7;
-    clearance = on_tubing ? 1 : 0.5;
-    id = (on_tubing ? od_tubing : od_screw) + 2*clearance;
+module frame_rider(
+        as_clearance = false, 
+        on_tubing = false, 
+        on_rod = false,
+        wall = 2, 
+        h = 2) {
+    
+
+    od_inner = 
+        on_tubing ? od_frame_tubing : 
+        on_rod ? od_frame_rod :
+        assert(false);
+    clearance = 
+        on_tubing ? 1 : 0;  // The rod od already contains clearance 
+    id =  od_inner + 2*clearance;
     od = id + 2 * wall;
     if (as_clearance) {
         can(d=id, h=a_lot);
@@ -880,16 +940,15 @@ module shaft_rider(as_clearance=false, clearance = 0.5, wall = 2, h = 2) {
 
 
 module drive_shaft_base() {
-    dx_total_spoke = 24;
     h = 6;
     h_hub = h + 4;;
     module blank() {
         triangle_placement(r=0) {
             hull() {
                 can(d=2, h=h, center=ABOVE); 
-                translate([dx_total_spoke, 0, 0]) can(d=4, h=h, center=ABOVE); 
+                translate([r_spoke, 0, 0]) can(d=4, h=h, center=ABOVE); 
             }
-            translate([dx_total_spoke, 0, 0]) 
+            translate([r_spoke, 0, 0]) 
                 frame_rider(h=h, on_tubing=true);
             shaft_rider(h=h_hub);
         } 
@@ -897,8 +956,8 @@ module drive_shaft_base() {
     module shape() {
         difference() {
             blank();
-            triangle_placement(r=0) {
-                translate([dx_total_spoke, 0, 0]) 
+            triangle_placement(r=r_spoke) {
+                translate([0, 0, 0]) 
                     frame_rider(on_tubing=true, as_clearance=true);
             }
             shaft_rider(as_clearance=true);

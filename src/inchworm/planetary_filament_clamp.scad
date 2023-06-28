@@ -154,13 +154,13 @@ n_teeth_shaft = 9;
 servo_transmission_gear_height = 5;
 gear_module_servo_transmission = 1.4;
 az_servo = 180; // [0:360]
-z_servo = -12; // [0: 100]
+z_servo = -10; // [0: 100]
 range_of_rotation_servo = 135;
 
 /* [Build Plate Layout] */
 
-dx_hub_bp  = -13; // [-100: 100]
-dy_hub_bp  = 30; // [-100: 100]
+dx_hub_bp  = -50; // [-100: 100]
+dy_hub_bp  = -10; // [-100: 100]
 
 dx_clamp_gear_bp = 12; // [-100: 100]
 dy_clamp_gear_bp = -18; // [-100: 100]
@@ -175,16 +175,16 @@ dx_hub_shaft_retainer_bp = -25;  // [-100: 100]
 dy_hub_shaft_retainer_bp = 10;  // [-100: 100]
 
 dx_rim_bp = 50;  // [-100: 100]
-dy_rim_bp = 50;  // [-100: 100]
+dy_rim_bp = 36;  // [-100: 100]
 
-dx_base_bp = -50;  // [-100: 100] 
-dy_base_bp = 50;  // [-100: 100]
+dx_base_bp = -40;  // [-100: 100] 
+dy_base_bp = 30;  // [-100: 100]
 
-dx_servo_transmission_gear_bp = -50;  // [-100: 100]
-dy_servo_transmission_gear_bp = -50;  // [-100: 100]
+dx_servo_transmission_gear_bp = -30;  // [-100: 100]
+dy_servo_transmission_gear_bp = -35;  // [-100: 100]
 
 dx_drive_gear_shaft_retainer_bp  = 0;  // [-100: 100]
-dy_drive_gear_shaft_retainer_bp  = -50;  // [-100: 100]
+dy_drive_gear_shaft_retainer_bp  = -32;  // [-100: 100]
 
 dx_drive_shaft_bearing_bp   = 0;  // [-100: 100]
 dy_drive_shaft_bearing_bp   = 50;  // [-100: 100]
@@ -933,10 +933,10 @@ module drive_shaft_base() {
     }
 }
 
-module drive_shaft_bearing(print_bearing=false, print_clip=true) {
-    h_bearing_gear = 2* servo_transmission_gear_height;
-    h_retention = 4;
-    base_clearance = 1;
+module drive_shaft_bearing(print_bearing=true, print_clip=true) {
+    h_bearing_gear = 1.5* servo_transmission_gear_height;
+    h_retention = 3.5;
+    base_clearance = 0;
     h = h_retention + h_base + base_clearance;
     echo("h drive_shaft_bearing", h);
     z_offset = 3.5;
@@ -1001,7 +1001,7 @@ module drive_shaft_bearing(print_bearing=false, print_clip=true) {
     } else {
         translate(translation) {
             visualize(visualization_drive_shaft_bearing) shape();
-            // clip_retention_clip(as_clearance=false);
+            clip_retention_clip(as_clearance=false);
         }
     }
 }

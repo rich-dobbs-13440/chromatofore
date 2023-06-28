@@ -19,7 +19,7 @@ Servo extruderEngageServo;
 
 // Servo angles
 static int filamentMoveAngle = 90;
-static int filamentClampAngle = 45;
+static int filamentClampAngle = 90;
 static int filamentRotateAngle = 180;
 static int extruderEngageAngle = 0;
 
@@ -29,7 +29,8 @@ static bool enableClampServo = false;
 static bool enableRotateServo = false;
 static bool enableEngageServo = false;
 
-
+int unclamp_angle = 50;
+int clamp_angle = 110;
 
 const int redLedPin = 14;
 const int blueLedPin = 15;
@@ -74,6 +75,7 @@ void updateFilamentClampAngle(const int angle) {
   if (enableMoveServo) {
     filamentClampAngle = angle;
     filamentClampServo.write(filamentClampAngle);
+    debugLog("Current filamentClampAngle", filamentClampAngle);
   }
 }
 
@@ -159,20 +161,20 @@ void serialHeartBeat() {
 
 void extrude(const float mm_of_filament, const float feedrate_mm_per_minute) {
   if (mm_of_filament > 0) {
-    updateFilamentClampAngle(15);  // Unclamp
+    updateFilamentClampAngle(unclamp_angle);  
     delay(2000);                   // Time interval to allow  clamp to open
     updateFilamentMoveAngle(0);
     delay(2000);                    // Time interval to allow  traveller to get into position
-    updateFilamentClampAngle(135);  // Clamp
+    updateFilamentClampAngle(clamp_angle);
     // Ignore feedrate for now!
     updateFilamentMoveAngle(mm_of_filament);
     delay(4000);
   } else {
-    updateFilamentClampAngle(15);  // Unclamp
+    updateFilamentClampAngle(unclamp_angle);  // Unclamp
     delay(2000);                   // Time interval to allow  clamp to open
     updateFilamentMoveAngle(135);
     delay(2000);                    // Time interval to allow  traveller to get into position
-    updateFilamentClampAngle(135);  // Clamp
+    updateFilamentClampAngle(clamp_angle);  // Clamp
     // Ignore feedrate for now!
     updateFilamentMoveAngle(135 + mm_of_filament);
     delay(4000);
@@ -335,9 +337,9 @@ void setup() {
 
   digitalWrite(blueLedPin, HIGH);
   enableMoveServo = true;
-  enableClampServo = false;
-  enableRotateServo = false;
-  enableEngageServo = false;
+  enableClampServo = true;
+  enableRotateServo = true;
+  enableEngageServo = true;
   setupServos();
   digitalWrite(blueLedPin, LOW);
 }

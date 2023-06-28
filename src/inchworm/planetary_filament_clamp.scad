@@ -39,6 +39,9 @@ function layout_from_mode(mode) =
     mode == PRINTING ? "printing" :
     "unknown";
     
+print_one = false;
+one_to_print = "base"; // ["hub", "rim & spokes", "clamp gear", "drive gear", "hub retainer", "drive gear retainer", "drive shaft", "shaft bearing", "base", "transmission gear"]
+    
 show_parts = true;
 show_vitamins = true;
 show_filament = true;
@@ -154,7 +157,7 @@ n_teeth_shaft = 9;
 servo_transmission_gear_height = 5;
 gear_module_servo_transmission = 1.4;
 az_servo = 180; // [0:360]
-z_servo = -10; // [0: 100]
+z_servo = -10; // [-20:20]
 range_of_rotation_servo = 135;
 
 /* [Build Plate Layout] */
@@ -198,54 +201,54 @@ module end_of_customization() {}
 layout = layout_from_mode(mode);
 //echo("mode", mode, "layout", layout);
 
+function show(variable, name) = 
+    print_one ? name == one_to_print :
+    variable;
+
 visualization_hub = 
     visualize_info(
-        "Hub", PART_1, hub, layout, show_parts); 
+        "Hub", PART_1, show(hub, "hub") , layout, show_parts); 
 
 visualization_spokes = 
     visualize_info(
-        "Spoke", PART_2, spokes, layout, show_parts); 
+        "Spoke", PART_2, show(spokes, "rim & spokes"), layout, show_parts); 
+
+visualization_rim =         
+    visualize_info(
+        "Gear Retention Rim", PART_3, show(rim, "rim & spokes"), layout_from_mode(layout), show_parts);
 
 visualization_clamp_gear = 
     visualize_info(
-        "Clamp Gear", PART_3, clamp_gear, layout_from_mode(layout), show_parts); 
-
-//visualization_slide = 
-//    visualize_info(
-//        "Screw Slide", PART_4, slide, layout_from_mode(DESIGNING), show_parts); 
+        "Clamp Gear", PART_9, show(clamp_gear, "clamp gear"), layout_from_mode(layout), show_parts); 
 
 visualization_drive_gear = 
     visualize_info(
-        "Drive Gear", PART_5, drive_gear, layout_from_mode(layout), show_parts); 
+        "Drive Gear", PART_5, show(drive_gear, "drive gear"), layout_from_mode(layout), show_parts); 
 
 visualization_hub_shaft_retainer = 
     visualize_info(
-        "Hub Shaft Retainer", PART_6, hub_shaft_retainer, layout_from_mode(layout), show_parts);
+        "Hub Shaft Retainer", PART_6, show(hub_shaft_retainer, "hub retainer"), layout_from_mode(layout), show_parts);
 
 visualization_drive_gear_shaft_retainer = 
     visualize_info(
-        "Drive Gear Shaft Retainer", PART_7, drive_gear_shaft_retainer, layout_from_mode(layout), show_parts);
+        "Drive Gear Shaft Retainer", PART_7, show(drive_gear_shaft_retainer, "drive gear retainer"), layout_from_mode(layout), show_parts);
     
 visualization_drive_shaft = 
     visualize_info(
-        "Clamp Drive Shaft", PART_8, drive_shaft, layout_from_mode(layout), show_parts);
-           
-visualization_rim =         
-    visualize_info(
-        "Gear Retention Rim", PART_9, rim, layout_from_mode(layout), show_parts);
-        
+        "Clamp Drive Shaft", PART_8, show(drive_shaft, "drive shaft"), layout_from_mode(layout), show_parts);
+                  
 visualization_drive_shaft_base = 
     visualize_info(
-        "Drive Shaft Base", PART_10, drive_shaft_base, layout_from_mode(layout), show_parts);     
+        "Drive Shaft Base", PART_10, show(drive_shaft_base, "base"), layout_from_mode(layout), show_parts);     
   
 visualization_drive_shaft_bearing =         
     visualize_info(
-        "Drive Shaft Bearing", PART_11, shaft_bearing, layout_from_mode(layout), show_parts);
+        "Drive Shaft Bearing", PART_11, show(shaft_bearing, "shaft bearing"), layout_from_mode(layout), show_parts);
         
         
 visualization_servo_transmission_gear =         
     visualize_info(
-        "Drive Shaft Bearing", PART_12, transmission_gear, layout_from_mode(layout), show_parts);
+        "Drive Shaft Bearing", PART_12, show(transmission_gear, "transmission gear"), layout_from_mode(layout), show_parts);
         
 /* Gear Calculations */
 
@@ -878,7 +881,6 @@ module shaft_rider(as_clearance=false, clearance = 0.25, wall = 2, h = 2) {
 
 module drive_shaft_base() {
     
-    //h_hub = h + 4;
     module blank() {
         triangle_placement(r=0) {
             hull() {
@@ -889,10 +891,8 @@ module drive_shaft_base() {
                 frame_rider(h=h_base, on_tubing=true);
             shaft_rider(h=h_base);
         } 
-        hull() {
-            rotate([0, 0 , 60]) mounted_servo(as_mounting=true, h=h_base);
-            can(d=18, h=h_base, center=ABOVE);
-        }
+        rotate([0, 0 , 60]) block([9.5, 18, h_base], center=ABOVE+FRONT);
+        rotate([0, 0 , 60]) mounted_servo(as_mounting=true, h=h_base, h_offset=3);
     }   
     module shape() {
         difference() {
@@ -908,12 +908,12 @@ module drive_shaft_base() {
     }
     rotation = 
         mode == DESIGNING ? [0, 0, 0] :
-        mode == PRINTING ? [0, 0, 0] :
+        mode == PRINTING ? [180, 0, 120] :
         mode == MESHING_GEARS ? [180, 0, 60] : 
         assert(false);
     translation = 
         mode == DESIGNING ? [0, 0, 0] :
-        mode == PRINTING ? [dx_base_bp, dy_base_bp, 0] :
+        mode == PRINTING ? [dx_base_bp, dy_base_bp, h_base] :
         mode == MESHING_GEARS ? [0, 0, dz_shaft_base] :     
         assert(false);
 
@@ -934,7 +934,7 @@ module drive_shaft_base() {
 }
 
 module drive_shaft_bearing(print_bearing=true, print_clip=true) {
-    h_bearing_gear = 1.5* servo_transmission_gear_height;
+    h_bearing_gear = 5 + servo_transmission_gear_height;
     h_retention = 3.5;
     base_clearance = 0;
     h = h_retention + h_base + base_clearance;
@@ -996,7 +996,7 @@ module drive_shaft_bearing(print_bearing=true, print_clip=true) {
             translate(translation) visualize(visualization_drive_shaft_bearing)  shape();
         }
         if (print_clip) {
-            translate(printing_clip_translation) clip_retention_clip(as_clearance=false);
+            translate(printing_clip_translation) visualize(visualization_drive_shaft_bearing) clip_retention_clip(as_clearance=false);
         }
     } else {
         translate(translation) {
@@ -1013,20 +1013,29 @@ module mount_servo() {
 }
 
 
-module mounted_servo(as_clearance=false, as_mounting=false, h=2) {
+module mounted_servo(as_clearance=false, as_mounting=false, h=2, h_offset=0) {
     assert(!is_undef(as_clearance));
     
     x_offset = 6;
     if (as_clearance) {
         mount_servo() {
-            rotate([180, 0, az_servo]) scale([1.1, 1.05, 1]) {
-                9g_motor_sprocket_at_origin();
-            }
+            translate([x_offset, 0, 0]) block([24, 12, a_lot]);
         }
     } else if (as_mounting) {
         mount_servo() {
-            translate([x_offset, 0, -z_servo]) block([32, 18, h], center=ABOVE);
+            difference() {
+                union() {
+                    translate([x_offset, 0, -z_servo]) block([34, 18, h], center=ABOVE);
+                    if (h_offset > 0) {
+                        translate([6, 0, -z_servo]) {
+                            center_reflect([1, 0, 0]) translate([12, 0, 0]) block([5, 12, h_offset], center=FRONT+BELOW);
+                        }
+                    }
+                }
+                translate([x_offset, 0, 0])  hull() center_reflect([1, 0, 0]) translate([15.5, 0, 25]) hole_through("M2", $fn=12);
+            }
         }
+        //center_reflect([1, 0, 0]) translate([12, 0, 0]) hole_through("M2", $fn=12);
     } else {
         mount_servo() {
             rotate([180, 0, az_servo]) 9g_motor_sprocket_at_origin();
@@ -1056,7 +1065,7 @@ module servo_transmission_gear() {
             translate([dx_servo_transmission_gear_bp, dy_servo_transmission_gear_bp, servo_transmission_gear_height/2]) shape(); 
         } else {
             mount_servo() {
-                translate([0, 0, -2]) shape(); 
+                translate([0, 0, dz_shaft_base - 3]) shape(); 
             }
         }
     }

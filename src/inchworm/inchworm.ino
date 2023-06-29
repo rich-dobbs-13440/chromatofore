@@ -1,6 +1,7 @@
 #include <TimeLib.h>
 #include <Servo.h>
 #include <string.h>
+#include <ezButton.h>
 
 float nan = sqrt (-1); 
 
@@ -29,8 +30,11 @@ static bool enableClampServo = false;
 static bool enableRotateServo = false;
 static bool enableEngageServo = false;
 
-int unclamp_angle = 50;
-int clamp_angle = 110;
+const int CLAMP_LIMIT_PIN = 12;
+ezButton clampLimitSwitch(CLAMP_LIMIT_PIN);  // create ezButton object that attach to pin 7;
+
+int unclamp_angle = 10;
+int clamp_angle = 170;
 
 const int redLedPin = 14;
 const int blueLedPin = 15;
@@ -124,8 +128,15 @@ void writePeriodicMessage() {
   int currentMinute = minute();
   int currentSecond = second();
 
+  int state = clampLimitSwitch.getState();
+  String message;
+  if(state == HIGH)
+    message = "The clamp limit switch: UNTOUCHED";
+  else
+    message = "The clamp limit switch: TOUCHED";  
+
   // Display the periodic message with the current time
-  debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, "Periodic message!");
+  debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, message);
   Serial.flush();
 }
 
@@ -288,6 +299,7 @@ void setupServos() {
     filamentMoveServo.attach(FILAMENT_MOVE_PIN);
   }
   if (enableClampServo) {
+    clampLimitSwitch.setDebounceTime(50); // set debounce time to 50 milliseconds
     filamentClampServo.attach(FILAMENT_CLAMP_PIN);
   }
   if (enableRotateServo) {
@@ -345,6 +357,12 @@ void setup() {
 }
 
 void loop() {
+  clampLimitSwitch.loop();
+  if(clampLimitSwitch.isPressed())
+    debugLog("The limit switch: UNTOUCHED -> TOUCHED");
+
+  if(clampLimitSwitch.isReleased())
+    debugLog("The limit switch: TOUCHED -> UNTOUCHED");  
   ledHeartBeat();
   serialHeartBeat();
   handleSerial();

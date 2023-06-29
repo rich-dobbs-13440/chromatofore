@@ -6,6 +6,7 @@ include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
 use <PolyGear/PolyGear.scad>
 use <ScadApotheka/9g_servo.scad>
+use <ScadApotheka/roller_limit_switch.scad>
 
 
 a_lot = 200;
@@ -157,7 +158,7 @@ n_teeth_shaft = 9;
 servo_transmission_gear_height = 5;
 gear_module_servo_transmission = 1.4;
 az_servo = 180; // [0:360]
-z_servo = -10; // [-20:20]
+z_servo = -9.8; // [-20:0.1:20]
 range_of_rotation_servo = 135;
 
 /* [Build Plate Layout] */
@@ -352,6 +353,7 @@ n_teeth_servo_transmission = ceil(n_teeth_shaft * required_gear_ratio_servo_tran
 echo("n_teeth_servo_transmission", n_teeth_servo_transmission);
 md_servo_transmission = n_teeth_servo_transmission * gear_module_servo_transmission;
 echo("md_servo_transmission", md_servo_transmission);
+id_servo_transmission_gear = (n_teeth_servo_transmission - 2) * gear_module_servo_transmission;
 
 /*  Rendering order */
 
@@ -880,6 +882,20 @@ module shaft_rider(as_clearance=false, clearance = 0.25, wall = 2, h = 2) {
 
 
 module drive_shaft_base() {
+      
+    module mounted_roller_limit_switch(as_mount=false) {
+        translation_limit_switch = [24, 12, 5];  
+        if (as_mount) {
+            center_reflect([0, 1, 0]) translate([24, 6.6, 0]) {
+                difference() {
+                    block([20, 2.5, 12], center=BELOW+RIGHT); 
+                    center_reflect([1, 0, 0]) translate([5., 0, -9])  rotate([90, 0, 0]) hole_through("M2", $fn=12);
+                }
+            }
+        } else {
+            translate(translation_limit_switch)  roller_limit_switch();
+        }
+    }
     
     module blank() {
         triangle_placement(r=0) {
@@ -892,7 +908,8 @@ module drive_shaft_base() {
             shaft_rider(h=h_base);
         } 
         rotate([0, 0 , 60]) block([9.5, 18, h_base], center=ABOVE+FRONT);
-        rotate([0, 0 , 60]) mounted_servo(as_mounting=true, h=h_base, h_offset=3);
+        rotate([0, 0 , 60]) mounted_servo(as_mounting=true, h=h_base, h_offset=2.5);
+        rotate([0, 0 , 60]) mounted_roller_limit_switch(as_mount=true);
     }   
     module shape() {
         difference() {
@@ -921,6 +938,7 @@ module drive_shaft_base() {
         visualize_vitamins(visualization_drive_shaft_base) { 
             translate(translation) {
                 mounted_servo(as_clearance=false) ; 
+                mounted_roller_limit_switch();
             }   
         }
     }  
@@ -1015,7 +1033,6 @@ module mount_servo() {
 
 module mounted_servo(as_clearance=false, as_mounting=false, h=2, h_offset=0) {
     assert(!is_undef(as_clearance));
-    
     x_offset = 6;
     if (as_clearance) {
         mount_servo() {
@@ -1045,18 +1062,36 @@ module mounted_servo(as_clearance=false, as_mounting=false, h=2, h_offset=0) {
 
 
 module servo_transmission_gear() {
+    od_horn_hub = 7;
+    depth_recess =  servo_transmission_gear_height - 3;
+    module screw_holes() {
+        center_reflect([1, 0, 0]) translate([14.32/2, 0, 25]) hole_through("M2", $fn=12);
+        center_reflect([0, 1, 0]) translate([0, 14.32/2, 25]) hole_through("M2", $fn=12);        
+    }
+    module horn_recess() {
+        center_reflect([1, 0, 0]) translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
+        rotate([0, 0, 90]) center_reflect([1, 0, 0]) translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
+    }
+    module limit_switch_nub() {
+        rotate([0, 0, 45]) translate([id_servo_transmission_gear/2, 0, servo_transmission_gear_height/2]) {
+            sphere(r=3.5);
+            can(d=7, h=servo_transmission_gear_height, center=BELOW);
+        }
+    }
     module shape() {     
         general_straight_spur_gear(
             n_teeth_servo_transmission , 
             gear_module_servo_transmission,
             servo_transmission_gear_height, 
-            body_child = -1, 
+            body_child = 1, 
             cutout_child = 0)  {
                 union() {
-                    //translate([5, 0, 0]) plane_clearance(FRONT);
                     can(d=7, h=a_lot);
-                    center_reflect([1, 0, 0]) translate([14.32/2, 0, 25]) hole_through("M2", $fn=12);
-                    center_reflect([0, 1, 0]) translate([0, 14.32/2, 25]) hole_through("M2", $fn=12);
+                    screw_holes();
+                    horn_recess();   
+                }
+                union() {
+                    limit_switch_nub();
                 }
             }  
     }
@@ -1064,8 +1099,11 @@ module servo_transmission_gear() {
         if (mode == PRINTING) {
             translate([dx_servo_transmission_gear_bp, dy_servo_transmission_gear_bp, servo_transmission_gear_height/2]) shape(); 
         } else {
+            
             mount_servo() {
-                translate([0, 0, dz_shaft_base - 3]) shape(); 
+                translate([0, 0, dz_shaft_base - 3]) rotate([0, 0, 45]) { 
+                    shape(); 
+                }
             }
         }
     }

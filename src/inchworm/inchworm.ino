@@ -1,9 +1,20 @@
+/*
+
+GCODE implementation:
+
+G28 C0 : Move clamp servo to home position signaled by limit switch.  
+
+G1 E10 F10 : Extrude 10 mm of filament, feed rate currently ignore.
+
+*/
+
+
 #include <TimeLib.h>
 #include <Servo.h>
 #include <string.h>
 #include <ezButton.h>
 
-float nan = sqrt (-1); 
+float nan = sqrt(-1);
 
 // Servo pins
 const int FILAMENT_MOVE_PIN = 8;
@@ -26,7 +37,7 @@ static int extruderEngageAngle = 0;
 
 
 static bool enableMoveServo = false;
-static bool enableClampServo = false;
+static bool enableClampServo = true;
 static bool enableRotateServo = false;
 static bool enableEngageServo = false;
 
@@ -130,10 +141,10 @@ void writePeriodicMessage() {
 
   int state = clampLimitSwitch.getState();
   String message;
-  if(state == HIGH)
+  if (state == HIGH)
     message = "The clamp limit switch: UNTOUCHED";
   else
-    message = "The clamp limit switch: TOUCHED";  
+    message = "The clamp limit switch: TOUCHED";
 
   // Display the periodic message with the current time
   debugLog("Current time: ", currentHour, ":", currentMinute, ":", currentSecond, message);
@@ -172,24 +183,46 @@ void serialHeartBeat() {
 
 void extrude(const float mm_of_filament, const float feedrate_mm_per_minute) {
   if (mm_of_filament > 0) {
-    updateFilamentClampAngle(unclamp_angle);  
-    delay(2000);                   // Time interval to allow  clamp to open
+    updateFilamentClampAngle(unclamp_angle);
+    delay(2000);  // Time interval to allow  clamp to open
     updateFilamentMoveAngle(0);
-    delay(2000);                    // Time interval to allow  traveller to get into position
+    delay(2000);  // Time interval to allow  traveller to get into position
     updateFilamentClampAngle(clamp_angle);
     // Ignore feedrate for now!
     updateFilamentMoveAngle(mm_of_filament);
     delay(4000);
   } else {
     updateFilamentClampAngle(unclamp_angle);  // Unclamp
-    delay(2000);                   // Time interval to allow  clamp to open
+    delay(2000);                              // Time interval to allow  clamp to open
     updateFilamentMoveAngle(135);
-    delay(2000);                    // Time interval to allow  traveller to get into position
+    delay(2000);                            // Time interval to allow  traveller to get into position
     updateFilamentClampAngle(clamp_angle);  // Clamp
     // Ignore feedrate for now!
     updateFilamentMoveAngle(135 + mm_of_filament);
     delay(4000);
   }
+}
+
+
+void home_clamp_servo() {
+  float increment = 1;
+  float clamp_angle = 90;
+  delay(1000);
+  updateFilamentClampAngle(clamp_angle);
+  clampLimitSwitch.loop();
+  while(clampLimitSwitch.getState() == LOW) {
+    delay(1000);
+    clampLimitSwitch.loop();
+  }
+  for (clamp_angle = 90; clamp_angle < 180; clamp_angle += increment) {
+    updateFilamentClampAngle(clamp_angle);
+    clampLimitSwitch.loop();
+    int state = clampLimitSwitch.getState();
+    if (state == LOW) {
+      break;
+    }
+  }
+  debugLog("Fast find clamp limit:", clamp_angle);
 }
 
 
@@ -222,76 +255,60 @@ void handleSerial() {
 
 
 
-
 void processInputBuffer() {
   String gcode_line(inputBuffer);
   acknowledgeCommand(gcode_line);
   debugLog("Received ", gcode_line);
-  char *token;
+  char* token;
   char delimiter = " ";
-  token = strtok(inputBuffer, &delimiter); 
+  token = strtok(inputBuffer, &delimiter);
   String word;
   float g = nan;
   float e = nan;
   float f = nan;
+  float c = nan;
   debugLog("e", e);
   while (token != NULL) {
-    word = token; 
+    word = token;
     debugLog("word", word);
-    if (word.startsWith("G")) {
-      g = word.substring(1).toFloat(); 
-    } else if(word.startsWith("E")) {
-      e = word.substring(1).toFloat(); 
-    } else if(word.startsWith("F")) {
-      f = word.substring(1).toFloat(); 
+    if (word.startsWith("C")) {
+      c = word.substring(1).toFloat();
+    } else if (word.startsWith("E")) {
+      e = word.substring(1).toFloat();
+    } else if (word.startsWith("E")) {
+      e = word.substring(1).toFloat();
+    } else if (word.startsWith("F")) {
+      f = word.substring(1).toFloat();
+    } else if (word.startsWith("G")) {
+      g = word.substring(1).toFloat();
     }
     token = strtok(NULL, &delimiter);
   }
-  
+
   switch (int(g)) {
-  case 1:
-    if (e!=0) {
-      debugLog("Handle extrusion command.");
-      float mm_of_filament = e;
-      float feedrate_mm_per_minute = f;
-      extrude(mm_of_filament, feedrate_mm_per_minute);
-    }
-    break;
-  case 10:
-    // Code to execute when g is 10.0
-    debugLog("Value of g is 10");
-    break;
-  default:
-    // Code to execute when g doesn't match any case
-    debugLog("Value of g doesn't match any case");
-    break;
-}
-
-  // if (parser.HasWord('G')) {
-  //   float g = 0.0;
-  //   g = parser.GetWordValue('G');
-  //   if (g == 1.0) {
-  //     if (parser.HasWord('E')) {
-  //       // Example G1 E10 F120 ;
-  //       float mm_of_filament = 0;
-  //       {
-  //         mm_of_filament = parser.GetWordValue('E');
-  //       }
-  //       float feedrate_mm_per_minute = 0;
-  //       if (parser.HasWord('F')) {
-  //         feedrate_mm_per_minute = parser.GetWordValue('F');
-  //       }
-  //       acknowledgeCommand(parser.line);
-  //       debugLog("Handle extrusion command.");
-  //       extrude(mm_of_filament, feedrate_mm_per_minute);
-
-  //       debugLog("Done with Handle extrusion command.");
-  //     }
-
-  //   } else {
-  //     debugLog("Value for g", g);
-  //   }
-  // }
+    case 1:
+      if (e != 0) {
+        debugLog("Handle extrusion command.");
+        float mm_of_filament = e;
+        float feedrate_mm_per_minute = f;
+        extrude(mm_of_filament, feedrate_mm_per_minute);
+      }
+      break;
+    case 10:
+      // Code to execute when g is 10.0
+      debugLog("Value of g is 10");
+      break;
+    case 28:
+      // Home axis
+      if (c != 0) {
+        home_clamp_servo();
+      }
+      break;
+    default:
+      // Code to execute when g doesn't match any case
+      debugLog("Value of g doesn't match any case");
+      break;
+  }
 }
 
 void setupServos() {
@@ -299,7 +316,7 @@ void setupServos() {
     filamentMoveServo.attach(FILAMENT_MOVE_PIN);
   }
   if (enableClampServo) {
-    clampLimitSwitch.setDebounceTime(50); // set debounce time to 50 milliseconds
+    clampLimitSwitch.setDebounceTime(50);  // set debounce time to 50 milliseconds
     filamentClampServo.attach(FILAMENT_CLAMP_PIN);
   }
   if (enableRotateServo) {
@@ -322,12 +339,11 @@ void setupSerial() {
   Serial.begin(baudRate);
 
   debugLog("--------------");
-  debugLog("Sketch Version: 1.0");
+  debugLog("Sketch Version: 1.1");
   debugLog("Upload Date: ", __DATE__);
   debugLog("Upload Time: ", __TIME__);
   debugLog("Baud Rate: ", baudRate);
   debugLog("Millis: ", millis());
-
 }
 
 void setupLedHeartBeat(const int pin) {
@@ -358,11 +374,11 @@ void setup() {
 
 void loop() {
   clampLimitSwitch.loop();
-  if(clampLimitSwitch.isPressed())
+  if (clampLimitSwitch.isPressed())
     debugLog("The limit switch: UNTOUCHED -> TOUCHED");
 
-  if(clampLimitSwitch.isReleased())
-    debugLog("The limit switch: TOUCHED -> UNTOUCHED");  
+  if (clampLimitSwitch.isReleased())
+    debugLog("The limit switch: TOUCHED -> UNTOUCHED");
   ledHeartBeat();
   serialHeartBeat();
   handleSerial();

@@ -6,6 +6,7 @@ include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
 use <PolyGear/PolyGear.scad>
 use <ScadApotheka/9g_servo.scad>
+use <ScadApotheka/hs_311_standard_servo.scad>
 use <ScadApotheka/roller_limit_switch.scad>
 
 
@@ -41,7 +42,7 @@ function layout_from_mode(mode) =
     "unknown";
     
 print_one = false;
-one_to_print = "base"; // ["hub", "rim & spokes", "clamp gear", "drive gear", "hub retainer", "drive gear retainer", "drive shaft", "shaft bearing", "base", "transmission gear"]
+one_to_print = "base"; // ["hub", "rim & spokes", "clamp gear", "drive gear", "hub retainer", "drive gear retainer", "drive shaft", "shaft bearing", "base", "transmission gear", "rack track"]
     
 show_parts = true;
 show_vitamins = true;
@@ -157,9 +158,11 @@ n_teeth_shaft = 9;
 /* [Servo Transmission  Design] */
 servo_transmission_gear_height = 5;
 gear_module_servo_transmission = 1.4;
+servo_type = "tiankongrc_9g"; // ["tiankongrc_9g", "RadioShack2730766"]
 az_servo = 180; // [0:360]
+az_standard_servo = -15;//[-20:20]
 z_servo = -9.8; // [-20:0.1:20]
-range_of_rotation_servo = 135;
+range_of_rotation_servo = 160;
 
 /* [Build Plate Layout] */
 
@@ -607,7 +610,6 @@ module drive_gear(show_vitamins=true, include_bottom_gear=false) {
         drive_shaft(as_clearance=true, clearance_scaling=[1.06, 1.06, 1] );
     }
     module shape() { 
-
         general_bevel_gear(
                 n_teeth_drive_gear, 
                 module_drive_gear, 
@@ -1030,6 +1032,14 @@ module mount_servo() {
     translate([r_servo, 0, z_servo]) children();
 }
 
+module servo_at_origin() {
+    if (servo_type == "tiankongrc_9g") {
+        rotate([180, 0, az_servo]) 9g_motor_sprocket_at_origin();
+    } else if (servo_type == "RadioShack2730766") {
+        translate([0, 0, 42]) rotate([-90, 0, az_standard_servo]) hs_3ll_hitec_standard_servo();
+    }
+}
+
 
 module mounted_servo(as_clearance=false, as_mounting=false, h=2, h_offset=0) {
     assert(!is_undef(as_clearance));
@@ -1055,27 +1065,62 @@ module mounted_servo(as_clearance=false, as_mounting=false, h=2, h_offset=0) {
         //center_reflect([1, 0, 0]) translate([12, 0, 0]) hole_through("M2", $fn=12);
     } else {
         mount_servo() {
-            rotate([180, 0, az_servo]) 9g_motor_sprocket_at_origin();
+             servo_at_origin();
         }
     }
 }
 
 
 module servo_transmission_gear() {
-    od_horn_hub = 7;
+    
     depth_recess =  servo_transmission_gear_height - 3;
     module screw_holes() {
         center_reflect([1, 0, 0]) translate([14.32/2, 0, 25]) hole_through("M2", $fn=12);
         center_reflect([0, 1, 0]) translate([0, 14.32/2, 25]) hole_through("M2", $fn=12);        
     }
+    module tiankongrc_9g_horn_recess() {
+        od_horn_hub = 7;
+        center_reflect([1, 0, 0]) 
+            translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) 
+                block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
+        rotate([0, 0, 90]) 
+            center_reflect([1, 0, 0]) 
+                translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) 
+                block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
+    }
+    
+    module radio_shack_2730766_horn_recess() {
+        od_horn_hub = 11;
+        base = 14;
+        center_reflect([1, 0, 0]) 
+            translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) 
+                block([id_servo_transmission_gear/2-1, od_horn_hub, 12], center=ABOVE+FRONT);
+        rotate([0, 0, 90]) 
+                center_reflect([1, 0, 0]) 
+                    translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) 
+                        block([id_servo_transmission_gear/2-1, od_horn_hub, 12], center=ABOVE+FRONT);        
+    }
+    
     module horn_recess() {
-        center_reflect([1, 0, 0]) translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
-        rotate([0, 0, 90]) center_reflect([1, 0, 0]) translate([0, 0, servo_transmission_gear_height/2 - depth_recess]) block([id_servo_transmission_gear/2-1, od_horn_hub, 10], center=ABOVE+FRONT);
+        if (servo_type == "tiankongrc_9g") {   
+          tiankongrc_9g_horn_recess();
+        } else if (servo_type == "RadioShack2730766") {
+            radio_shack_2730766_horn_recess();
+        } else {
+            assert(false);
+        } 
+             
     }
     module limit_switch_nub() {
-        rotate([0, 0, 45]) translate([id_servo_transmission_gear/2, 0, servo_transmission_gear_height/2]) {
-            sphere(r=3.5);
-            can(d=7, h=servo_transmission_gear_height, center=BELOW);
+        d_nub = 7;
+        r_limit_switch = 20;
+        rotate([0, 0, 45]) {
+            translate([r_limit_switch, 0, servo_transmission_gear_height/2]) sphere(d=d_nub);
+            hull() {
+                translate([0, 0, servo_transmission_gear_height/2]) can(d=d_nub, h=servo_transmission_gear_height, center=BELOW);
+                translate([r_limit_switch, 0, servo_transmission_gear_height/2]) 
+                    can(d=d_nub, h=servo_transmission_gear_height, center=BELOW);
+            }
         }
     }
     module shape() {     
@@ -1107,6 +1152,25 @@ module servo_transmission_gear() {
             }
         }
     }
+}
+
+
+rack_track() ;
+
+module rack_track() {
+    t = 2;
+    l = 20; 
+    w = 6;
+    b = 4;
+    h = 2;
+    base = [l, w + 2* t, b];
+    wall = [l, t, b +  h];
+    module shape() {
+        block(base, center=BELOW);
+        center_reflect([0, 1, 0]) translate([0, w/2, 0]) block(wall, center=ABOVE+RIGHT);
+    }
+    translate([0, 0, b]) shape();
+    
 }
 
 /*   General Routines */ 

@@ -8,7 +8,7 @@ use <PolyGear/PolyGear.scad>
 use <ScadApotheka/9g_servo.scad>
 use <ScadApotheka/hs_311_standard_servo.scad>
 use <ScadApotheka/roller_limit_switch.scad>
-
+  use <ScadApotheka/linear_actuator.scad>
 
 a_lot = 200;
 d_filament = 1.75 + 0.;
@@ -42,7 +42,7 @@ function layout_from_mode(mode) =
     "unknown";
     
 print_one = false;
-one_to_print = "base"; // ["hub", "rim & spokes", "clamp gear", "drive gear", "hub retainer", "drive gear retainer", "drive shaft", "shaft bearing", "base", "transmission gear", "rack track"]
+one_to_print = "base"; // ["hub", "rim & spokes", "clamp gear", "drive gear", "hub retainer", "drive gear retainer", "drive shaft", "shaft bearing", "base", "transmission gear", "clamp transmission", "simple shaft bearing"]
     
 show_parts = true;
 show_vitamins = true;
@@ -65,6 +65,7 @@ drive_shaft = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 shaft_bearing = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 drive_shaft_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 transmission_gear = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+clamp_transmission  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 include_drive_gear_spacer = true;
 include_drive_shaft_side = true;
@@ -150,8 +151,8 @@ dz_shaft_base = 40;  // [10:70]
 h_base = 6;
 
 /* [Drive Shaft Design] */
-gear_height_shaft = 70;
-gear_module_shaft = 0.8;
+gear_height_shaft = 80;
+gear_module_shaft = 1;
 n_teeth_shaft = 9;
 
 
@@ -195,6 +196,9 @@ dy_drive_gear_shaft_retainer_bp  = -32;  // [-100: 100]
 
 dx_drive_shaft_bearing_bp   = 0;  // [-100: 100]
 dy_drive_shaft_bearing_bp   = 50;  // [-100: 100]
+
+dx_clamp_transmission_bp = 0;
+dy_clamp_transmission_bp = 70;
 
 module end_of_customization() {}
 
@@ -253,6 +257,11 @@ visualization_drive_shaft_bearing =
 visualization_servo_transmission_gear =         
     visualize_info(
         "Drive Shaft Bearing", PART_12, show(transmission_gear, "transmission gear"), layout_from_mode(layout), show_parts);
+        
+        
+visualization_clamp_transmission =         
+    visualize_info(
+        "Clamp Transmission", PART_13, show(clamp_transmission, "clamp transmission"), layout_from_mode(layout), show_parts);        
         
 /* Gear Calculations */
 
@@ -379,7 +388,7 @@ rim();
 drive_shaft_bearing();
 drive_shaft_base();
 servo_transmission_gear();
-
+standard_servo_clamp_transmission();
 
 
 
@@ -645,14 +654,15 @@ module drive_gear(show_vitamins=true, include_bottom_gear=false) {
 
 
 module drive_gear_shaft_retainer() {
+    h = 4;
     module retention_screws() {
-        center_reflect([1, 0, 0]) translate([2.5, -25, 2]) rotate([90, 0, 0]) hole_through("M2", cld = 0.4, $fn=12);
+        center_reflect([1, 0, 0]) translate([3, -25, h/2]) rotate([90, 0, 0]) hole_through("M2", cld = 0.4, $fn=12);
     }
      translation = mode == PRINTING ? [dx_drive_gear_shaft_retainer_bp, dy_drive_gear_shaft_retainer_bp, 0] : [0, 0, dz_top_of_drive_gear]; 
     visualize(visualization_drive_gear_shaft_retainer) {
         translate(translation) {
             render(convexity=10) difference() {
-                can(d=od_driver_gear_retainer, h=4, center=ABOVE);
+                can(d=od_driver_gear_retainer, h=h, center=ABOVE);
                 drive_shaft(as_clearance=true, clearance_scaling=[1.06, 1.06, 1]);
                 retention_screws();
             }
@@ -757,6 +767,7 @@ module clamp_gear(show_vitamins = true, include_outer_hub = false, screw_length=
 }
 
 
+
 module hub_shaft_retainer(
         show_vitamins = true,
         as_clearance = false, 
@@ -813,7 +824,7 @@ module drive_shaft(show_vitamins = true, as_clearance=false, clearance_scaling=[
 
     module base() {
         can(d = od_shaft_gear, h = h_base, center=ABOVE);
-        translate([0, 0, 0]) can(d = od_shaft_gear + 4,  h = h_base, center=BELOW);
+        translate([0, 0, 0]) can(d = 2*r_hub-0.5,  h = h_base, center=BELOW);
     }
     module blank() {
         shaft();
@@ -953,6 +964,69 @@ module drive_shaft_base() {
     }
 }
 
+
+
+module standard_servo_clamp_transmission() {
+    module teardrop(d, l, c=CENTER, add_base=false) {
+            translate([66, 0, 16]) hull() {
+                rod(d=d, l=l, center=SIDEWISE+c);
+                if (add_base) {
+                    #translate([0, 0, -d/2]) block([d, l, 0.1], center=c);
+                }
+                translate([0, 0, 0.75*d]) rod(d=0.5, l=l, center=SIDEWISE+c);
+            }        
+    }
+    module bearing_holder(as_clearance) {
+        if (as_clearance) {
+            teardrop(md_shaft_bearing+6.5, l=a_lot);
+        } else {
+            render(convexity=10) difference() {
+                teardrop(md_shaft_bearing + 9.5, l=3, c=RIGHT, add_base=true);
+                teardrop(md_shaft_bearing + 2, l=a_lot, c=RIGHT);
+            }
+        }
+    }
+    module shape() {
+        render(convexity=10) difference() {
+            linear_actuator_standard_servo_bracket(base_mounting_holes=false);
+            bearing_holder(as_clearance=true);
+        }
+        translate([0, 0, 0])bearing_holder(as_clearance=false);
+        translate([0, 2.5, 0])bearing_holder(as_clearance=false);
+        translate([0, 5, 0])bearing_holder(as_clearance=false);
+        translate([0, 19.75, 0]) bearing_holder(as_clearance=false);
+    }
+    translation = 
+        mode == PRINTING ? [dx_clamp_transmission_bp, dy_clamp_transmission_bp, 0]:
+        [0, 0, 0];
+    rotation = [0, 0, 0];
+    translate(translation) {
+        rotate(rotation) {  
+            visualize(visualization_clamp_transmission) {
+                shape();
+            }
+        }
+    }
+}
+
+//simple_drive_shaft_bearing(h_holder=3);
+//simple_drive_shaft_bearing(h_holder=8);
+
+module simple_drive_shaft_bearing(h_holder=3) {
+    h_base = 4;
+    h_snap = 1;
+    h_total = h_holder + h_base + h_snap;
+    hole_offset = 1.5;
+    render(convexity = 10) difference() {
+        union() {
+            can(d=md_shaft_bearing + 2.5, h = h_total, center = ABOVE); 
+            translate([hole_offset, 0, 0]) block([md_shaft_bearing + 8.0, md_shaft_bearing + 6.0, h_base], center = ABOVE);
+            translate([0, 0, h_base+h_holder]) can(d = md_shaft_bearing + 2.4, taper = md_shaft_bearing+3 , h=h_snap, center=ABOVE);
+        }
+        translate([hole_offset, 0, 0]) can(d=od_shaft_gear, h=a_lot);
+    } 
+}
+
 module drive_shaft_bearing(print_bearing=true, print_clip=true) {
     h_bearing_gear = 5 + servo_transmission_gear_height;
     h_retention = 3.5;
@@ -1021,7 +1095,9 @@ module drive_shaft_bearing(print_bearing=true, print_clip=true) {
     } else {
         translate(translation) {
             visualize(visualization_drive_shaft_bearing) shape();
-            clip_retention_clip(as_clearance=false);
+            if (shaft_bearing) {
+                clip_retention_clip(as_clearance=false);
+            }
         }
     }
 }
@@ -1155,23 +1231,23 @@ module servo_transmission_gear() {
 }
 
 
-rack_track() ;
+//rack_track() ;
 
-module rack_track() {
-    t = 2;
-    l = 20; 
-    w = 6;
-    b = 4;
-    h = 2;
-    base = [l, w + 2* t, b];
-    wall = [l, t, b +  h];
-    module shape() {
-        block(base, center=BELOW);
-        center_reflect([0, 1, 0]) translate([0, w/2, 0]) block(wall, center=ABOVE+RIGHT);
-    }
-    translate([0, 0, b]) shape();
-    
-}
+//module rack_track() {
+//    t = 2;
+//    l = 20; 
+//    w = 6;
+//    b = 4;
+//    h = 2;
+//    base = [l, w + 2* t, b];
+//    wall = [l, t, b +  h];
+//    module shape() {
+//        block(base, center=BELOW);
+//        center_reflect([0, 1, 0]) translate([0, w/2, 0]) block(wall, center=ABOVE+RIGHT);
+//    }
+//    translate([0, 0, b]) shape();
+//    
+//}
 
 /*   General Routines */ 
 

@@ -48,7 +48,7 @@ z_base_joiner = 3.8;
 /* [Cam Design] */
 
 od_cam = 13;
-dz_cam = -0.5;
+dz_cam = -0.7;
 ay_cam = 2;
 az_cam = 30;
 servo_angle = 0; // [0:180]
@@ -62,10 +62,10 @@ x_clamp_servo_base_bp = 0;
 y_clamp_servo_base_bp = 0;
 
 x_horn_cam_bp = 0;
-y_horn_cam_bp = 20;
+y_horn_cam_bp = 32;
 
 x_filament_guide_bp = 0; 
-y_filament_guide_bp = 40;
+y_filament_guide_bp = 16;
 
 module end_of_customization() {}
 
@@ -167,7 +167,7 @@ module filament_guide() {
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [0, -0, 0] :
-        [0, 0, servo_angle];
+        [0, 0, 0];
     translation = 
         mode == PRINTING ? [x_filament_guide_bp, y_filament_guide_bp, z_printing] :
         [0, 0, 0];
@@ -189,7 +189,7 @@ module horn_cam() {
             translate([0, 0, dz_cam]) rotate([0, ay_cam, 0]) plane_clearance(BELOW);
         }
     }
-    z_printing = 1.5;
+    z_printing = -dz_cam;
     rotation = 
         mode == PRINTING ? [0, -ay_cam, 0] :
         [0, 0, servo_angle];

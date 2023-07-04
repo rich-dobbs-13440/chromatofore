@@ -6,6 +6,8 @@ G28 C0 : Move clamp servo to home position signaled by limit switch.
 
 G1 E10 F10 : Extrude 10 mm of filament, feed rate currently ignore.
 
+G1 C10  : Move clamp servo 10 an angle of 10 degrees
+
 */
 
 
@@ -13,8 +15,10 @@ G1 E10 F10 : Extrude 10 mm of filament, feed rate currently ignore.
 #include <Servo.h>
 #include <string.h>
 #include <ezButton.h>
+#include <math.h>
 
 float nan = sqrt(-1);
+
 
 // Servo pins
 const int FILAMENT_MOVE_PIN = 8;
@@ -260,17 +264,18 @@ void processInputBuffer() {
   acknowledgeCommand(gcode_line);
   debugLog("Received ", gcode_line);
   char* token;
-  char delimiter = " ";
+  char delimiter = ' ';
   token = strtok(inputBuffer, &delimiter);
-  String word;
-  float g = nan;
+  
+  float c = nan;
   float e = nan;
   float f = nan;
-  float c = nan;
-  debugLog("e", e);
+  float g = nan;
+
+  //debugLog("e", e);
   while (token != NULL) {
-    word = token;
-    debugLog("word", word);
+    String word = token;
+    //debugLog("word", word);
     if (word.startsWith("C")) {
       c = word.substring(1).toFloat();
     } else if (word.startsWith("E")) {
@@ -284,15 +289,26 @@ void processInputBuffer() {
     }
     token = strtok(NULL, &delimiter);
   }
+  // debugLog("c:", c);
+  // debugLog("e:", e);
+  // debugLog("f:", f);
+  // debugLog("g:", g);
 
   switch (int(g)) {
     case 1:
-      if (e != 0) {
+      debugLog("c:", c);
+      if (!isnan(e)) {
         debugLog("Handle extrusion command.");
         float mm_of_filament = e;
         float feedrate_mm_per_minute = f;
         extrude(mm_of_filament, feedrate_mm_per_minute);
       }
+      if (!isnan(c)) {
+        debugLog("Handle clamp command. Angle:", c);
+        float angle = c;
+        updateFilamentClampAngle(angle);
+      }
+
       break;
     case 10:
       // Code to execute when g is 10.0

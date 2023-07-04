@@ -35,9 +35,9 @@ print_one = false;
 one_to_print = "clamp_servo_base"; // [clamp_servo_base, horn_cam, filament_guide]
 
 /* [Show] */
-clamp_servo_base = true;
-horn_cam = true;
-filament_guide = true;
+clamp_servo_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [BaseDesign] */
 
@@ -47,15 +47,16 @@ z_base_joiner = 3.8;
 
 /* [Cam Design] */
 
-od_cam = 13;
-dz_cam = -0.7;
-ay_cam = 2;
+od_cam = 12;
+dz_cam = -1.2;
+ay_cam = 4;
 az_cam = 30;
 servo_angle = 0; // [0:180]
 
 /* [Guide Design] */
-filament_translation = [-5, 0, 2];
+filament_translation = [-4.5, 0, 1.7];
 z_guide = 2;
+d_guide = 3.4;
 
 /* [Build Plate Layout] */
 x_clamp_servo_base_bp = 0;
@@ -149,9 +150,10 @@ module one_arm_horn(as_clearance=false) {
 }
 
 module filament_guide() {
+    cam_clearance = 0.5;
     module blank() {
         translate([-5, 0, 0]) block([34, 14, z_guide], center=ABOVE);
-        translate(filament_translation) rod(d=4, l=14, center=SIDEWISE); 
+        translate(filament_translation) rod(d=d_guide, l=14, center=SIDEWISE); 
     }
     module shape() {
         render(convexity=10) difference() {
@@ -160,8 +162,9 @@ module filament_guide() {
                 filament(as_clearance=true);
                 translate(filament_translation + [0, 0, 1]) rod(d=0.5, l=20, center=SIDEWISE); 
             }
-            can(d=12, h=a_lot);
+            can(d=od_cam + 2*cam_clearance, h=a_lot);
             servo_screws(as_clearance = true);
+            translate([0, 0, z_guide]) block([a_lot, 8, a_lot], center=ABOVE); 
         }        
     }
     z_printing = 0;

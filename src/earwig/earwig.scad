@@ -36,7 +36,7 @@ print_fixed_clamp = true;
 print_pusher = true;
 
 print_one_part = false;
-part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails]
+part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, horn_linkage]
 
 
 /* [Show] */
@@ -44,6 +44,7 @@ servo_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -106,6 +107,9 @@ x_rail_bp = 30;
 y_rail_bp = 0; 
 dx_rail_bp = 15;
 
+x_horn_linkage_bp = 0;
+y_horn_linkage_bp = 0;
+
 module end_of_customization() {}
 
 
@@ -138,10 +142,13 @@ visualization_filament_guide =
     visualize_info(
         "Filament Guide", PART_4, show(filament_guide, "filament_guide") , layout, show_parts); 
      
-  
-  visualization_rails =         
+visualization_rails =         
     visualize_info(
         "Rails", PART_5, show(rails, "rails") , layout, show_parts);   
+        
+visualization_horn_linkage  =        
+    visualize_info(
+        "Horn Linkage", PART_6, show(horn_linkage, "horn_linkage") , layout, show_parts);   
         
  if (mode ==  ASSEMBLE_SUBCOMPONENTS) {     
     filament();
@@ -167,7 +174,8 @@ visualization_filament_guide =
      if (print_pusher) {
          filament_guide(item=2);
          servo_base(item=2);
-         // TODO: Linkages
+         horn_linkage();
+         
      }
  }
 
@@ -193,9 +201,10 @@ module fixed_clamp() {
 module pusher_assembly() {
     y_pusher_assmebly = y_guide/2;
     translate([0, y_pusher_assmebly, 0]) {
-        color(PART_11) servo_base();
+        servo_base();
         filament_guide();
         one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
+        horn_linkage(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher); 
     }
 }
 
@@ -248,6 +257,34 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
         }
     }
 }
+
+
+module horn_linkage(servo_angle=0, servo_offset_angle=0) {
+    module shape() {
+        render(convexity=10) difference() {
+            hull() {
+                can(d=od_cam, h=4, center=ABOVE);
+                translate([12, 0, 0]) can(d=7, h=4, center=ABOVE);
+            }
+            translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
+            can(d=1.8, h=a_lot);
+            translate([12, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
+             translate([12, 0, 3]) nutcatch_parallel("M2", clh=4, $fn=12); 
+        }
+//        render(convexity=10) difference() {
+//            can(d=od_cam, hollow=7.5, h=3, center=BELOW);
+//            translate([0, 0, dz_cam]) rotate([0, 0, 0]) plane_clearance(BELOW);
+//        }
+    }
+    z_printing = 4;
+    rotation = 
+        mode == PRINTING ? [180, 0, 0] :
+        [0, 0, servo_angle + servo_offset_angle];
+    translation = 
+        mode == PRINTING ? [x_horn_linkage_bp, y_horn_linkage_bp, z_printing] :
+        [0, 0, 3.5];
+    translate(translation) rotate(rotation) visualize(visualization_horn_linkage) shape();  
+} 
 
 
 

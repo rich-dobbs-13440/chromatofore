@@ -46,7 +46,9 @@ filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation ] */
-y_moving_clamp = 0; // [0:100]
+servo_angle_moving_clamp = 0; // [0:180]
+servo_angle_fixed_clamp = 0; // [0:180]
+y_moving_clamp = 30; // [0:100]
 
 /* [Base Design] */
 
@@ -62,7 +64,7 @@ od_cam = 12;
 dz_cam = -1.2;
 ay_cam = 4;
 az_cam = 30;
-servo_angle = 0; // [0:180]
+
 
 /* [Guide Design] */
 filament_translation = [-4.5, 0, 1.7];
@@ -171,8 +173,8 @@ visualization_filament_guide =
 module moving_clamp() {
     translate([0, y_moving_clamp, 0]) {
         servo_base();
-        one_arm_horn();
-        horn_cam();
+        one_arm_horn(servo_angle=servo_angle_moving_clamp, servo_offset_angle=az_cam);
+        horn_cam(servo_angle=servo_angle_moving_clamp);
         filament_guide();
     }
 }
@@ -181,8 +183,8 @@ module fixed_clamp() {
     y_fixed_clamp = y_frame - y_guide/2;
     translate([0, y_fixed_clamp, 0]) {
         servo_base();
-        one_arm_horn();
-        horn_cam();
+        one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=az_cam);
+        horn_cam(servo_angle=servo_angle_fixed_clamp);
         filament_guide();
     }
 }
@@ -206,13 +208,14 @@ module filament(as_clearance = false, clearance_is_tight = true) {
                 rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
             }  
     } else if (mode != PRINTING) {
-        translate(filament_translation) 
+        filament_length = y_frame + 40;
+        translate(filament_translation + [0, -20, 0]) 
             color("red") 
-                rod(d=d_filament, l=20, center=SIDEWISE);
+                rod(d=d_filament, l=filament_length, center=SIDEWISE+RIGHT);
     }
 }
 
-module one_arm_horn(as_clearance=false) {
+module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
     module blank() {
         translate([0, 0, 1]) can(d=7.5, h=3.77, center=ABOVE); 
         translate([0, 0, 4.77]) {
@@ -232,7 +235,7 @@ module one_arm_horn(as_clearance=false) {
     if (as_clearance) {
         shape();
     } else if (mode != PRINTING) {
-        rotate([0, 0, servo_angle + az_cam]) {
+        rotate([0, 0, servo_angle + servo_offset_angle]) {
             color("white") {
                 shape();
             }
@@ -333,7 +336,7 @@ module filament_guide(item=0) {
     translate(translation) rotate(rotation) visualize(visualization_filament_guide) shape();       
 }
 
-module horn_cam(item=0) {
+module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
     
     module shape() {
         render(convexity=10) difference() {
@@ -351,7 +354,7 @@ module horn_cam(item=0) {
     z_printing = -dz_cam;
     rotation = 
         mode == PRINTING ? [0, -ay_cam, 0] :
-        [0, 0, servo_angle];
+        [0, 0, servo_angle + servo_offset_angle];
     translation = 
         mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
         [0, 0, 3.5];

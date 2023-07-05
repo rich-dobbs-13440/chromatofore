@@ -6,7 +6,9 @@ G28 C0 : Move clamp servo to home position signaled by limit switch.
 
 G1 E10 F10 : Extrude 10 mm of filament, feed rate currently ignore.
 
-G1 C10  : Move clamp servo 10 an angle of 10 degrees
+G1 C10  : Move clamp servo to an angle of 10 degrees
+
+G1 X10  : Move move servo to an angle of 10 degres
 
 */
 
@@ -40,8 +42,8 @@ static int filamentRotateAngle = 180;
 static int extruderEngageAngle = 0;
 
 
-static bool enableMoveServo = false;
-static bool enableClampServo = true;
+static bool enableMoveServo = true;  // Axis X
+static bool enableClampServo = true; // Axis C
 static bool enableRotateServo = false;
 static bool enableEngageServo = false;
 
@@ -271,6 +273,7 @@ void processInputBuffer() {
   float e = nan;
   float f = nan;
   float g = nan;
+  float x = nan;
 
   //debugLog("e", e);
   while (token != NULL) {
@@ -286,7 +289,9 @@ void processInputBuffer() {
       f = word.substring(1).toFloat();
     } else if (word.startsWith("G")) {
       g = word.substring(1).toFloat();
-    }
+    } else if (word.startsWith("X")) {
+      x = word.substring(1).toFloat();      
+    } 
     token = strtok(NULL, &delimiter);
   }
   // debugLog("c:", c);
@@ -296,17 +301,21 @@ void processInputBuffer() {
 
   switch (int(g)) {
     case 1:
-      debugLog("c:", c);
+      if (!isnan(c)) {
+        debugLog("Handle clamp command. Angle:", c);
+        float angle = c;
+        updateFilamentClampAngle(angle);
+      }      
       if (!isnan(e)) {
         debugLog("Handle extrusion command.");
         float mm_of_filament = e;
         float feedrate_mm_per_minute = f;
         extrude(mm_of_filament, feedrate_mm_per_minute);
       }
-      if (!isnan(c)) {
-        debugLog("Handle clamp command. Angle:", c);
-        float angle = c;
-        updateFilamentClampAngle(angle);
+      if (!isnan(x)) {
+        debugLog("Handle move command. Angle:", x);
+        float angle = x;
+        updateFilamentMoveAngle(angle);
       }
 
       break;

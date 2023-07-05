@@ -82,7 +82,7 @@ frame_clearance = 0.75;
 y_frame = 60;
 x_rail_attachment = 8;
 y_rail_attachment = 16; 
-z_rail_attachment = 4;
+z_rail_attachment = 8;
 y_rail_screw_offset = 3;
 
 
@@ -260,25 +260,22 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
 
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
+    ay_cutoff = -5;
     module shape() {
         render(convexity=10) difference() {
             hull() {
                 can(d=od_cam, h=4, center=ABOVE);
-                translate([12, 0, 0]) can(d=7, h=4, center=ABOVE);
+                translate([12, 0, 0]) can(d=7, h=6, center=ABOVE);
             }
             translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
             can(d=1.8, h=a_lot);
-            translate([12, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
-             translate([12, 0, 3]) nutcatch_parallel("M2", clh=4, $fn=12); 
+            translate([12, 0, -1]) rotate([180, 0, 0]) hole_through("M2", h=5, cld=0.4, $fn=12);
+            translate([0, 0, 4]) rotate([0, ay_cutoff, 0]) plane_clearance(ABOVE);   
         }
-//        render(convexity=10) difference() {
-//            can(d=od_cam, hollow=7.5, h=3, center=BELOW);
-//            translate([0, 0, dz_cam]) rotate([0, 0, 0]) plane_clearance(BELOW);
-//        }
     }
     z_printing = 4;
     rotation = 
-        mode == PRINTING ? [180, 0, 0] :
+        mode == PRINTING ? [180,  + ay_cutoff, 0] :
         [0, 0, servo_angle + servo_offset_angle];
     translation = 
         mode == PRINTING ? [x_horn_linkage_bp, y_horn_linkage_bp, z_printing] :
@@ -286,8 +283,16 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     translate(translation) rotate(rotation) visualize(visualization_horn_linkage) shape();  
 } 
 
-
-
+module rail_screws(as_clearance=false, cld=0.2) {
+    if (as_clearance) {
+        center_reflect([0, 1, 0]) 
+            translate([5, y_rail_screw_offset, -4]) 
+                rotate([0, 90, 0]) 
+                    hole_through("M2", cld=cld, $fn=12);
+    } else {
+        assert(false);
+    }
+} 
 
 module rail(item=0) {
     s_dovetail = s_guide_dovetail + 2*frame_clearance; 
@@ -296,14 +301,11 @@ module rail(item=0) {
     z_rail = z_guide + s_guide_dovetail + 2 * rail_wall;
     module attachment_block() {
         render(convexity=10) difference() {
-            block([x_rail_attachment, y_rail_attachment, z_rail_attachment], center = BELOW+RIGHT+BEHIND);
-            translate([0, y_rail_attachment/2]) 
-            center_reflect([0, 1, 0]) 
-                translate([5, y_rail_screw_offset, -z_rail_attachment/2]) 
-                    rotate([0, 90, 0]) 
-                        hole_through("M2", cld=0.4, $fn=12); 
-        }
-        
+            translate([0, 0, rail_wall-frame_clearance]) 
+                block([x_rail_attachment, y_rail_attachment, z_rail_attachment], center = BELOW+RIGHT+BEHIND);
+            translate([0, y_rail_attachment/2, rail_wall]) 
+                rail_screws(as_clearance=true, cld=0.4);
+        } 
     }
     module blank() {
         translate([rail_wall, 0, -rail_wall]) {
@@ -457,18 +459,18 @@ module servo_base(item=0, visualization = visualization_servo_base) {
     }  
 }
 
-module clamp_servo_base() {
-    
-    rotation = 
-        mode == PRINTING ? [180, 0, 0] :
-        [0, 0, 0];
-    translation = 
-        mode == PRINTING ? [x_clamp_servo_base_bp, y_clamp_servo_base_bp, z_printing] :
-        [0, 0, 0];
-    translate(translation) rotate(rotation) {
-        if (show_vitamins && mode != PRINTING) {
-            translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
-        }
-        visualize(visualization_clamp_servo_base) servo_base();
-    }
-}
+//module clamp_servo_base() {
+//    
+//    rotation = 
+//        mode == PRINTING ? [180, 0, 0] :
+//        [0, 0, 0];
+//    translation = 
+//        mode == PRINTING ? [x_clamp_servo_base_bp, y_clamp_servo_base_bp, z_printing] :
+//        [0, 0, 0];
+//    translate(translation) rotate(rotation) {
+//        if (show_vitamins && mode != PRINTING) {
+//            translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
+//        }
+//        visualize(visualization_clamp_servo_base) servo_base();
+//    }
+//}

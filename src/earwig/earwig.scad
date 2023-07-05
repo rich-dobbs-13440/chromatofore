@@ -61,11 +61,11 @@ servo_angle = 0; // [0:180]
 /* [Guide Design] */
 filament_translation = [-4.5, 0, 1.7];
 x_guide = 38;
-z_guide = 2;
-d_guide = 3.4;
+z_guide =2;
+d_guide = 3.2;
 
 /* [Frame Design] */
-frame_clearance = 0.25;
+frame_clearance = 0.75;
 y_frame = 40;
 
 /* [Build Plate Layout] */
@@ -132,9 +132,9 @@ module filament(as_clearance = false, clearance_is_tight = true) {
     if (as_clearance) {
         translate(filament_translation) 
             if (clearance_is_tight) {
-                rod(d=d_filament_with_tight_clearance, l=20, center=SIDEWISE); 
+                rod(d=d_filament_with_tight_clearance, l=a_lot, center=SIDEWISE); 
             } else {
-                rod(d=d_filament_with_clearance, l=20, center=SIDEWISE);      
+                rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
             }  
     } else if (mode != PRINTING) {
         translate(filament_translation) 
@@ -174,7 +174,7 @@ module one_arm_horn(as_clearance=false) {
 module frame() {
     x_frame = x_guide + 8;
     z_frame = z_guide + 3;
-    guides = [x_guide + 2*frame_clearance, y_frame - 4, z_guide + 2*frame_clearance];
+    guides = [x_guide + 2*frame_clearance, y_frame - 4, z_guide + 0.25];
     servo_clearance = [x_base_pillar + 1, y_frame-4, a_lot]; 
     module blank() {
         translate([x_base_offset, 0, -2]) block([x_frame, y_frame, z_frame], center = ABOVE+RIGHT); 
@@ -201,6 +201,7 @@ module frame() {
                 }
             }
             translate([x_base_offset, 0, -2]) block(servo_clearance, center=RIGHT);
+            filament(as_clearance=true);
         }
         render(convexity=10) difference() {        
             attachment_blank();
@@ -222,8 +223,9 @@ module frame() {
 module filament_guide() {
     cam_clearance = 0.5;
     module blank() {
-        translate([x_base_offset, 0, 0]) block([x_guide, 14, z_guide], center=ABOVE);
-        translate(filament_translation) rod(d=d_guide, l=14, center=SIDEWISE); 
+        translate([x_base_offset, 0, 0]) block([x_guide, 16, z_guide], center=ABOVE);
+        // translate(filament_translation) rod(d=d_guide, l=14, center=SIDEWISE); 
+        translate(filament_translation) block([6, 16, d_guide]); 
     }
     module shape() {
         render(convexity=10) difference() {

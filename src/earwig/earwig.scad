@@ -48,7 +48,9 @@ rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
 servo_angle_fixed_clamp = 0; // [0:180]
-y_moving_clamp = 30; // [0:100]
+servo_angle_pusher  = 0; // [0:180]
+servo_offset_angle_pusher  = 110; // [0:360]
+y_moving_clamp =35; // [0:100]
 
 /* [Base Design] */
 
@@ -81,6 +83,8 @@ x_rail_attachment = 8;
 y_rail_attachment = 16; 
 z_rail_attachment = 4;
 y_rail_screw_offset = 3;
+
+
 
 /* [Build Plate Layout] */
 x_servo_base_bp = 0;
@@ -151,7 +155,7 @@ visualization_filament_guide =
          rail(item=1);
      }
      if (print_moving_clamp) {
-         filament_guide(item=0);
+         filament_guide(item=0, include_pusher_pivot=true);
          servo_base(item=0);
          horn_cam(item=0);
      }
@@ -165,17 +169,14 @@ visualization_filament_guide =
          servo_base(item=2);
          // TODO: Linkages
      }
-     
-     
-     
  }
 
 module moving_clamp() {
     translate([0, y_moving_clamp, 0]) {
         servo_base();
+        filament_guide(include_pusher_pivot=true);
         one_arm_horn(servo_angle=servo_angle_moving_clamp, servo_offset_angle=az_cam);
-        horn_cam(servo_angle=servo_angle_moving_clamp);
-        filament_guide();
+        horn_cam(servo_angle=servo_angle_moving_clamp); 
     }
 }
 
@@ -183,9 +184,9 @@ module fixed_clamp() {
     y_fixed_clamp = y_frame - y_guide/2;
     translate([0, y_fixed_clamp, 0]) {
         servo_base();
+        filament_guide();
         one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_fixed_clamp);
-        filament_guide();
     }
 }
 
@@ -193,9 +194,14 @@ module pusher_assembly() {
     y_pusher_assmebly = y_guide/2;
     translate([0, y_pusher_assmebly, 0]) {
         color(PART_11) servo_base();
-        one_arm_horn();
         filament_guide();
+        one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
     }
+}
+
+module rails() {  
+    translate([x_base_offset+x_guide/2, 0, 0]) rail(); 
+    translate([x_base_offset-x_guide/2, y_frame, 0])  rotate([0, 0, 180]) rail(); 
 }
 
 module filament(as_clearance = false, clearance_is_tight = true) {
@@ -246,13 +252,6 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
 
 
 
-
-
-module rails() {  
-    translate([x_base_offset+x_guide/2, 0, 0]) rail(); 
-    translate([x_base_offset-x_guide/2, y_frame, 0])  rotate([0, 0, 180]) rail(); 
-}
-
 module rail(item=0) {
     s_dovetail = s_guide_dovetail + 2*frame_clearance; 
     rail_wall = 2;
@@ -300,9 +299,26 @@ module rail(item=0) {
 }
 
 
-module filament_guide(item=0) {
+module filament_guide(item=0, include_pusher_pivot=false) {
     cam_clearance = 0.5;
-    
+    module pusher_pivot(as_pad = false, as_vitamin = false) {
+        translation = [0, -y_guide/2-1.7, 0];
+        if (as_pad) {
+            translate(translation) {
+                render(convexity=10) difference() {
+                    block([7, 5, z_guide], center=ABOVE);
+                    translate([0, 0, 25]) hole_through("M2", cld=0.4, $fn=12); 
+                }
+            }
+        } else if (as_vitamin) {
+            translate(translation) {
+                rotate([180, 0, 0]) color(BLACK_IRON) screw("M2x8", $fn=12);
+                translate([0, 0, z_guide]) rotate([180, 0, 0]) color(BLACK_IRON) nut("M2", $fn=12);
+            }
+        } else {
+            assert(false);
+        }
+    } 
     module blank() {
         translate([x_base_offset, 0, 0]) {
             block([x_guide, y_guide, z_guide], center=ABOVE);
@@ -311,7 +327,6 @@ module filament_guide(item=0) {
                 block([1+s_guide_dovetail, y_guide, z_guide], center=ABOVE+BEHIND);
             }
         }
-        // translate(filament_translation) rod(d=d_guide, l=14, center=SIDEWISE); 
         translate(filament_translation) block([6, 16, d_guide]); 
     }
     module shape() {
@@ -324,7 +339,10 @@ module filament_guide(item=0) {
             can(d=od_cam + 2*cam_clearance, h=a_lot);
             servo_screws(as_clearance = true);
             translate([0, 0, z_guide]) block([16, 8, 8], center=ABOVE+BEHIND); 
-        }        
+        }
+        if (include_pusher_pivot) {
+            pusher_pivot (as_pad = true);
+        }
     }
     z_printing = 0;
     rotation = 
@@ -333,7 +351,14 @@ module filament_guide(item=0) {
     translation = 
         mode == PRINTING ? [x_filament_guide_bp + dx_filament_guide_bp*item, y_filament_guide_bp, z_printing] :
         [0, 0, 0];
-    translate(translation) rotate(rotation) visualize(visualization_filament_guide) shape();       
+    translate(translation) rotate(rotation) {
+        if (include_pusher_pivot && show_vitamins && mode != PRINTING) {
+            visualize_vitamins(visualization_filament_guide) {
+                pusher_pivot (as_vitamin = true);
+            }
+        }
+        visualize(visualization_filament_guide) shape();
+    }       
 }
 
 module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {

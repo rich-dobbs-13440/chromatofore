@@ -36,7 +36,7 @@ print_fixed_clamp = true;
 print_pusher = true;
 
 print_one_part = false;
-part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, horn_linkage]
+part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, horn_linkage, linkage]
 
 
 /* [Show] */
@@ -45,6 +45,7 @@ horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -54,7 +55,6 @@ servo_offset_angle_pusher  = 110; // [0:360]
 y_moving_clamp =35; // [0:100]
 
 /* [Base Design] */
-
 dz_servo = 3.5;
 x_base_pillar = 34;
 z_base_pillar = 8.8;
@@ -62,7 +62,6 @@ z_base_joiner = 3.8;
 x_base_offset = -5;
 
 /* [Cam Design] */
-
 od_cam = 12;
 dz_cam = -1.2;
 ay_cam = 4;
@@ -78,13 +77,15 @@ d_guide = 3.2;
 s_guide_dovetail = 2;
 
 /* [Frame Design] */
-frame_clearance = 0.75;
+frame_clearance = 0.5;
 y_frame = 60;
 x_rail_attachment = 8;
 y_rail_attachment = 16; 
 z_rail_attachment = 8;
 y_rail_screw_offset = 3;
 
+/* [Linkage Design] */
+linkage_length = 26;
 
 
 /* [Build Plate Layout] */
@@ -109,6 +110,9 @@ dx_rail_bp = 15;
 
 x_horn_linkage_bp = 0;
 y_horn_linkage_bp = 0;
+
+x_linkage_bp = 0;
+y_linkage_bp = 0;
 
 module end_of_customization() {}
 
@@ -150,6 +154,10 @@ visualization_horn_linkage  =
     visualize_info(
         "Horn Linkage", PART_6, show(horn_linkage, "horn_linkage") , layout, show_parts);   
         
+visualization_linkage  =        
+    visualize_info(
+        "Linkage", PART_7, show(linkage, "linkage") , layout, show_parts);          
+        
  if (mode ==  ASSEMBLE_SUBCOMPONENTS) {     
     filament();
     pusher_assembly();
@@ -175,7 +183,7 @@ visualization_horn_linkage  =
          filament_guide(item=2);
          servo_base(item=2);
          horn_linkage();
-         
+         linkage();
      }
  }
 
@@ -260,6 +268,7 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
 
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
+    //  The horn linkage sits on top of the horn, to avoid interference with the filament.
     ay_cutoff = -5;
     module shape() {
         render(convexity=10) difference() {
@@ -283,12 +292,32 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     translate(translation) rotate(rotation) visualize(visualization_horn_linkage) shape();  
 } 
 
+
+module linkage() {
+    // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
+    module shape() {
+        render(convexity=10) difference() {
+            hull() center_reflect([1, 0, 0]) translate([linkage_length/2, 0, 0]) can(d=5, h = 2, center=ABOVE);
+            center_reflect([1, 0, 0]) translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+        }
+    }
+    //linkage_angle = 12; // TODO:  Calculate it based on kinematics.
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0,  0, 0] :
+        [0, 0, 0];    // TODO:  Calculate it based on kinematics.
+    translation = 
+        mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
+        [0, 0, 0];   // TODO:  Calculate it based on kinematics.  
+    translate(translation) rotate(rotation) visualize(visualization_linkage) shape();  
+}
+
 module rail_screws(as_clearance=false, cld=0.2) {
     if (as_clearance) {
         center_reflect([0, 1, 0]) 
             translate([5, y_rail_screw_offset, -4]) 
                 rotate([0, 90, 0]) 
-                    hole_through("M2", cld=cld, $fn=12);
+                    hole_through("M2", l=20, cld=cld, $fn=12);
     } else {
         assert(false);
     }
@@ -442,6 +471,10 @@ module servo_base(item=0, visualization = visualization_servo_base) {
             } 
             translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
             servo_screws(as_clearance = true);
+            translate([x_base_offset, 0, 0]) 
+                center_reflect([1, 0, 0]) 
+                    translate([25, 0, 0]) 
+                        rail_screws(as_clearance=true, cld=0.2); // Tight fit, will hold screws
         }
     }
     z_printing = 0;
@@ -459,18 +492,3 @@ module servo_base(item=0, visualization = visualization_servo_base) {
     }  
 }
 
-//module clamp_servo_base() {
-//    
-//    rotation = 
-//        mode == PRINTING ? [180, 0, 0] :
-//        [0, 0, 0];
-//    translation = 
-//        mode == PRINTING ? [x_clamp_servo_base_bp, y_clamp_servo_base_bp, z_printing] :
-//        [0, 0, 0];
-//    translate(translation) rotate(rotation) {
-//        if (show_vitamins && mode != PRINTING) {
-//            translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
-//        }
-//        visualize(visualization_clamp_servo_base) servo_base();
-//    }
-//}

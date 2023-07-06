@@ -460,9 +460,9 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
     
     module shape() {
         render(convexity=10) difference() {
-            can(d=od_cam, h=2, center=ABOVE);
+            can(d=od_cam, h=2.5, center=ABOVE);
             rotate([0, 0, az_cam]) hull() {
-                translate([0, 0, -1])  one_arm_horn(as_clearance=true);
+                translate([0, 0, -1])  scale([0.85, 0.85, 1]) one_arm_horn(as_clearance=true);
                 translate([0, 0, -5])  one_arm_horn(as_clearance=true);
             }
         }

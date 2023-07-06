@@ -78,7 +78,7 @@ s_guide_dovetail = 2;
 
 /* [Frame Design] */
 frame_clearance = 0.5;
-y_frame = 60;
+y_frame = 85;
 x_rail_attachment = 8;
 y_rail_attachment = 16; 
 z_rail_attachment = 8;
@@ -269,27 +269,54 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     //  The horn linkage sits on top of the horn, to avoid interference with the filament.
-    ay_cutoff = -5;
+    az_pivot = 20;
+    dx_pivot = 16;
+    module pivot(as_clearance) {
+        rotate([0, 0, az_pivot]) translate([dx_pivot, 0, 1.9]) rotate([180, 0, 0]) {
+            if (as_clearance) {
+                translate([0, 0, 5]) hole_through("M2", h=5, cld=0.0, $fn=12);  // Tap this to avoid a nut!
+            } else {
+                color(BLACK_IRON) screw("M2x8", $fn=12);
+                translate([0, 0, -2]) color(BLACK_IRON) nut("M2", $fn=12);
+                translate([0, 0, -5]) color(BLACK_IRON) nut("M2", $fn=12);
+                rotate([0, 0, 15]) translate([0, 0, -6.6]) color(BLACK_IRON) nut("M2", $fn=12);
+            }
+        }
+    }
     module shape() {
+        h = 4;
         render(convexity=10) difference() {
-            hull() {
-                can(d=od_cam, h=4, center=ABOVE);
-                translate([12, 0, 0]) can(d=7, h=6, center=ABOVE);
+            union() {
+                hull() {
+                    can(d=od_cam, h=h, center=ABOVE);
+                    translate([5, 0, 0]) can(d=7, h=h, center=ABOVE);
+                    
+                }
+                translate([0, 0, h-2]) {
+                    hull() {
+                        can(d=od_cam, h=2, center=ABOVE);
+                        rotate([0, 0, az_pivot])  translate([dx_pivot, 0, 0]) can(d=5, h=2, center=ABOVE);
+                    }
+                }
             }
             translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
-            can(d=1.8, h=a_lot);
-            translate([12, 0, -1]) rotate([180, 0, 0]) hole_through("M2", h=5, cld=0.4, $fn=12);
-            translate([0, 0, 4]) rotate([0, ay_cutoff, 0]) plane_clearance(ABOVE);   
+            can(d=2.2, h=a_lot);  // Central hole for screw!
+            pivot(as_clearance=true); 
         }
     }
     z_printing = 4;
     rotation = 
-        mode == PRINTING ? [180,  + ay_cutoff, 0] :
+        mode == PRINTING ? [180,  0, 0] :
         [0, 0, servo_angle + servo_offset_angle];
     translation = 
         mode == PRINTING ? [x_horn_linkage_bp, y_horn_linkage_bp, z_printing] :
         [0, 0, 3.5];
-    translate(translation) rotate(rotation) visualize(visualization_horn_linkage) shape();  
+    translate(translation) rotate(rotation) {
+        if (show_vitamins && mode != PRINTING) {
+            visualize_vitamins(visualization_horn_linkage) pivot(as_clearance = false) ; 
+        }
+        visualize(visualization_horn_linkage) shape();  
+    }
 } 
 
 
@@ -380,7 +407,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
             }
         } else if (as_vitamin) {
             translate(translation) {
-                rotate([180, 0, 0]) color(BLACK_IRON) screw("M2x8", $fn=12);
+                rotate([180, 0, 0]) color(BLACK_IRON) screw("M2x16", $fn=12);
                 translate([0, 0, z_guide]) rotate([180, 0, 0]) color(BLACK_IRON) nut("M2", $fn=12);
             }
         } else {

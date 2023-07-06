@@ -93,33 +93,32 @@ linkage_length = 26;
 
 
 /* [Build Plate Layout] */
-x_servo_base_bp = 0;
-y_servo_base_bp = 0;
-dx_servo_base_bp = -50;
-
-x_horn_cam_bp = 0;
-y_horn_cam_bp = 32;
-dx_horn_cam_bp = -15;
-
-x_filament_guide_bp = 0; 
-y_filament_guide_bp = 16;
-dx_filament_guide_bp = -50; 
-
-x_frame_bp = 0;
-y_frame_bp = -15;
-
 x_rail_bp = 30; 
 y_rail_bp = 0; 
 dx_rail_bp = 15;
 
-x_horn_linkage_bp = 0;
-y_horn_linkage_bp = 0;
+x_servo_base_bp = 0;
+y_servo_base_bp = 0;
+dx_servo_base_bp = -50;
 
-x_linkage_bp = 0;
-y_linkage_bp = 0;
+x_filament_guide_bp = 0; 
+y_filament_guide_bp = 20;
+dx_filament_guide_bp = -50; 
+
+x_horn_cam_bp = 0;
+y_horn_cam_bp = 40;
+dx_horn_cam_bp = -15;
+
+x_horn_linkage_bp = 0;
+y_horn_linkage_bp = 60;
+
+x_linkage_bp = -30;
+y_linkage_bp = 60;
+
+
 
 x_pusher_body_bp = 0;
-y_pusher_body_bp = 0;
+y_pusher_body_bp = 80;
 
 module end_of_customization() {}
 
@@ -191,7 +190,6 @@ visualization_pusher_body =
         horn_cam(item=1);          
      }
      if (print_pusher) {
-         filament_guide(item=2);
          pusher_body();
          horn_linkage();
          linkage();

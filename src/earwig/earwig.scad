@@ -64,7 +64,7 @@ x_base_offset = -5;
 /* [Cam Design] */
 od_cam = 12;
 dz_cam = -1.2;
-ay_cam = 4;
+ay_cam = 6;
 az_cam = 30;
 
 

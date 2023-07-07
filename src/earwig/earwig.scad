@@ -302,22 +302,21 @@ module rails() {
 // Parts
 
 module pusher_body() {
-    quick_connect_translation = filament_translation + [0, -28, 0];
-    quick_connect_base_translation = filament_translation + [0, -14, 0];
+    dy_qc = -15;
+    quick_connect_translation = filament_translation + [0, -21 + dy_qc, 0];
     blank_offset = 8;
     x_locked_guide = x_guide + 2 * frame_clearance;
     z_locked_guide = z_guide + 2 * frame_clearance;
     dx_p_locked_guide = x_base_offset + x_guide/2 + frame_clearance;
     dx_m_locked_guide = x_base_offset - x_guide/2 - frame_clearance;;
     module blank() {
-        // + 2*s_guide_dovetail + 2*frame_clearance;
         translate(quick_connect_translation) rotate([-90, 0, 0]) quick_connect_body();
         translate([x_base_offset, blank_offset, 0]) block([x_base_pillar, 14, z_base_pillar], center=BELOW+LEFT);
         translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
         translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
-        translate(quick_connect_base_translation) hull() {
-            translate([0, 8, 0.6]) block([30, 0.1, 6], center=BELOW);
-            rod(d=11., l=0.1, center=SIDEWISE+RIGHT);
+        hull() {
+           translate([0, -6, 0]) block([30, 0.1, 4], center=BELOW);
+           translate(quick_connect_translation+[0, 14.5, 0])  rod(d=11., l=0.1, center=SIDEWISE+RIGHT);
         }
     }
     module cutout_for_printablility() {
@@ -332,7 +331,7 @@ module pusher_body() {
             blank();
             servo_base(as_clearance = true);
             filament(as_clearance = true, clearance_is_tight=false);
-            translate(filament_translation) rod(d=1, taper=10, l=18, center=SIDEWISE+LEFT);
+            translate(filament_translation) rod(d=1, taper=10, l=10-dy_qc, center=SIDEWISE+LEFT);
             cutout_for_printablility();
         }
     }
@@ -381,7 +380,7 @@ module clip() {
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     //  The horn linkage sits on top of the horn, to avoid interference with the filament.
     az_pivot = 20;
-    dx_pivot = 16;
+    dx_pivot = 14;
     module pivot(as_clearance) {
         rotate([0, 0, az_pivot]) translate([dx_pivot, 0, 1.9]) rotate([180, 0, 0]) {
             if (as_clearance) {
@@ -400,7 +399,7 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
             union() {
                 hull() {
                     can(d=od_cam, h=h, center=ABOVE);
-                    translate([13, 0, 0]) can(d=7, h=h, center=ABOVE);
+                    translate([12, 0, 0]) can(d=7, h=h, center=ABOVE);
                     
                 }
                 translate([0, 0, h-2]) {

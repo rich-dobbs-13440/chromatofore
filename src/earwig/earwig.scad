@@ -58,7 +58,7 @@ servo_angle_moving_clamp = 0; // [0:180]
 servo_angle_fixed_clamp = 0; // [0:180]
 servo_angle_pusher  = 0; // [0:180]
 servo_offset_angle_pusher  = 110; // [0:360]
-y_moving_clamp =35; // [0:100]
+
 
 /* [Base Design] */
 dz_servo = 3.5;
@@ -91,6 +91,8 @@ z_rail_attachment = 8;
 y_rail_screw_offset = 3;
 
 /* [Linkage Design] */
+az_horn_linkage_pivot = 20;
+r_horn_linkage = 14;
 linkage_length = 26;
 
 
@@ -128,7 +130,32 @@ y_linkage_bp = 50;
 
 module end_of_customization() {}
 
+/* Linkage kinematicts */
 
+// Move servo origin
+dx_origin = 0;
+dy_origin = 8;
+//translate([dx_origin, dy_origin, 0]) color("yellow") can(d=1, h=a_lot);
+
+a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
+dx_horn_pivot = dx_origin + cos(a_horn_pivot) * r_horn_linkage;
+dy_horn_pivot = dy_origin + sin(a_horn_pivot) * r_horn_linkage; 
+//translate([dx_horn_pivot, dy_horn_pivot, 0]) color("blue") can(d=1, h=a_lot);
+
+ linkage_angle = acos(-dx_horn_pivot/linkage_length); 
+
+dx_pivot = dx_horn_pivot + cos(linkage_angle) * linkage_length;
+dy_pivot = dy_horn_pivot + sin(linkage_angle) * linkage_length; 
+//translate([dx_pivot, dy_pivot, 0]) color("green") can(d=1, h=a_lot);
+   
+dx_linkage_midpoint = dx_horn_pivot/2;
+dy_linkage_midpoint = (dy_pivot+dy_horn_pivot)/2;
+//translate([dx_linkage_midpoint, dy_linkage_midpoint, 0]) color("brown") can(d=1, h=a_lot);
+// But translation is applied after rotation, so dy must be adjusted;
+dx_linkage = dx_linkage_midpoint;
+dy_linkage = dy_horn_pivot- dy_origin + sin(linkage_angle) * linkage_length/2;
+
+y_moving_clamp = dy_pivot +10;
 
 function layout_from_mode(mode) = 
     mode == NEW_DEVELOPMENT ? "hidden" :
@@ -286,9 +313,9 @@ module pusher() {
     y_pusher_assmebly = y_guide/2;
     translate([0, y_pusher_assmebly, 0]) {
         pusher_body();
-        //filament_guide();
         one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
         horn_linkage(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher); 
+        linkage();
     }
 }
 
@@ -344,7 +371,7 @@ module pusher_body() {
         [0, 0, 0];
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
-            //visualize_vitamins(visualization_pusher_body) pivot(as_clearance = false) ; 
+            visualize_vitamins(visualization_pusher_body) translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin(); ; 
         }
         visualize(visualization_pusher_body) shape();  
     }
@@ -379,10 +406,8 @@ module clip() {
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     //  The horn linkage sits on top of the horn, to avoid interference with the filament.
-    az_pivot = 20;
-    dx_pivot = 14;
     module pivot(as_clearance) {
-        rotate([0, 0, az_pivot]) translate([dx_pivot, 0, 1.9]) rotate([180, 0, 0]) {
+        rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, 1.9]) rotate([180, 0, 0]) {
             if (as_clearance) {
                 translate([0, 0, 5]) hole_through("M2", h=5, cld=0.0, $fn=12);  // Tap this to avoid a nut!
             } else {
@@ -405,7 +430,7 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
                 translate([0, 0, h-2]) {
                     hull() {
                         can(d=od_cam, h=2, center=ABOVE);
-                        rotate([0, 0, az_pivot])  translate([dx_pivot, 0, 0]) can(d=5, h=2, center=ABOVE);
+                        rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
                     }
                 }
             }
@@ -438,14 +463,14 @@ module linkage() {
             center_reflect([1, 0, 0]) translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
         }
     }
-    //linkage_angle = 12; // TODO:  Calculate it based on kinematics.
+
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [0,  0, 0] :
-        [0, 0, 0];    // TODO:  Calculate it based on kinematics.
+        [0, 0, linkage_angle];    
     translation = 
         mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
-        [0, 0, 0];   // TODO:  Calculate it based on kinematics.  
+        [dx_linkage, dy_linkage, 8];  
     translate(translation) rotate(rotation) visualize(visualization_linkage) shape();  
 }
 

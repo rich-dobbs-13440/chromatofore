@@ -69,8 +69,8 @@ x_base_offset = -5;
 
 /* [Cam Design] */
 od_cam = 12;
-dz_cam = -1.2;
-ay_cam = 6;
+dz_cam = 0.6; // [0: 0.1 : 3]
+ay_cam = 10; // [0: 1: 20]
 az_cam = 30;
 
 
@@ -259,12 +259,17 @@ visualization_collet =
 }
 
 module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
+    h_barrel_one_arm_horn = 3.77;
+    h_arm_one_arm_horn = 1.3;
+    dz_engagement_one_arm_horn = 1;
+    
+    dz_arm = h_barrel_one_arm_horn + dz_engagement_one_arm_horn;
     module blank() {
-        translate([0, 0, 1]) can(d=7.5, h=3.77, center=ABOVE); 
-        translate([0, 0, 4.77]) {
+        translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
+        translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
             hull() {
-                can(d=6, h=1.3, center=BELOW);
-                translate([14, 0, 0]) can(d=4, h=1.3, center=BELOW); 
+                can(d=6, h=h_arm_one_arm_horn, center=BELOW);
+                translate([14, 0, 0]) can(d=4, h=h_arm_one_arm_horn, center=BELOW); 
             }
         }        
     }
@@ -276,7 +281,7 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
         }
     } 
     if (as_clearance) {
-        shape();
+        blank();
     } else if (mode != PRINTING) {
         rotate([0, 0, servo_angle + servo_offset_angle]) {
             color("white") {
@@ -342,7 +347,7 @@ module pusher_body() {
         translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
         translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
         hull() {
-           translate([0, -6, 0]) block([30, 0.1, 4], center=BELOW);
+           #translate([x_base_offset, -6, 0]) block([30, 0.1, 4], center=BELOW);
            translate(quick_connect_translation+[0, 14.5, 0])  rod(d=11., l=0.1, center=SIDEWISE+RIGHT);
         }
     }
@@ -599,7 +604,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
     }       
 }
 
-module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
+module horn_cam_original(item=0, servo_angle=0, servo_offset_angle=0) {
     
     module shape() {
         render(convexity=10) difference() {
@@ -621,6 +626,49 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
     translation = 
         mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
         [0, 0, 3.5];
+    translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
+}
+
+
+
+module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
+    h_above =2;
+    h_barrel = 3.77;
+    h_arm = 1.3; 
+    h_below = 2;
+    h = h_above + h_arm + h_below;
+    dz_horn_engagement = -1;
+    dz_horn = dz_horn_engagement -h_barrel + h_arm + h_below;
+    dx_print_base = 5;
+    module cam_blank() {
+        render(convexity=10) difference() {
+            translate([0, 0, 0]) can(d=od_cam, h=h, center=ABOVE);
+            translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
+                //translate([0, 0, -1])  scale([0.85, 0.85, 1]) one_arm_horn(as_clearance=true);
+            hull() {
+                    translate([0, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
+                    translate([-5, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
+            }
+            can(d=2.5, h=a_lot); //Screw
+            translate([dx_print_base, 0, 0]) plane_clearance(FRONT); 
+        }
+    }        
+    module shape() {
+        rotate([0, 0, -az_cam]) {
+            render(convexity=10) difference() {
+                rotate([0, 0, az_cam])  cam_blank();
+                // cam_surface
+               translate([0, 0, dz_cam]) rotate([0, ay_cam, 0]) plane_clearance(BELOW); 
+            }
+        }
+    }
+    z_printing = dx_print_base;
+    rotation = 
+        mode == PRINTING ? [0, 90, 0] :
+        [0, 0, servo_angle + servo_offset_angle + az_cam];
+    translation = 
+        mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
+        [0, 0, h_barrel-dz_horn_engagement-h_arm-h_below];
     translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
 }
 

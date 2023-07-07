@@ -604,35 +604,9 @@ module filament_guide(item=0, include_pusher_pivot=false) {
     }       
 }
 
-module horn_cam_original(item=0, servo_angle=0, servo_offset_angle=0) {
-    
-    module shape() {
-        render(convexity=10) difference() {
-            can(d=od_cam, h=2.5, center=ABOVE);
-            rotate([0, 0, az_cam]) hull() {
-                translate([0, 0, -1])  scale([0.85, 0.85, 1]) one_arm_horn(as_clearance=true);
-                translate([0, 0, -5])  one_arm_horn(as_clearance=true);
-            }
-        }
-        render(convexity=10) difference() {
-            can(d=od_cam, hollow=7.5, h=3, center=BELOW);
-            translate([0, 0, dz_cam]) rotate([0, ay_cam, 0]) plane_clearance(BELOW);
-        }
-    }
-    z_printing = -dz_cam;
-    rotation = 
-        mode == PRINTING ? [0, -ay_cam, 0] :
-        [0, 0, servo_angle + servo_offset_angle];
-    translation = 
-        mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
-        [0, 0, 3.5];
-    translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
-}
-
-
 
 module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
-    h_above =2;
+    h_above =2.2;
     h_barrel = 3.77;
     h_arm = 1.3; 
     h_below = 2;
@@ -653,6 +627,8 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
                     translate([-5, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
             }
             can(d=2.5, h=a_lot); //Screw 
+            // Screw used as filament stop:
+            translate([dx_print_base-1.7, -3, 25]) hole_through("M2", $fn=12, cld=0.2); // Tight fit, use screw to tap out hole to avoid using a nut.
         }
     }        
     module shape() {

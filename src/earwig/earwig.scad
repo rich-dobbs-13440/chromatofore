@@ -68,7 +68,7 @@ z_base_joiner = 3.8;
 x_base_offset = -5;
 
 /* [Cam Design] */
-od_cam = 12;
+od_cam = 11;
 dz_cam = 0.6; // [0: 0.1 : 3]
 ay_cam = 10; // [0: 1: 20]
 az_cam = 30;
@@ -546,7 +546,7 @@ module rail_riders() {
 
 
 module filament_guide(item=0, include_pusher_pivot=false) {
-    cam_clearance = 0.5;
+    cam_clearance = 1.5;
     module pusher_pivot(as_pad = false, as_vitamin = false) {
         translation = [0, -y_guide/2-1.7, 0];
         if (as_pad) {
@@ -581,7 +581,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
             }
             can(d=od_cam + 2*cam_clearance, h=a_lot);
             servo_screws(as_clearance = true);
-            translate([0, 0, z_guide]) block([16, 8, 8], center=ABOVE+BEHIND); 
+            * translate([0, 0, z_guide]) block([16, 8, 8], center=ABOVE+BEHIND); 
         }
         if (include_pusher_pivot) {
             pusher_pivot (as_pad = true);
@@ -631,7 +631,7 @@ module horn_cam_original(item=0, servo_angle=0, servo_offset_angle=0) {
 
 
 
-module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
+module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     h_above =2;
     h_barrel = 3.77;
     h_arm = 1.3; 
@@ -639,18 +639,20 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0) {
     h = h_above + h_arm + h_below;
     dz_horn_engagement = -1;
     dz_horn = dz_horn_engagement -h_barrel + h_arm + h_below;
-    dx_print_base = 5;
+    dx_print_base = od_cam/2;
     module cam_blank() {
         render(convexity=10) difference() {
-            translate([0, 0, 0]) can(d=od_cam, h=h, center=ABOVE);
+            hull() {
+                translate([0, 0, 0]) can(d=od_cam, h=h, center=ABOVE);
+                translate([dx_print_base, 0, 0]) block([2, 8, h], center=BEHIND+ABOVE);
+            }
             translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-                //translate([0, 0, -1])  scale([0.85, 0.85, 1]) one_arm_horn(as_clearance=true);
+             translate([0, 0, dz_horn-clearance])  one_arm_horn(as_clearance=true);
             hull() {
                     translate([0, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
                     translate([-5, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
             }
-            can(d=2.5, h=a_lot); //Screw
-            translate([dx_print_base, 0, 0]) plane_clearance(FRONT); 
+            can(d=2.5, h=a_lot); //Screw 
         }
     }        
     module shape() {

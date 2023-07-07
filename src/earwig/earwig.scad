@@ -39,12 +39,14 @@ print_fixed_clamp = true;
 print_pusher = true;
 
 print_one_part = false;
-part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, horn_linkage, linkage]
+part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage]
 
 
 /* [Show] */
 servo_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 pusher_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+collet = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+clip = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -106,19 +108,23 @@ y_filament_guide_bp = 20;
 dx_filament_guide_bp = -50; 
 
 x_horn_cam_bp = 0;
-y_horn_cam_bp = 40;
+y_horn_cam_bp = -15;
 dx_horn_cam_bp = -15;
 
+x_pusher_body_bp = 0;
+y_pusher_body_bp =40;
+
+x_collet_bp  =-40;
+y_collet_bp  = 40;
+
+x_clip_bp  =-60;
+y_clip_bp  =40;
+
 x_horn_linkage_bp = 0;
-y_horn_linkage_bp = 60;
+y_horn_linkage_bp = 55;
 
 x_linkage_bp = -30;
-y_linkage_bp = 60;
-
-
-
-x_pusher_body_bp = 0;
-y_pusher_body_bp = 80;
+y_linkage_bp = 50;
 
 module end_of_customization() {}
 
@@ -168,9 +174,17 @@ visualization_pusher_body =
     visualize_info(
         "Pusher Body", PART_8, show(pusher_body, "pusher_body") , layout, show_parts);     
         
+visualization_collet = 
+    visualize_info(
+        "Quick Connect Collet", PART_9, show(collet, "collet") , layout, show_parts);       
+     
+  visualization_clip = 
+    visualize_info(
+        "Quick Connect Clip", PART_10, show(clip, "clip") , layout, show_parts);          
+        
  if (mode ==  ASSEMBLE_SUBCOMPONENTS) {     
     filament();
-    pusher_assembly();
+    pusher();
     moving_clamp();
     fixed_clamp();
     rails();
@@ -191,6 +205,8 @@ visualization_pusher_body =
      }
      if (print_pusher) {
          pusher_body();
+         collet();
+         clip();
          horn_linkage();
          linkage();
      }
@@ -266,7 +282,7 @@ module fixed_clamp() {
     }
 }
 
-module pusher_assembly() {
+module pusher() {
     y_pusher_assmebly = y_guide/2;
     translate([0, y_pusher_assmebly, 0]) {
         pusher_body();
@@ -276,12 +292,6 @@ module pusher_assembly() {
     }
 }
 
-
-
-
-
-//quick_connect_collet(tubing_allowance=0);
-//c_clip(orient_for_build=true);
 
 module rails() {  
     translate([x_base_offset+x_guide/2, 0, 0]) rail(); 
@@ -340,6 +350,33 @@ module pusher_body() {
         visualize(visualization_pusher_body) shape();  
     }
 }
+
+module collet() {
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0,  0, 0] :
+        [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_collet_bp, y_collet_bp, z_printing] :
+        [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        visualize(visualization_collet) quick_connect_collet(tubing_allowance=0);
+    }      
+}
+
+module clip() {
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0,  0, 0] :
+        [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_clip_bp, y_clip_bp, z_printing] :
+        [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        visualize(visualization_clip) quick_connect_c_clip(orient_for_build=true);
+    }      
+}
+
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     //  The horn linkage sits on top of the horn, to avoid interference with the filament.

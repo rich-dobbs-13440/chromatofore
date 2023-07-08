@@ -27,6 +27,7 @@ const int FILAMENT_MOVE_PIN = 8;
 const int FILAMENT_CLAMP_PIN = 9;
 const int FILAMENT_ROTATE_PIN = 10;
 const int EXTRUDER_ENGAGE_PIN = 11;
+const int FILAMENT_FIXED_CLAMP_PIN = 12;
 
 // Servo objects
 Servo filamentMoveServo;

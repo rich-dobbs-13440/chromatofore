@@ -15,24 +15,26 @@ mode = 3; // [1:"Designing, no rotation or translation", 3: "Assemble", 4: "Prin
 show_vitamins = true;
 guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-copies_to_print = 3;
+copies_to_print = 1; // [1:10]
 
 /* [Design] */
-dz_filament = -12;
+dz_filament = -14;
+dz_roller = 1; // [0:0.1:2]
 filament_clearance = 0.5;
-d_roller_clearance = 5;
-l_roller_clearance = 10;
+d_roller_clearance = 5.5;
+l_roller_clearance = 5.; // [4:0.1:6]
 dx_mount_holes = 5;
-dz_mount_holes = -18;
+
+
 
 /* [Build Plate Layout] */
-x_guide_bp = 30; 
+x_guide_bp = 10; 
 y_guide_bp = 0; 
-dx_guide_bp = 15;
+dx_guide_bp = 30;
 
 x_base_bp = 0;
-y_base_bp = 0;
-dx_base_bp = -50;
+y_base_bp = -20;
+dx_base_bp = 30;
 
 module end_customization() {}
 
@@ -51,6 +53,28 @@ if (mode == PRINTING) {
     filament_guide();
 }
 
+function layout_from_mode(mode) = 
+    mode == NEW_DEVELOPMENT ? "hidden" :
+    mode == DESIGNING ? "as_designed" :
+    //mode == MESHING_GEARS ? "mesh_gears" :
+    mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
+    mode == PRINTING ? "printing" :
+    "unknown";
+
+layout = layout_from_mode(mode);
+
+show_parts = true;
+
+visualization_guide = 
+    visualize_info(
+        "Filament Sensor Guide", PART_32, guide, layout, show_parts); 
+
+visualization_base = 
+    visualize_info(
+        "Filament Sensor Base", PART_34, base, layout, show_parts); 
+
+
+
 module filament(as_clearance=false) {
     translate([0, 0, dz_filament]) {
         if (as_clearance) {
@@ -65,9 +89,11 @@ module filament(as_clearance=false) {
 
 module filament_guide(item=0) {
     module roller_clearance() {
-        translate([-6, -2.5, dz_filament+2]) {
-            rod(d=d_roller_clearance, l = l_roller_clearance, center=SIDEWISE);
-            block([d_roller_clearance, l_roller_clearance, 4], center=ABOVE); 
+        translate([-6, 0, dz_filament+dz_roller]) {
+            hull() {
+                rod(d=d_roller_clearance, l = l_roller_clearance, center=SIDEWISE);
+                translate([0, 0, d_roller_clearance/2]) block([d_roller_clearance+3, l_roller_clearance + 3, 0.1], center=ABOVE);
+            } 
         }
     } 
     module blank() {
@@ -81,26 +107,36 @@ module filament_guide(item=0) {
             blank();
             filament(as_clearance=true);
             roller_clearance();
-            guide_mounting_screws(as_clearance=true, for_guide=true); 
+            guide_mounting_screws(as_clearance=true, as_slot=true); 
         }
     }
-    color(PART_32) shape();
+    dz_printing = back_plate().x/2;  
+    rotation = 
+        mode == PRINTING ? [0, 90, 0] : [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_guide_bp + item * dx_guide_bp, y_guide_bp, dz_printing] : 
+        [0, 0, 0];
+    translate(translation) {
+        rotate(rotation) {
+            visualize(visualization_guide)  shape();
+        }
+    }
 }
 
-module guide_mounting_screws(as_clearance=false, for_guide=false) {
+module guide_mounting_screws(as_clearance=false, as_slot=true) {
     dx=4;
-
+    dz_mount_holes = dz_filament -6;
     center_reflect([1, 0, 0]) {
         translate([dx_mount_holes, 0, dz_mount_holes]) {
             rotate([90, 0, 0]) {
                 if (as_clearance) {
-                    if (for_guide) {
-                        translate([dx/2, 0, 25]) hole_through("M2", $fn=12, cld=0.4);
-                    } else {
+                    if (as_slot) {
                         hull() {
-                            hole_through("M2", $fn=12, cld=0.4);
-                            translate([dx, 0, 0]) hole_through("M2", $fn=12, cld=0.4);
+                            translate([0, 0, 25])  hole_through("M2", $fn=12, cld=0.4);
+                            translate([dx, 0, 25]) hole_through("M2", $fn=12, cld=0.4);
                         }
+                    } else { 
+                        translate([dx/2, 0, 25]) hole_through("M2", $fn=12, cld=0.4);                    
                     }
                 } else {
                     color(STAINLESS_STEEL) {
@@ -115,10 +151,11 @@ module guide_mounting_screws(as_clearance=false, for_guide=false) {
 
 module filament_sensor_base(item=0) {
     z_be = -dz_filament + 6;
+    wall = 4;
     module base_extension() {
         render(convexity=10) difference() {
              translate(back_plate_translation()) {
-                block([back_plate().x, 4, z_be], center=BELOW+RIGHT);
+                block([back_plate().x, wall, z_be], center=BELOW+RIGHT);
              }
              guide_mounting_screws(as_clearance=true); 
         }   
@@ -130,8 +167,16 @@ module filament_sensor_base(item=0) {
     rotation = 
         mode == PRINTING ? [-90, 0, 0] :
          [0, 0, 0];
-    rotate(rotation) {
-        no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins && mode != PRINTING);
-        color(PART_34) base_extension();
+    dz_printing = back_plate_translation().y + wall ;
+    translation = 
+        mode == PRINTING ? [x_base_bp + item * dx_base_bp, y_base_bp, dz_printing] : 
+        [0, 0, 0];    
+    if (base > 0) {
+        translate(translation) {
+            rotate(rotation) {
+                no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins && mode != PRINTING);
+                color(PART_34) base_extension();
+            }
+        }
     }
 }

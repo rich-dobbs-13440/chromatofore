@@ -18,6 +18,8 @@ G1 X10  : Move move servo to an angle of 10 degres
 #include <string.h>
 #include <ezButton.h>
 #include <math.h>
+//#include <earwig.h>
+
 
 float nan = sqrt(-1);
 

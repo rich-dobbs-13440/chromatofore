@@ -107,7 +107,7 @@ module outlet_mounting_screws(as_clearance = false) {
             translate([0, dy_outlet_screw_offset, 0]) {
                 rotate([0, 90, 0]) {    
                     if (as_clearance) {
-                        translate([0, 0, 25])  hole_through("M2", $fn=12, cld=0.4);
+                        translate([0, 0, 50])  hole_through("M2", $fn=12, cld=0.4, l=100);
                     } else {
                     }  
                 }
@@ -144,7 +144,6 @@ module quick_connect_body_outlet(item) {
             can(d = d_filament + 2 * filament_clearance, h = filament_length);
         }
     }
-
     dz_printing = outlet_flange.x;  
     rotation = 
         mode == PRINTING ? [0, 0, 0] : [0, 90, 0];
@@ -176,7 +175,6 @@ module filament_guide(item=0) {
             }
         }
     }
-    
     module roller_clearance() {
         translate([dx_roller, 0, dz_filament+dz_roller]) {
             hull() {
@@ -200,7 +198,7 @@ module filament_guide(item=0) {
             reentry_clearance();
             roller_clearance();
             guide_mounting_screws(as_clearance=true, as_slot=true); 
-            outlet_mounting_screws(as_clearance=true);
+            #outlet_mounting_screws(as_clearance=true);
         }
     }
     dz_printing = l_guide/2;  

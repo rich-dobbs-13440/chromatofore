@@ -198,7 +198,7 @@ module filament_guide(item=0) {
             reentry_clearance();
             roller_clearance();
             guide_mounting_screws(as_clearance=true, as_slot=true); 
-            #outlet_mounting_screws(as_clearance=true);
+            outlet_mounting_screws(as_clearance=true);
         }
     }
     dz_printing = l_guide/2;  

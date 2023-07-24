@@ -41,7 +41,7 @@ print_pusher = true;
 print_frame = true;
 
 print_one_part = false;
-part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder]
+part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder, limit_switch_bumper]
 
 
 /* [Show] */
@@ -57,6 +57,7 @@ linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+limit_switch_bumper = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -111,11 +112,11 @@ linkage_length = 26;
 
 
 /* [Limit Switch Holder Design] */
-dx_limit_switch_holder = -17.5; // [-30:0]
+dx_limit_switch_holder = -17.1; // [-30:0]
 dz_limit_switch_holder = -11; // [-30:0]
 dx_top_clamp = -5.2; // [-6: 0.1: -5]
 dy_top_clamp = 7; // [-10:10]
-dz_top_clamp = -16; // [-20:-10]
+dz_top_clamp = -17; // [-20:-10]
 
 /* [Build Plate Layout] */
 x_rail_bp = 30; 
@@ -159,6 +160,9 @@ dx_tie_bp = dx_rail_bp;
 
 x_limit_switch_holder_bp = -20; 
 y_limit_switch_holder_bp = -30;
+
+x_limit_switch_bumper_bp = -40;
+y_limit_switch_bumper_bp = -40;
 
 module end_of_customization() {}
 
@@ -252,7 +256,15 @@ visualization_tie =
         
 visualization_tie_bracket = 
     visualize_info(
-        "Tie Bracket", PART_2, show(tie_bracket, "tie_bracket") , layout, show_parts);           
+        "Tie Bracket", PART_12, show(tie_bracket, "tie_bracket") , layout, show_parts);   
+      
+visualization_limit_switch_holder =   
+    visualize_info(
+        "Limit_", PART_13, show(limit_switch_holder, "limit_switch_holder") , layout, show_parts); 
+  
+visualization_limit_switch_bumper =   
+    visualize_info(
+        "Limit_", PART_14, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
         
  if (mode ==  ASSEMBLE_SUBCOMPONENTS) {     
     filament();
@@ -271,6 +283,7 @@ visualization_tie_bracket =
          filament_guide(item=0, include_pusher_pivot=true);
          servo_base(item=0);
          horn_cam(item=0);
+         limit_switch_bumper();
      }
      if (print_fixed_clamp) {
          filament_guide(item=1);
@@ -359,6 +372,7 @@ module moving_clamp() {
         filament_guide(include_pusher_pivot=true);
         one_arm_horn(servo_angle=servo_angle_moving_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_moving_clamp); 
+        limit_switch_bumper();
     }
 }
 
@@ -400,18 +414,19 @@ module frame() {
 
 // Parts
 
-
-module limit_switch_holder() {
+module limit_switch_bumper() {
     base_thickness = 2;
     dx_screw = -2.6;
-    module shape() {
-        
-        
-        color(PART_25) 
+    module shape() {  
+        color(PART_29) 
             render(convexity = 10) difference() {
                 union() { 
                     block([5, 10, 5], center = BELOW+BEHIND);
-                    translate([0, 3, 0]) block([base_thickness, 15, 8], center = BELOW+BEHIND+RIGHT);
+                    hull() {
+                        translate([0, 4, 0]) block([5, 1, 5], center = BELOW+BEHIND+RIGHT);
+                        translate([-2.5, 12, -9]) block([5, 2, 5], center = BELOW+BEHIND+RIGHT);
+                        translate([0, 10, -9]) block([0.1, 2, 2], center = BELOW+BEHIND+RIGHT);
+                    }
                 }
                 translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
                 translate([dx_screw, 0, -2]) {
@@ -424,9 +439,40 @@ module limit_switch_holder() {
                             clsl   =  0.1); 
                 } 
             }
+    }
+    rotation = 
+        mode == PRINTING ? [0,  90, 0] :
+        [0,  0, 0];
+    translation = 
+        mode == PRINTING ? [x_limit_switch_bumper_bp, y_limit_switch_bumper_bp, , 0]:
+        [dx_limit_switch_holder, 0, dz_limit_switch_holder];
+    translate(translation) rotate(rotation)  visualize(visualization_limit_switch_bumper) shape();
+}
+
+module limit_switch_holder() {
+    base_thickness = 2;
+    dx_screw = -2.6;
+    module shape() {  
+        color(visualization_limit_switch_holder[1]) 
+            render(convexity = 10) difference() {
+                union() { 
+                    block([5, 10, 6], center = BELOW+BEHIND);
+                    translate([0, 3, 0]) block([base_thickness, 15, 8], center = BELOW+BEHIND+RIGHT);
+                }
+                translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
+                translate([dx_screw, 0, -2.]) {
+                    rotate([0, 0, 180]) 
+                        nutcatch_sidecut(
+                            name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
+                            l      = 50.0,  // length of slot
+                            clk    =  0.5,  // key width clearance
+                            clh    =  0.5,  // height clearance
+                            clsl   =  0.1); 
+                } 
+            }
         translate([dx_top_clamp, dy_top_clamp, dz_top_clamp])
             rotate([0, 90, 90]) nsrsh_top_clamp(
-                show_vitamins=show_vitamins, 
+                show_vitamins=show_vitamins && mode != PRINTING , 
                 right_handed = false,
                 alpha=1, 
                 thickness=base_thickness, 
@@ -438,7 +484,9 @@ module limit_switch_holder() {
     translation = 
         mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, , 0]:
         [dx_limit_switch_holder, 0, dz_limit_switch_holder];
-    translate(translation) rotate(rotation) shape();
+    if (visualization_limit_switch_holder[2]) {
+        translate(translation) rotate(rotation) shape();
+    }
 }
 
 module tie(item = 0, dovetail_clearance=dovetail_clearance) {

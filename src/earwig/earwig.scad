@@ -8,6 +8,7 @@ use <ScadApotheka/9g_servo.scad>
 use <ScadApotheka/hs_311_standard_servo.scad>
 use <ScadApotheka/roller_limit_switch.scad>
 use <ScadApotheka/ptfe_tubing_quick_connect.scad> 
+use <ScadApotheka/no_solder_roller_limit_switch_holder.scad>
 
 
 
@@ -40,7 +41,7 @@ print_pusher = true;
 print_frame = true;
 
 print_one_part = false;
-part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie]
+part_to_print = "frame"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder]
 
 
 /* [Show] */
@@ -55,6 +56,7 @@ horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -108,6 +110,13 @@ r_horn_linkage = 14;
 linkage_length = 26;
 
 
+/* [Limit Switch Holder Design] */
+dx_limit_switch_holder = -17.5; // [-30:0]
+dz_limit_switch_holder = -11; // [-30:0]
+dx_top_clamp = -5.2; // [-6: 0.1: -5]
+dy_top_clamp = 7; // [-10:10]
+dz_top_clamp = -16; // [-20:-10]
+
 /* [Build Plate Layout] */
 x_rail_bp = 30; 
 y_rail_bp = 0; 
@@ -140,13 +149,16 @@ y_horn_linkage_bp = 55;
 x_linkage_bp = -30;
 y_linkage_bp = 50;
 
-x_tie_bracket_bp = 0;
-y_tie_bracket_bp = 0;
-dx_tie_bracket_bp = 0;
+x_tie_bracket_bp = x_rail_bp;
+y_tie_bracket_bp = -30;
+dx_tie_bracket_bp = dx_rail_bp;
 
-x_tie_bp = 0;
-y_tie_bp = 0;
-dx_tie_bp = 0;
+x_tie_bp = x_rail_bp;
+y_tie_bp = -50;
+dx_tie_bp = dx_rail_bp;
+
+x_limit_switch_holder_bp = -20; 
+y_limit_switch_holder_bp = -30;
 
 module end_of_customization() {}
 
@@ -263,7 +275,8 @@ visualization_tie_bracket =
      if (print_fixed_clamp) {
          filament_guide(item=1);
          servo_base(item=1);
-        horn_cam(item=1);          
+        horn_cam(item=1);
+         limit_switch_holder();         
      }
      if (print_pusher) {
          pusher_body();
@@ -356,6 +369,7 @@ module fixed_clamp() {
         filament_guide();
         one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_fixed_clamp);
+        limit_switch_holder();
     }
 }
 
@@ -385,6 +399,47 @@ module frame() {
 
 
 // Parts
+
+
+module limit_switch_holder() {
+    base_thickness = 2;
+    dx_screw = -2.6;
+    module shape() {
+        
+        
+        color(PART_25) 
+            render(convexity = 10) difference() {
+                union() { 
+                    block([5, 10, 5], center = BELOW+BEHIND);
+                    translate([0, 3, 0]) block([base_thickness, 15, 8], center = BELOW+BEHIND+RIGHT);
+                }
+                translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
+                translate([dx_screw, 0, -2]) {
+                    rotate([0, 0, 180]) 
+                        nutcatch_sidecut(
+                            name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
+                            l      = 50.0,  // length of slot
+                            clk    =  0.5,  // key width clearance
+                            clh    =  0.5,  // height clearance
+                            clsl   =  0.1); 
+                } 
+            }
+        translate([dx_top_clamp, dy_top_clamp, dz_top_clamp])
+            rotate([0, 90, 90]) nsrsh_top_clamp(
+                show_vitamins=show_vitamins, 
+                right_handed = false,
+                alpha=1, 
+                thickness=base_thickness, 
+                use_dupont_pins = true);   
+    }
+    rotation = 
+        mode == PRINTING ? [0,  90, 0] :
+        [0,  0, 0];
+    translation = 
+        mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, , 0]:
+        [dx_limit_switch_holder, 0, dz_limit_switch_holder];
+    translate(translation) rotate(rotation) shape();
+}
 
 module tie(item = 0, dovetail_clearance=dovetail_clearance) {
     module shape() { 

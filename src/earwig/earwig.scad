@@ -101,7 +101,7 @@ dz_rail_screws = -4;
 /* [Dove Tail Design] */
 x_dovetail = 4;
 y_dovetail = 6;
-z_dovetail = 4;
+z_dovetail = 5;
 dovetail_clearance = 0.25;
 tie_length = 30;
 
@@ -114,14 +114,16 @@ linkage_length = 26;
 /* [Limit Switch Holder Design] */
 dx_limit_switch_holder = -17.1; // [-30:0]
 dz_limit_switch_holder = -11; // [-30:0]
-dx_top_clamp = -5.2; // [-6: 0.1: -5]
+dx_top_clamp = -5.3; // [-6: 0.1: -5]
 dy_top_clamp = 7; // [-10:10]
-dz_top_clamp = -17; // [-20:-10]
+dz_top_clamp = -20; // [-20:-10]
+right_handed_limit_switch_holder = true;
+limit_switch_holder_base_thickness = 2;
 
 /* [Build Plate Layout] */
 x_rail_bp = 30; 
 y_rail_bp = 0; 
-dx_rail_bp = 15;
+dx_rail_bp = 18;
 
 x_servo_base_bp = 0;
 y_servo_base_bp = 0;
@@ -151,7 +153,7 @@ x_linkage_bp = -30;
 y_linkage_bp = 50;
 
 x_tie_bracket_bp = x_rail_bp;
-y_tie_bracket_bp = -30;
+y_tie_bracket_bp = -15;
 dx_tie_bracket_bp = dx_rail_bp;
 
 x_tie_bp = x_rail_bp;
@@ -197,6 +199,8 @@ s_dovetail = s_guide_dovetail + 2*frame_clearance;
 
 x_rail = 1 + s_guide_dovetail + 1 + rail_wall;
 z_rail = z_guide + s_guide_dovetail + 2 * rail_wall;
+
+
 
 function layout_from_mode(mode) = 
     mode == NEW_DEVELOPMENT ? "hidden" :
@@ -304,9 +308,9 @@ visualization_limit_switch_bumper =
          tie_bracket(item = 2);
          tie_bracket(item = 3);
          tie(item = 0);
-         //tie(item = 1);
-         //tie(item = 0);
-         //tie(item = 1);         
+         tie(item = 1);
+         tie(item = 2);
+         tie(item = 3);         
      }
  }
  
@@ -415,17 +419,22 @@ module frame() {
 // Parts
 
 module limit_switch_bumper() {
-    base_thickness = 2;
+
     dx_screw = -2.6;
+    bumper = [5, 2, 7];
+    support = [0.1, 2, 4];
+    nut_block = [5, 10, 6];
+    dx_bumper = right_handed_limit_switch_holder ? 0 : -2.5;
     module shape() {  
         color(PART_29) 
             render(convexity = 10) difference() {
                 union() { 
-                    block([5, 10, 5], center = BELOW+BEHIND);
+                    block(nut_block, center = BELOW+BEHIND);
                     hull() {
+                        translate([dx_bumper, 12, -9]) block(bumper,  center = BELOW+BEHIND+RIGHT);
                         translate([0, 4, 0]) block([5, 1, 5], center = BELOW+BEHIND+RIGHT);
-                        translate([-2.5, 12, -9]) block([5, 2, 5], center = BELOW+BEHIND+RIGHT);
-                        translate([0, 10, -9]) block([0.1, 2, 2], center = BELOW+BEHIND+RIGHT);
+                        
+                        translate([0, 10, -9]) block(support,  center = BELOW+BEHIND+RIGHT);
                     }
                 }
                 translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
@@ -450,18 +459,28 @@ module limit_switch_bumper() {
 }
 
 module limit_switch_holder() {
-    base_thickness = 2;
+ 
     dx_screw = -2.6;
+    joiner = [limit_switch_holder_base_thickness, 15, 3];
+    dx_joiner = right_handed_limit_switch_holder ? -6.5 : 0;
+    dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
+    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 10, 6];
+    az_nutcatch_sidecut = right_handed_limit_switch_holder ? 0 : 180;
     module shape() {  
         color(visualization_limit_switch_holder[1]) 
             render(convexity = 10) difference() {
                 union() { 
-                    block([5, 10, 6], center = BELOW+BEHIND);
-                    translate([0, 3, 0]) block([base_thickness, 15, 8], center = BELOW+BEHIND+RIGHT);
+                    block(nut_block, center = BELOW+BEHIND);
+                    translate([dx_joiner, 0, 0]) {
+                        hull() {
+                            translate([0, 4, dz_top_clamp + 8]) block(joiner, center = ABOVE+BEHIND+RIGHT);
+                            block([limit_switch_holder_base_thickness, 10, 6], center = BELOW+BEHIND);
+                        }
+                    }
                 }
                 translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
                 translate([dx_screw, 0, -2.]) {
-                    rotate([0, 0, 180]) 
+                    rotate([0, 0, az_nutcatch_sidecut]) 
                         nutcatch_sidecut(
                             name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                             l      = 50.0,  // length of slot
@@ -470,19 +489,21 @@ module limit_switch_holder() {
                             clsl   =  0.1); 
                 } 
             }
-        translate([dx_top_clamp, dy_top_clamp, dz_top_clamp])
+        translate([dx_top_clamp - dx_top_clamp_adjustment, dy_top_clamp, dz_top_clamp])
             rotate([0, 90, 90]) nsrsh_top_clamp(
                 show_vitamins=show_vitamins && mode != PRINTING , 
-                right_handed = false,
+                right_handed = right_handed_limit_switch_holder,
                 alpha=1, 
-                thickness=base_thickness, 
+                thickness=limit_switch_holder_base_thickness, 
                 use_dupont_pins = true);   
     }
+    ay_printing = right_handed_limit_switch_holder ? -90 : 90;
     rotation = 
-        mode == PRINTING ? [0,  90, 0] :
+        mode == PRINTING ? [0,  ay_printing, 0] :
         [0,  0, 0];
+    dz_printing = right_handed_limit_switch_holder ? 10.5 : 0;
     translation = 
-        mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, , 0]:
+        mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, dz_printing]:
         [dx_limit_switch_holder, 0, dz_limit_switch_holder];
     if (visualization_limit_switch_holder[2]) {
         translate(translation) rotate(rotation) shape();
@@ -495,12 +516,12 @@ module tie(item = 0, dovetail_clearance=dovetail_clearance) {
         block([x_dovetail, y_dovetail, tie_length], center=BEHIND); 
     }
     
-    z_printing = 0;
+    z_printing = x_dovetail;
     rotation = 
-        mode == PRINTING ? [0,  0, 0] :
+        mode == PRINTING ? [90,  -90, 0] :
         [0, 0, 180];
     translation = 
-        mode == PRINTING ? [x_tie_bp, y_tie_bp, z_printing] :
+        mode == PRINTING ? [x_tie_bp + item*dx_tie_bp, y_tie_bp, z_printing] :
         [0, 0, 0];
     translate(translation) rotate(rotation) {
         visualize(visualization_tie) shape();  
@@ -543,10 +564,10 @@ module tie_bracket(item = 0, clearance=dovetail_clearance) {
     }
     z_printing = 0;
     rotation = 
-        mode == PRINTING ? [0,  0, 0] :
+        mode == PRINTING ? [0,  90, 90] :
         [0, 0, 180];
     translation = 
-        mode == PRINTING ? [x_tie_bracket_bp, y_tie_bracket_bp, z_printing] :
+        mode == PRINTING ? [x_tie_bracket_bp + item * dx_tie_bracket_bp, y_tie_bracket_bp, z_printing] :
         [0, 0, dz_rail_screws];
     translate(translation) rotate(rotation) {
         visualize(visualization_tie_bracket) shape();  

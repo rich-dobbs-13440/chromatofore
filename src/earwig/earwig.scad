@@ -110,8 +110,8 @@ tie_length = 30;
 /* [Linkage Design] */
 az_horn_linkage_pivot = 20;
 r_horn_linkage = 14;
-linkage_length = 26;
-linkage_adjustment_range = 10;
+linkage_length = 36;
+linkage_shorten_range = 4;
 
 
 /* [Limit Switch Holder Design] */
@@ -750,21 +750,31 @@ module adjustable_linkage() {
     // but can be fine tuned for length.  In the short term this is needed for development and 
     // experimentation, but is not likely to be included in the final product as geometry is 
     // locked down.
-    linkage_width = 5;
+    linkage_width = 4;
     linkage_height = 6;
-    pad_height = 2;
+    pad_height = 4;
+    pad_diameter = 5;
     slider_height = 6;
-    slider = [linkage_adjustment_range + 4, linkage_width/2, slider_height];
+    
+    slider = [linkage_length - pad_diameter - linkage_shorten_range, linkage_width/2, slider_height];
+    linkage_adjustment_range = slider.x - 6;
     slot_translation = [linkage_adjustment_range/2, -25, slider_height/2];
+    dy_slot = (pad_diameter-linkage_width)/2;
+    dx_slot = 2;
     module blank() {
-        translate([linkage_length/2, 0, 0]) can(d=linkage_width, h = pad_height, center=ABOVE);
-        block([linkage_length/2 + linkage_width/2, linkage_width/2, pad_height], center=ABOVE+FRONT+RIGHT);
-        block(slider, center = ABOVE + RIGHT);
+        hull() {
+            translate([linkage_length/2, 0, 0]) {
+                can(d=pad_diameter, h = pad_height, center=ABOVE);
+                block([pad_diameter, pad_diameter/2, pad_height], center=ABOVE+RIGHT);
+            }
+        }
+        translate([dx_slot, dy_slot, 0]) {
+            block(slider, center = ABOVE + RIGHT);
+            block([linkage_length/2, linkage_width/2, pad_height], center=ABOVE+FRONT+RIGHT);
+        }
     }  
-    module shape() {
-        render(convexity=10) difference() {
-            blank();
-            translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+    module slot() {
+        translate([dx_slot, 0, 0]) {
             hull() {
                 center_reflect([1, 0, 0]) {
                     translate(slot_translation) {
@@ -774,16 +784,23 @@ module adjustable_linkage() {
             }
         }
     }
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+            slot();
+        }
+    }
 
-    z_printing = linkage_width/2;
+    z_printing = pad_diameter/2;
     rotation = 
         mode == PRINTING ? [-90,  0, 0] :
         [0, 0, linkage_angle];    
     translation = 
         mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
         [dx_linkage, dy_linkage, 8];  
-    translate(translation) rotate(rotation) visualize(visualization_adjustable_linkage) {
-        shape(); 
+    translate(translation) rotate(rotation) {
+        visualize(visualization_adjustable_linkage) shape(); 
         if  (mode == PRINTING) {
             translate([0, 0, 2 * linkage_width]) shape(); 
         } else {

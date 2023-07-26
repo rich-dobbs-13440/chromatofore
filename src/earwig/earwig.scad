@@ -24,14 +24,14 @@ d_number_ten_screw = 4.7 + 0;
 od_three_eighths_inch_tubing = 9.3 + 0;
 od_one_quarter_inch_tubing = 6.5 + 0;
 
-NEW_DEVELOPMENT = 0 + 0;
-DESIGNING = 1 + 0;
+//NEW_DEVELOPMENT = 0 + 0;
+//DESIGNING = 1 + 0;
 ASSEMBLE_SUBCOMPONENTS = 3 + 0;
 PRINTING = 4 + 0;
 
 /* [Output Control] */
 
-mode = 3; // [1:"Designing, no rotation or translation", 3: "Assemble", 4: "Printing"]
+mode = 3; // [3: "Assemble", 4: "Printing"]
 show_vitamins = true;
 show_parts = true; // But nothing here has parts yet.
 print_both_rails = true;
@@ -41,7 +41,7 @@ print_pusher = true;
 print_frame = true;
 
 print_one_part = false;
-part_to_print = "limit_switch_bumper"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder, limit_switch_bumper]
+part_to_print = "adjustable_linkage"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder, limit_switch_bumper, adjustable_linkage]
 
 
 /* [Show] */
@@ -54,6 +54,7 @@ filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+adjustable_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -110,6 +111,7 @@ tie_length = 30;
 az_horn_linkage_pivot = 20;
 r_horn_linkage = 14;
 linkage_length = 26;
+linkage_adjustment_range = 10;
 
 
 /* [Limit Switch Holder Design] */
@@ -123,6 +125,7 @@ limit_switch_holder_base_thickness = 2;
 
 /* [Limit Switch Bumper Design] */
 x_limit_switch_bumper = 5.5;
+// Adjust to trigger switch at maximum range of moving clamp. Long term need to adjustable linkage_length
 y_limit_switch_bumper = 3;
 z_limit_switch_bumper = 8;
 // Relative to top of nut block
@@ -160,6 +163,10 @@ y_horn_linkage_bp = 55;
 x_linkage_bp = -30;
 y_linkage_bp = 50;
 
+x_adjustable_linkage_bp = -30;
+y_adjustable_linkage_bp = 50;
+dx_adjustable_linkage_bp = -30;
+
 x_tie_bracket_bp = x_rail_bp;
 y_tie_bracket_bp = -15;
 dx_tie_bracket_bp = dx_rail_bp;
@@ -181,22 +188,22 @@ module end_of_customization() {}
 // Move servo origin
 dx_origin = 0;
 dy_origin = 8;
-//translate([dx_origin, dy_origin, 0]) color("yellow") can(d=1, h=a_lot);
+//Debug: translate([dx_origin, dy_origin, 0]) color("yellow") can(d=1, h=a_lot);
 
 a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
 dx_horn_pivot = dx_origin + cos(a_horn_pivot) * r_horn_linkage;
 dy_horn_pivot = dy_origin + sin(a_horn_pivot) * r_horn_linkage; 
-//translate([dx_horn_pivot, dy_horn_pivot, 0]) color("blue") can(d=1, h=a_lot);
+// Debug: ttranslate([dx_horn_pivot, dy_horn_pivot, 0]) color("blue") can(d=1, h=a_lot);
 
  linkage_angle = acos(-dx_horn_pivot/linkage_length); 
 
 dx_pivot = dx_horn_pivot + cos(linkage_angle) * linkage_length;
 dy_pivot = dy_horn_pivot + sin(linkage_angle) * linkage_length; 
-//translate([dx_pivot, dy_pivot, 0]) color("green") can(d=1, h=a_lot);
+// Debug: translate([dx_pivot, dy_pivot, 0]) color("green") can(d=1, h=a_lot);
    
 dx_linkage_midpoint = dx_horn_pivot/2;
 dy_linkage_midpoint = (dy_pivot+dy_horn_pivot)/2;
-//translate([dx_linkage_midpoint, dy_linkage_midpoint, 0]) color("brown") can(d=1, h=a_lot);
+// Debug: translate([dx_linkage_midpoint, dy_linkage_midpoint, 0]) color("brown") can(d=1, h=a_lot);
 // But translation is applied after rotation, so dy must be adjusted;
 dx_linkage = dx_linkage_midpoint;
 dy_linkage = dy_horn_pivot- dy_origin + sin(linkage_angle) * linkage_length/2;
@@ -211,9 +218,6 @@ z_rail = z_guide + s_guide_dovetail + 2 * rail_wall;
 
 
 function layout_from_mode(mode) = 
-    mode == NEW_DEVELOPMENT ? "hidden" :
-    mode == DESIGNING ? "as_designed" :
-    //mode == MESHING_GEARS ? "mesh_gears" :
     mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
     mode == PRINTING ? "printing" :
     "unknown";
@@ -249,6 +253,10 @@ visualization_horn_linkage  =
 visualization_linkage  =        
     visualize_info(
         "Linkage", PART_7, show(linkage, "linkage") , layout, show_parts);     
+        
+visualization_adjustable_linkage  =        
+    visualize_info(
+        "Adjustable Linkage", PART_15, show(adjustable_linkage, "adjustable_linkage") , layout, show_parts);             
    
 visualization_pusher_body = 
     visualize_info(
@@ -308,7 +316,8 @@ visualization_limit_switch_bumper =
          collet();
          clip();
          horn_linkage();
-         linkage();
+         //linkage();
+         adjustable_linkage();
      }
      if (print_frame) {
          tie_bracket(item = 0);
@@ -406,6 +415,7 @@ module pusher() {
         one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
         horn_linkage(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher); 
         linkage();
+        adjustable_linkage();
     }
 }
 
@@ -469,7 +479,7 @@ module limit_switch_bumper() {
 }
 
 module limit_switch_holder() {
- 
+    limit_switch_base = rls_base();
     dx_screw = -2.6;
     joiner = [limit_switch_holder_base_thickness, 15, 3];
     dx_joiner = right_handed_limit_switch_holder ? -6.5 : 0;
@@ -515,7 +525,7 @@ module limit_switch_holder() {
     rotation = 
         mode == PRINTING ? [0,  ay_printing, 0] :
         [0,  0, 0];
-    dz_printing = right_handed_limit_switch_holder ? 10.5 : 0;
+    dz_printing = right_handed_limit_switch_holder ? limit_switch_base.y + limit_switch_holder_base_thickness : 0;
     translation = 
         mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, dz_printing]:
         [dx_limit_switch_holder, 0, dz_limit_switch_holder];
@@ -734,7 +744,53 @@ module linkage() {
     translate(translation) rotate(rotation) visualize(visualization_linkage) shape();  
 }
 
+module adjustable_linkage() {
+    // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
+    // The adjustable linkage constis of two part that serve the purpose of the single piece linkage,
+    // but can be fine tuned for length.  In the short term this is needed for development and 
+    // experimentation, but is not likely to be included in the final product as geometry is 
+    // locked down.
+    linkage_width = 5;
+    linkage_height = 6;
+    pad_height = 2;
+    slider_height = 6;
+    slider = [linkage_adjustment_range + 4, linkage_width/2, slider_height];
+    slot_translation = [linkage_adjustment_range/2, -25, slider_height/2];
+    module blank() {
+        translate([linkage_length/2, 0, 0]) can(d=linkage_width, h = pad_height, center=ABOVE);
+        block([linkage_length/2 + linkage_width/2, linkage_width/2, pad_height], center=ABOVE+FRONT+RIGHT);
+        block(slider, center = ABOVE + RIGHT);
+    }  
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+            hull() {
+                center_reflect([1, 0, 0]) {
+                    translate(slot_translation) {
+                        rotate([90, 0, 0]) hole_through("M2", cld=0.2, $fn=12);
+                    }
+                }
+            }
+        }
+    }
 
+    z_printing = linkage_width/2;
+    rotation = 
+        mode == PRINTING ? [-90,  0, 0] :
+        [0, 0, linkage_angle];    
+    translation = 
+        mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
+        [dx_linkage, dy_linkage, 8];  
+    translate(translation) rotate(rotation) visualize(visualization_adjustable_linkage) {
+        shape(); 
+        if  (mode == PRINTING) {
+            translate([0, 0, 2 * linkage_width]) shape(); 
+        } else {
+            rotate([0, 0, 180]) shape();
+        }
+    }
+}
 
 module rail_screws(as_clearance=false, cld=0.2) {
     if (as_clearance) {

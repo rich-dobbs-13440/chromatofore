@@ -41,24 +41,34 @@ print_pusher = true;
 print_frame = true;
 
 print_one_part = false;
-part_to_print = "adjustable_linkage"; // [servo_base, horn_cam, filament_guide, rails, pusher_body, collet, clip, horn_linkage, linkage, tie_bracket, tie, limit_switch_holder, limit_switch_bumper, adjustable_linkage]
+part_to_print = "adjustable_linkage"; // [adjustable_linkage, clip, collet, filament_guide, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, pusher_body, rails, servo_base, tie, tie_bracket]
 
 
-/* [Show] */
-servo_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-pusher_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-collet = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-clip = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+/* [Show] */ 
+// Order to match the legend:
 adjustable_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+
+filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_bumper = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+pusher_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+qc_clip = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+qc_collet = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+servo_base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+
+
+/* [Legend] */
+x_legend = 0; // [-200 : 200]
+y_legend = 0; // [-200 : 200]
+z_legend = 0; // [-200 : 200]
+legend_position = [x_legend, y_legend, z_legend];
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -71,9 +81,14 @@ roller_arm_length = 20; // [18:Short, 20:Long]
 /* [Base Design] */
 dz_servo = 3.5;
 x_base_pillar = 34;
+y_base_pillar = 12;
 z_base_pillar = 8.8;
 z_base_joiner = 3.8;
-x_base_offset = -5;
+dx_base_offset = -5;
+dy_base_offset = 10;
+
+/* [Outlet Design] */
+y_outlet = 8;
 
 /* [Cam Design] */
 od_cam = 11;
@@ -110,18 +125,18 @@ tie_length = 30;
 /* [Linkage Design] */
 az_horn_linkage_pivot = 20;
 r_horn_linkage = 14;
-linkage_length = 36;
+linkage_length = 32;
 linkage_shorten_range = 4;
 
 
 /* [Limit Switch Holder Design] */
 dx_limit_switch_holder = -17.1; // [-30:0]
 dz_limit_switch_holder = -11; // [-30:0]
-dx_top_clamp = -5.3; // [-6: 0.1: -5]
-dy_top_clamp = 7; // [-10:10]
+dx_top_clamp = -7.2; // [-15: 0.1: -5]
+dy_top_clamp = -12; // [-20:15]
 dz_top_clamp = -20; // [-20:-10]
-right_handed_limit_switch_holder = true;
-limit_switch_holder_base_thickness = 2;
+right_handed_limit_switch_holder = false;
+limit_switch_holder_base_thickness = 4;
 
 /* [Limit Switch Bumper Design] */
 x_limit_switch_bumper = 5.5;
@@ -262,13 +277,13 @@ visualization_pusher_body =
     visualize_info(
         "Pusher Body", PART_8, show(pusher_body, "pusher_body") , layout, show_parts);     
         
-visualization_collet = 
+visualization_qc_collet = 
     visualize_info(
-        "Quick Connect Collet", PART_9, show(collet, "collet") , layout, show_parts);       
+        "Quick Connect Collet", PART_9, show(qc_collet, "qc_collet") , layout, show_parts);       
      
-  visualization_clip = 
+  visualization_qc_clip = 
     visualize_info(
-        "Quick Connect Clip", PART_10, show(clip, "clip") , layout, show_parts);         
+        "Quick Connect Clip", PART_10, show(qc_clip, "qc_clip") , layout, show_parts);         
        
 visualization_tie = 
     visualize_info(
@@ -280,11 +295,36 @@ visualization_tie_bracket =
       
 visualization_limit_switch_holder =   
     visualize_info(
-        "Limit_", PART_13, show(limit_switch_holder, "limit_switch_holder") , layout, show_parts); 
+        "Limit Switch Holder", PART_13, show(limit_switch_holder, "limit_switch_holder") , layout, show_parts); 
   
 visualization_limit_switch_bumper =   
     visualize_info(
-        "Limit_", PART_14, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
+        "Limit Switch Bumper", PART_14, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
+        
+// Skip PART_3 because of color confict with rails!
+
+visualization_fixed_clamp_body = 
+    visualize_info(
+        "Fixed Clamp Body", PART_16, show(fixed_clamp_body, "fixed_clamp_body") , layout, show_parts); 
+        
+visualization_infos = [
+    visualization_adjustable_linkage,
+
+    visualization_filament_guide,
+    visualization_fixed_clamp_body,
+    visualization_horn_cam,
+    visualization_horn_linkage,
+    visualization_limit_switch_bumper,
+    visualization_limit_switch_holder,
+    visualization_linkage,
+    visualization_pusher_body,
+    visualization_qc_clip,
+    visualization_qc_collet,    
+    visualization_rails,
+    visualization_servo_base,
+    visualization_tie_bracket,
+    visualization_tie,
+];
         
  if (mode ==  ASSEMBLE_SUBCOMPONENTS) {     
     filament();
@@ -293,6 +333,8 @@ visualization_limit_switch_bumper =
     fixed_clamp();
     rails();
     frame();
+     
+     generate_legend_for_visualization(visualization_infos, legend_position, font6_legend_text_characteristics());
      
  } else if (mode ==  PRINTING) {
      rail(item=0);
@@ -307,7 +349,7 @@ visualization_limit_switch_bumper =
      }
      if (print_fixed_clamp) {
          filament_guide(item=1);
-         servo_base(item=1);
+         fixed_clamp_body(item=0);
         horn_cam(item=1);
          limit_switch_holder();         
      }
@@ -343,8 +385,8 @@ visualization_limit_switch_bumper =
                 rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
             }  
     } else if (mode != PRINTING) {
-        filament_length = y_frame + 40;
-        translate(filament_translation + [0, -20, 0]) 
+        filament_length = y_frame + 60;
+        translate(filament_translation + [0, -40, 0]) 
             color("red") 
                 rod(d=d_filament, l=filament_length, center=SIDEWISE+RIGHT);
     }
@@ -398,10 +440,9 @@ module moving_clamp() {
 }
 
 module fixed_clamp() {
-    y_fixed_clamp = y_frame - y_guide/2;
-    translate([0, y_fixed_clamp, 0]) {
-        servo_base();
-        filament_guide();
+    dy_fixed_clamp = y_frame - y_base_pillar/2; // - y_guide/2;
+    translate([0, dy_fixed_clamp, 0]) {
+        fixed_clamp_body(item=0);
         one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_fixed_clamp);
         limit_switch_holder();
@@ -421,16 +462,16 @@ module pusher() {
 
 
 module rails() {  
-    translate([x_base_offset+x_guide/2, 0, 0]) rail(); 
-    translate([x_base_offset-x_guide/2, y_frame, 0])  rotate([0, 0, 180]) rail(); 
+    translate([dx_base_offset+x_guide/2, 0, 0]) rail(); 
+    translate([dx_base_offset-x_guide/2, y_frame, 0])  rotate([0, 0, 180]) rail(); 
 }
 
 module frame() {
 
-        translate([x_base_offset + x_guide/2 + rail_wall, y_rail_attachment/2, 0]) tie_bracket();
-        translate([x_base_offset - x_guide/2 - rail_wall, y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket(); 
-        translate([x_base_offset + x_guide/2 + rail_wall, y_frame - y_rail_attachment/2, 0]) tie_bracket();
-        translate([x_base_offset - x_guide/2 -rail_wall, y_frame - y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket();     
+        translate([dx_base_offset + x_guide/2 + rail_wall, y_rail_attachment/2, 0]) tie_bracket();
+        translate([dx_base_offset - x_guide/2 - rail_wall, y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket(); 
+        translate([dx_base_offset + x_guide/2 + rail_wall, y_frame - y_rail_attachment/2, 0]) tie_bracket();
+        translate([dx_base_offset - x_guide/2 -rail_wall, y_frame - y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket();     
 }
 
 
@@ -439,7 +480,7 @@ module frame() {
 module limit_switch_bumper() {
 
     dx_screw = -2.6;
-    nut_block = [5, 10, 6];
+    nut_block = [6, 10, 6];
     bumper = [x_limit_switch_bumper, y_limit_switch_bumper, z_limit_switch_bumper];
     support = [0.1, 2, 4];
     connection = [5, nut_block.y, 0.1];
@@ -452,7 +493,7 @@ module limit_switch_bumper() {
                     block(nut_block, center = BELOW+BEHIND);
                     hull() {
                         translate([dx_bumper, 12, dz_z_limit_switch_bumper - nut_block.z]) block(bumper,  center = BELOW+BEHIND+RIGHT);
-                        #translate([0, 0, -nut_block.z]) block(connection, center = BELOW+BEHIND);
+                        translate([0, 0, -nut_block.z]) block(connection, center = BELOW+BEHIND);
                         
                         translate([0, 10, -9]) block(support,  center = BELOW+BEHIND+RIGHT);
                     }
@@ -484,7 +525,7 @@ module limit_switch_holder() {
     joiner = [limit_switch_holder_base_thickness, 15, 3];
     dx_joiner = right_handed_limit_switch_holder ? -6.5 : 0;
     dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
-    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 10, 6];
+    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 14, 6];
     az_nutcatch_sidecut = right_handed_limit_switch_holder ? 0 : 180;
     module shape() {  
         color(visualization_limit_switch_holder[1]) 
@@ -493,7 +534,7 @@ module limit_switch_holder() {
                     block(nut_block, center = BELOW+BEHIND);
                     translate([dx_joiner, 0, 0]) {
                         hull() {
-                            translate([0, 4, dz_top_clamp + 8]) block(joiner, center = ABOVE+BEHIND+RIGHT);
+                            translate([0, dy_top_clamp, dz_top_clamp + 10]) block(joiner, center = ABOVE+BEHIND+RIGHT);
                             block([limit_switch_holder_base_thickness, 10, 6], center = BELOW+BEHIND);
                         }
                     }
@@ -604,15 +645,15 @@ module pusher_body() {
     blank_offset = 8;
     x_locked_guide = x_guide + 2 * frame_clearance;
     z_locked_guide = z_guide + 2 * frame_clearance;
-    dx_p_locked_guide = x_base_offset + x_guide/2 + frame_clearance;
-    dx_m_locked_guide = x_base_offset - x_guide/2 - frame_clearance;;
+    dx_p_locked_guide = dx_base_offset + x_guide/2 + frame_clearance;
+    dx_m_locked_guide = dx_base_offset - x_guide/2 - frame_clearance;
     module blank() {
         translate(quick_connect_translation) rotate([-90, 0, 0]) quick_connect_body();
-        translate([x_base_offset, blank_offset, 0]) block([x_base_pillar, 14, z_base_pillar], center=BELOW+LEFT);
+        translate([dx_base_offset, blank_offset, 0]) block([x_base_pillar, 14, z_base_pillar], center=BELOW+LEFT);
         translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
         translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
         hull() {
-           #translate([x_base_offset, -6, 0]) block([30, 0.1, 4], center=BELOW);
+           translate([dx_base_offset, -6, 0]) block([30, 0.1, 4], center=BELOW);
            translate(quick_connect_translation+[0, 14.5, 0])  rod(d=11., l=0.1, center=SIDEWISE+RIGHT);
         }
     }
@@ -630,6 +671,7 @@ module pusher_body() {
             filament(as_clearance = true, clearance_is_tight=false);
             translate(filament_translation) rod(d=1, taper=10, l=10-dy_qc, center=SIDEWISE+LEFT);
             cutout_for_printablility();
+            servo_screws(as_clearance=true, recess=true);
         }
     }
     z_printing = blank_offset;
@@ -641,7 +683,8 @@ module pusher_body() {
         [0, 0, 0];
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
-            visualize_vitamins(visualization_pusher_body) translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin(); ; 
+            visualize_vitamins(visualization_pusher_body) translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin(); 
+            servo_screws(as_clearance=false, recess=true);
         }
         visualize(visualization_pusher_body) shape();  
     }
@@ -656,7 +699,7 @@ module collet() {
         mode == PRINTING ? [x_collet_bp, y_collet_bp, z_printing] :
         [0, 0, 0];
     translate(translation) rotate(rotation) {
-        visualize(visualization_collet) quick_connect_collet(tubing_allowance=0);
+        visualize(visualization_qc_collet) quick_connect_collet(tubing_allowance=0);
     }      
 }
 
@@ -669,7 +712,7 @@ module clip() {
         mode == PRINTING ? [x_clip_bp, y_clip_bp, z_printing] :
         [0, 0, 0];
     translate(translation) rotate(rotation) {
-        visualize(visualization_clip) quick_connect_c_clip(orient_for_build=true);
+        visualize(visualization_qc_clip) quick_connect_c_clip(orient_for_build=true);
     }      
 }
 
@@ -809,9 +852,9 @@ module adjustable_linkage() {
     }
 }
 
-module rail_screws(as_clearance=false, cld=0.2) {
+module horizontal_rail_screws(as_clearance=false, cld=0.2) {
     if (as_clearance) {
-        center_reflect([0, 1, 0]) 
+         center_reflect([0, 1, 0]) 
             translate([5, y_rail_screw_offset, dz_rail_screws]) 
                 rotate([0, 90, 0]) 
                     hole_through("M2", l=20, cld=cld, $fn=12);
@@ -820,13 +863,28 @@ module rail_screws(as_clearance=false, cld=0.2) {
     }
 } 
 
+
+module vertical_rail_screws(as_clearance=false, cld=0.2) {
+     center_reflect([0, 1, 0]) {
+        translate([0, y_rail_screw_offset, 0]) {
+            if (as_clearance) {
+                translate([0, 0, 25]) hole_through("M2", cld=cld, $fn=12);
+            } else {
+                color(STAINLESS_STEEL)
+                    translate([0, 0, 6]) screw("M2x16", $fn=12);
+            }
+        }
+    }
+} 
+
 module rail(item=0) {
     module attachment_block() {
         render(convexity=10) difference() {
             translate([0, 0, rail_wall-frame_clearance]) 
                 block([x_rail_attachment, y_rail_attachment, z_rail_attachment], center = BELOW+RIGHT+BEHIND);
-            translate([0, y_rail_attachment/2, rail_wall]) 
-                rail_screws(as_clearance=true, cld=0.4);
+            translate([0, y_rail_attachment/2, rail_wall]) {
+                horizontal_rail_screws(as_clearance=true, cld=0.4);
+            }
         } 
     }
     module blank() {
@@ -838,7 +896,8 @@ module rail(item=0) {
         } 
     }
     module shape() {
-        render(convexity=10) difference() {
+        //render(convexity=10) 
+            difference() {
             blank();
                 translate([frame_clearance, 0, -frame_clearance]) {
                 block([s_dovetail+2, a_lot, z_guide+2 * frame_clearance ], center=ABOVE+BEHIND);
@@ -846,6 +905,14 @@ module rail(item=0) {
                     block([1 +frame_clearance , a_lot, z_guide + s_dovetail], center=ABOVE+BEHIND);
                     block([1+s_dovetail, a_lot, z_guide+frame_clearance], center=ABOVE+BEHIND);
                 }
+                translate([-2, y_rail_attachment/2 - 2, rail_wall]) {
+                    vertical_rail_screws(as_clearance=true, cld=0.4);
+                }
+                translate([0, y_frame - y_rail_attachment, 0]) {
+                    translate([-2, y_rail_attachment/2 +2, rail_wall]) {
+                        vertical_rail_screws(as_clearance=true, cld=0.4);
+                    }  
+                }              
             }
         }
     }
@@ -892,7 +959,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
         }
     } 
     module blank() {
-        translate([x_base_offset, 0, 0]) {
+        translate([dx_base_offset, 0, 0]) {
             block([x_guide, y_guide, z_guide], center=ABOVE);
             rail_riders();
         }
@@ -906,8 +973,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
                 translate(filament_translation + [0, 0, 1]) rod(d=0.5, l=20, center=SIDEWISE); 
             }
             can(d=od_cam + 2*cam_clearance, h=a_lot);
-            servo_screws(as_clearance = true);
-            * translate([0, 0, z_guide]) block([16, 8, 8], center=ABOVE+BEHIND); 
+            servo_screws(as_clearance = true, recess=false);
         }
         if (include_pusher_pivot) {
             pusher_pivot (as_pad = true);
@@ -924,6 +990,7 @@ module filament_guide(item=0, include_pusher_pivot=false) {
         if (include_pusher_pivot && show_vitamins && mode != PRINTING) {
             visualize_vitamins(visualization_filament_guide) {
                 pusher_pivot (as_vitamin = true);
+                 servo_screws(as_clearance = false, recess=false);
             }
         }
         visualize(visualization_filament_guide) shape();
@@ -976,12 +1043,22 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
 }
 
-module servo_screws(as_clearance = true) {
+module servo_screws(as_clearance = true, recess=false) {
+    h_recess = recess ? 3.8 : 0;
+    h = recess ? 10 : 0;
+    
+    screw_length = recess ? 12 : 20;
+    screw_name = str("M2x", screw_length);
     if (as_clearance) {
-        translate([8.5, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
-        translate([-19.5, 0, 25]) hole_through("M2", cld=0.4, $fn=12);
+        dz = recess ? h-h_recess : 25;
+        translate([8.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
+        translate([-19.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
     } else {
-        assert(false);
+        dz = recess ? - h_recess : 2;
+        color(BLACK_IRON) {
+            translate([8.5, 0, dz]) screw(screw_name, $fn=12);
+             translate([-19.5, 0, dz]) screw(screw_name, $fn=12);
+        }
     }    
 }
 
@@ -989,16 +1066,16 @@ module servo_screws(as_clearance = true) {
 module servo_base(item=0, visualization = visualization_servo_base, as_clearance=false) {
     module cavity() {
         translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
-        servo_screws(as_clearance = true);
-        translate([x_base_offset, 0, 0]) 
+        servo_screws(as_clearance = true, recess=true);
+        translate([dx_base_offset, 0, 0]) 
             center_reflect([1, 0, 0]) 
                 translate([25, 0, 0]) 
-                    rail_screws(as_clearance=true, cld=0.2); // Tight fit, will hold screws        
+                    horizontal_rail_screws(as_clearance=true, cld=0.2); // Tight fit, will hold screws        
     }
     module shape() {
         render(convexity=10) difference() {
             union() {
-                translate([x_base_offset, 0, 0]) block([x_base_pillar, 10, z_base_pillar], center=BELOW);
+                translate([dx_base_offset, 0, 0]) block([x_base_pillar, 10, z_base_pillar], center=BELOW);
                 block([14, 14, z_base_joiner], center=BELOW);
             } 
             cavity();
@@ -1021,5 +1098,95 @@ module servo_base(item=0, visualization = visualization_servo_base, as_clearance
             visualize(visualization) shape();
         }
     }  
+}
+
+module ptfe_clamp(as_clearance = true) {
+ 
+    if (as_clearance) {
+        hull() {
+            block([5, 20, a_lot], center=ABOVE+RIGHT);
+            block([15, 0.1, a_lot], center=ABOVE+RIGHT);
+        }
+        center_reflect([1, 0, 0]) {
+            translate([8, 10, 25]) hole_through("M2", cld=0.4, $fn=12);
+        }
+    } else {
+        assert(false);
+    }
+}
+
+module fixed_clamp_body(item=0) {
+    d_horn_cam_clearance = 16;    
+    module overhang() {
+        translate([-1.5, 0, 0]) block([15, y_base_pillar, a_lot], center=LEFT);
+    }
+    module rails_screws(as_clearance = true) {
+        module item() {
+            if (as_clearance) {
+                horizontal_rail_screws(as_clearance=true, cld=0.2); // Tight fit, will hold screws    
+                translate([0, 2, 0]) vertical_rail_screws(as_clearance=true, cld=0.4); // Loose fit, screws pass through                
+            } else {
+                translate([0, 2, 0]) vertical_rail_screws(as_clearance=false);
+            }
+        }
+        translate([dx_base_offset, 0, 0]) {
+            center_reflect([1, 0, 0]) {
+                translate([21.6, -2, 0]) {
+                    item();
+                }
+            }            
+        }
+    }
+    module cavity() {
+        translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
+        can(d=d_horn_cam_clearance, h=a_lot, center=ABOVE);
+        translate([filament_translation.x, 0, 0]) ptfe_clamp(as_clearance = true);
+        overhang();
+        servo_screws(as_clearance = true, recess=true);
+        rails_screws(as_clearance = true);
+    }
+    module rail_engagement() {
+        blank_offset = 8;
+        x_locked_guide = x_guide + 2 * frame_clearance;
+        z_locked_guide = z_guide + 2 * frame_clearance;
+        dx_p_locked_guide = dx_base_offset + x_guide/2 + frame_clearance;
+        dx_m_locked_guide = dx_base_offset - x_guide/2 - frame_clearance;
+        translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
+        translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
+    }
+    module blank() {
+        // The part around the servo:
+        translate([dx_base_offset, 0, 0]) 
+            block([x_base_pillar, y_base_pillar, z_base_pillar], center=BELOW);
+        translate([dx_base_offset, y_base_pillar/2, 0]) {  
+            // The part to the right of the servo:
+            block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=BELOW+RIGHT);
+            // The part to the right and above servo   
+            block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=ABOVE+RIGHT);
+        }
+        rail_engagement();
+    }
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            cavity();
+        }
+    }
+
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [180, 0, 0] :
+        [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_servo_base_bp + item*dx_servo_base_bp, y_servo_base_bp, z_printing] :
+        [0, 0, 0];
+    translate(translation) rotate(rotation) {    
+        if (show_vitamins && mode != PRINTING) {
+            translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
+            servo_screws(as_clearance = false, recess=true);
+            rails_screws(as_clearance = false);
+        }  
+        visualize(visualization_fixed_clamp_body) shape();
+    }
 }
 

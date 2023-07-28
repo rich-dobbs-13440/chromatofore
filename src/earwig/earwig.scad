@@ -143,11 +143,17 @@ right_handed_limit_switch_holder = false;
 limit_switch_holder_base_thickness = 4;
 
 /* [Limit Switch Bumper Design] */
-x_limit_switch_bumper = 5.5;
-y_limit_switch_bumper = 2;
-z_limit_switch_bumper = 8;
+x_limit_switch_bumper = 10;
+y_limit_switch_bumper = 8;
+z_limit_switch_bumper = 10;
+
+// Relative to inside of nut block
+dx_limit_switch_bumper = 0;
+// Relative to center line of nut block
+dy_limit_switch_bumper = 5;
 // Relative to top of nut block
-dz_z_limit_switch_bumper = -1; 
+dz_limit_switch_bumper = 4; 
+
 
 /* [Build Plate Layout] */
 x_rail_bp = 30; 
@@ -485,22 +491,18 @@ module frame() {
 module limit_switch_bumper() {
 
     dx_screw = -2.6;
-    nut_block = [6, 10, 6];
+    nut_block = [6, 6, 6];
     bumper = [x_limit_switch_bumper, y_limit_switch_bumper, z_limit_switch_bumper];
     support = [0.1, 2, 4];
     connection = [5, nut_block.y, 0.1];
-    
-    dx_bumper = right_handed_limit_switch_holder ? 0 : -2.5;
+    bumper_translation = [dx_limit_switch_bumper, dy_limit_switch_bumper, dz_limit_switch_bumper - nut_block.z];
     module shape() {  
         color(PART_29) 
             render(convexity = 10) difference() {
                 union() { 
                     block(nut_block, center = BELOW+BEHIND);
                     hull() {
-                        translate([dx_bumper, 12, dz_z_limit_switch_bumper - nut_block.z]) block(bumper,  center = BELOW+BEHIND+RIGHT);
-                        translate([0, 0, -nut_block.z]) block(connection, center = BELOW+BEHIND);
-                        
-                        translate([0, 10, -9]) block(support,  center = BELOW+BEHIND+RIGHT);
+                        translate(bumper_translation) block(bumper,  center = BELOW+BEHIND+LEFT);
                     }
                 }
                 translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);

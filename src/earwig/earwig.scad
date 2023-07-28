@@ -34,6 +34,7 @@ PRINTING = 4 + 0;
 mode = 3; // [3: "Assemble", 4: "Printing"]
 show_vitamins = true;
 show_parts = true; // But nothing here has parts yet.
+show_legend = false;
 print_both_rails = true;
 print_moving_clamp = true;
 print_fixed_clamp = true;
@@ -132,16 +133,18 @@ linkage_shorten_range = 4;
 /* [Limit Switch Holder Design] */
 dx_limit_switch_holder = -17.1; // [-30:0]
 dz_limit_switch_holder = -11; // [-30:0]
+
 dx_top_clamp = -7.2; // [-15: 0.1: -5]
-dy_top_clamp = -12; // [-20:15]
-dz_top_clamp = -20; // [-20:-10]
+// Displacement of cl of switch body to cl of servo
+dy_switch_body = 0; // [-20:15]
+// Displayment relative to bottom of nut block
+dz_switch_body = 0; // [-20:0]
 right_handed_limit_switch_holder = false;
 limit_switch_holder_base_thickness = 4;
 
 /* [Limit Switch Bumper Design] */
 x_limit_switch_bumper = 5.5;
-// Adjust to trigger switch at maximum range of moving clamp. Long term need to adjustable linkage_length
-y_limit_switch_bumper = 3;
+y_limit_switch_bumper = 2;
 z_limit_switch_bumper = 8;
 // Relative to top of nut block
 dz_z_limit_switch_bumper = -1; 
@@ -333,8 +336,10 @@ visualization_infos = [
     fixed_clamp();
     rails();
     frame();
-     
-     generate_legend_for_visualization(visualization_infos, legend_position, font6_legend_text_characteristics());
+     if (show_legend) {
+        generate_legend_for_visualization(
+            visualization_infos, legend_position, font6_legend_text_characteristics());
+     }
      
  } else if (mode ==  PRINTING) {
      rail(item=0);
@@ -525,38 +530,35 @@ module limit_switch_holder() {
     joiner = [limit_switch_holder_base_thickness, 15, 3];
     dx_joiner = right_handed_limit_switch_holder ? -6.5 : 0;
     dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
-    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 14, 6];
+    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 8, 6];
     az_nutcatch_sidecut = right_handed_limit_switch_holder ? 0 : 180;
+    module blank() {
+        block(nut_block, center = BELOW+BEHIND);
+        block([nut_block.x, 19.25, nut_block.z], center = BELOW+BEHIND+RIGHT);
+    }
     module shape() {  
         color(visualization_limit_switch_holder[1]) 
             render(convexity = 10) difference() {
-                union() { 
-                    block(nut_block, center = BELOW+BEHIND);
-                    translate([dx_joiner, 0, 0]) {
-                        hull() {
-                            translate([0, dy_top_clamp, dz_top_clamp + 10]) block(joiner, center = ABOVE+BEHIND+RIGHT);
-                            block([limit_switch_holder_base_thickness, 10, 6], center = BELOW+BEHIND);
-                        }
-                    }
-                }
+                blank();
                 translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
                 translate([dx_screw, 0, -2.]) {
                     rotate([0, 0, az_nutcatch_sidecut]) 
                         nutcatch_sidecut(
                             name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                             l      = 50.0,  // length of slot
-                            clk    =  0.5,  // key width clearance
+                            clk    =  0.3,  // key width clearance
                             clh    =  0.5,  // height clearance
                             clsl   =  0.1); 
                 } 
             }
-        translate([dx_top_clamp - dx_top_clamp_adjustment, dy_top_clamp, dz_top_clamp])
+        translate([dx_top_clamp - dx_top_clamp_adjustment, dy_switch_body, dz_switch_body - nut_block.z - limit_switch_base.x/2])
             rotate([0, 90, 90]) {
                 nsrsh_top_clamp(
                     show_vitamins=show_vitamins && mode != PRINTING , 
                     right_handed = right_handed_limit_switch_holder,
                     alpha=1, 
                     thickness=limit_switch_holder_base_thickness, 
+                    recess_mounting_screws = true,
                     use_dupont_pins = true,
                     roller_arm_length = roller_arm_length,
                     switch_depressed = roller_switch_depressed); 
@@ -624,7 +626,7 @@ module tie_bracket(item = 0, clearance=dovetail_clearance) {
         render(convexity=10) difference() {
             blank();
             center_reflect([0, 0, 1]) translate([-wall, 0, -z_rail/2 - z_dovetail]) tie_dovetail(as_clearance = true, clearance=clearance);
-            translate([0, 0, -dz_rail_screws]) rail_screws(as_clearance=true, cld=0.4); 
+            translate([0, 0, -dz_rail_screws]) horizontal_rail_screws(as_clearance=true, cld=0.4); 
         }
     }
     z_printing = 0;
@@ -843,11 +845,14 @@ module adjustable_linkage() {
         mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
         [dx_linkage, dy_linkage, 8];  
     translate(translation) rotate(rotation) {
-        visualize(visualization_adjustable_linkage) shape(); 
-        if  (mode == PRINTING) {
-            translate([0, 0, 2 * linkage_width]) shape(); 
-        } else {
-            rotate([0, 0, 180]) shape();
+        visualize(visualization_adjustable_linkage) {
+            shape(); 
+            if  (mode == PRINTING) {
+                translate([0, 0, 2 * linkage_width]) shape(); 
+            } else {
+                shape(); 
+                rotate([0, 0, 180]) shape();
+            }
         }
     }
 }

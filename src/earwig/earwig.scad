@@ -1010,16 +1010,23 @@ module pusher_body() {
     dy_locked_guides = -24;
     servo_housing = [x_base_pillar + 4, 16, z_base_pillar];
     servo_rotation = [0, 0, 90];
-    connector_block = [16, 6, 16];
+    connector_block = [16, 8, 16];
     locked_guide = [12, 24, z_locked_guide];
+    servo_joiner = [servo_housing.y, 8, abs(dz_linkage)];
+    module inlet_tubing_connector(as_clearance = false) {
+        if (as_clearance) {
+            translate([filament_translation.x, dy_locked_guides, filament_translation.z]) { 
+                rotate([-90, 0, 0]) qtcc_ptfe_tubing_connector_keyhole(); 
+            }
+        }
+    } 
     module blank() {
-        *translate(quick_connect_translation) 
-            rotate([-90, 0, 0]) quick_connect_body();
         rotate(servo_rotation) 
             translate([dx_base_offset, blank_offset, dz_linkage]) {
                 block(servo_housing,  center=BELOW+LEFT);
             }
-        translate([0, dy_locked_guides, 0]) block([servo_housing.y, 6, abs(dz_linkage)], center=BELOW+RIGHT);
+        translate([0, dy_locked_guides, 0]) 
+            block(servo_joiner, center=BELOW+RIGHT);
         hull() {
             translate([dx_p_locked_guide, dy_locked_guides, -frame_clearance]) 
                 block(locked_guide, center=ABOVE+RIGHT+BEHIND);
@@ -1030,27 +1037,15 @@ module pusher_body() {
             block(connector_block, center=RIGHT);
             block([4, locked_guide.y, 4], center=RIGHT);
         }
-        * hull() {
-           translate([dx_base_offset, -6, 0]) block([30, 0.1, 4], center=BELOW);
-           translate(quick_connect_translation+[0, 14.5, 0])  rod(d=11., l=0.1, center=SIDEWISE+RIGHT);
-            
-        }
-    }
-    module cutout_for_printablility() {
-        // Alter roof (when printing in the minus y direction) to remove unsupported, but also unnecessary material
-        hull() {
-            translate([-6, -6.1, 1]) block([8.5, 5, 5.5], center=RIGHT+FRONT+BELOW);
-            translate([-9, -3, 1]) block([14, 5.5, 5.5], center=RIGHT+FRONT+BELOW);
-        }
+       
     }
     module shape() {
         render(convexity=10) difference() {
             blank();
             translate([0, 0, dz_linkage]) rotate(servo_rotation) servo_base(as_clearance = true);
             filament(as_clearance = true, clearance_is_tight=false);
-            //translate(filament_translation) rod(d=1, taper=10, l=10-dy_qc, center=SIDEWISE+LEFT);
-            // cutout_for_printablility();
-            rotate(servo_rotation) servo_screws(as_clearance=true, recess=true);
+            rotate(servo_rotation) servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=true);
+            inlet_tubing_connector(as_clearance = true);
         }
     }
     z_printing = -dy_locked_guides;
@@ -1066,7 +1061,8 @@ module pusher_body() {
                 translate([0, 0, dz_servo + dz_linkage]) 
                     rotate(servo_rotation) 
                         9g_motor_sprocket_at_origin(); 
-                translate([0, 0, dz_linkage]) rotate(servo_rotation) servo_screws(as_clearance=false, recess=true);
+                translate([0, 0, dz_linkage]) 
+                    rotate(servo_rotation) servo_screws(as_clearance=false, recess=false, upper_nutcatch_sidecut=true);
             }
         }
         visualize(visualization_pusher_body) shape();  
@@ -1161,11 +1157,7 @@ module rail_riders() {
 }
 
 
-
-
-
-
-module servo_screws(as_clearance = true, recess=false) {
+module servo_screws(as_clearance = true, recess=false, upper_nutcatch_sidecut = false) {
     h_recess = recess ? 3.8 : 0;
     h = recess ? 10 : 0;
     
@@ -1175,6 +1167,17 @@ module servo_screws(as_clearance = true, recess=false) {
         dz = recess ? h-h_recess : 25;
         translate([8.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
         translate([-19.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
+        if (upper_nutcatch_sidecut) {
+            translate([-19.5, 0, -16]) {
+                rotate([0, 0, 180]) 
+                    nutcatch_sidecut(
+                        name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
+                        l      = 50.0,  // length of slot
+                        clk    =  0.0,  // key width clearance
+                        clh    =  0.0,  // height clearance
+                        clsl   =  0.1);  // slot width clearance
+            }
+        }
     } else {
         dz = recess ? - h_recess : 2;
         color(BLACK_IRON) {

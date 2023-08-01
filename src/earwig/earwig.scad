@@ -150,13 +150,13 @@ limit_switch_holder_base_thickness = 4;
 
 /* [Limit Switch Bumper Design] */
 x_limit_switch_bumper = 10;
-y_limit_switch_bumper = 10;
+y_limit_switch_bumper = 14;
 z_limit_switch_bumper = 12;
 
 // Relative to inside of nut block
 dx_limit_switch_bumper = 0;
 // Relative to center line of nut block
-dy_limit_switch_bumper = 5;
+dy_limit_switch_bumper = 8;
 // Relative to top of nut block
 dz_limit_switch_bumper = 6; 
 

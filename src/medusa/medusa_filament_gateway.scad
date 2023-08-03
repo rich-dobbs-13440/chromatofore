@@ -1,5 +1,4 @@
 include <ScadStoicheia/centerable.scad>
-use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
 
 use <ScadApotheka/ptfe_filament_tubing_connector.scad>
@@ -40,21 +39,23 @@ dz_cone = 80;
 /* [Filament Barrel Design] */
 core_length = 1;
 // Adjust to go beyond barrel, so that the detector is independ of the path to the junction
-z_barrel = 24;
+z_barrel = 26;
 d_barrel = 4;
 
 
 /* [Limit Switch Holder Design] */
 // Adjust the angle, so that the limit switch is triggered when the filament is loaded.
-ay_barrel = -8;
+ay_barrel = -45;
+dx_limit_switch_holder = 5.1;  
 // Should not have to move from center line. 
 dy_limit_switch_holder = 0;  // [0:20]
 // Set to clear nut 
-dz_limit_switch_holder = 17;  // [0:20]
+dz_limit_switch_holder = 10;  // [0:20]
 
 // Displacement of cl of switch body to cl of servo
 dy_switch_body = 0; // [-20:15]
 // Displayment relative to bottom of nut block
+
 dz_switch_body = 0; // [-20:0]
 right_handed_limit_switch_holder = false;
 limit_switch_holder_base_thickness = 4;
@@ -84,24 +85,26 @@ visualization_limit_switch_support =
     visualize_info(
         "Limit Switch Support ", PART_3, show(limit_switch_support, "limit_switch_support") , layout, show_parts);  
         
-connector = flute_connector_dimensions();         
+connector = flute_connector_dimensions();    
+connector_extent = gtcc_extent(connector);
 clamp = flute_clamp_dimensions();    
 clamp_extent = gtcc_extent(clamp);
 
+ daz = 360/barrel_count; 
       
 module filament_detector_barrel(ay_barrel, rib = false) {     
     module blank() {
         visualize(visualization_barrel) {
-            quarter_turn_clamping_connector_key(core_length = core_length,  dimensions_1=clamp);
-            translate([0, 0, clamp_extent.z]) {
-                hull() {
+            //quarter_turn_clamping_connector_key(core_length = core_length,  dimensions_1=clamp);
+            translate([0, 0, -2]) { //connector_extent.z+3]) {
+                //hull() {
                     rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
-                    if (is_num(rib)) {
-                        z_contact = 5;
-                        translate([-rib, 0, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
-                        translate([-4, -6, z_barrel- z_contact]) rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_contact, center=ABOVE);
-                    }
-                }
+//                    if (is_num(rib)) {
+//                        z_contact = 5;
+//                        translate([-rib, 0, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
+//                        translate([-4, -6, z_barrel- z_contact]) rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_contact, center=ABOVE);
+//                    }
+                //}
             }
         }
         
@@ -110,7 +113,7 @@ module filament_detector_barrel(ay_barrel, rib = false) {
         difference() {
            blank(); 
            flute_barbed_tubing_clearance();
-           translate([0, 0, clamp_extent.z]) rotate([0, ay_barrel, 0]) flute_filament_path(is_entrance=false, multiplier = 5, include_below=false);
+           #translate([0, 0, -2]) rotate([0, ay_barrel, 0]) flute_filament_path(is_entrance=false, multiplier = 5, include_below=false);
            translate([0, 0, clamp_extent.z]) sphere(d = 2.5, $fn=30);
             
         }   
@@ -123,7 +126,7 @@ module limit_switch_holder() {
     // The switch can't contact the barrel, and has to clear the tube clamp. 
     // It also must be place so that removing the unprintable overhang doesn't interfer 
     // with mounting.
-    dx_limit_switch_holder = 10;  
+    
     dx_nut_clearance =  12.5;
     x_sw = 8;
     y_sw = 8;
@@ -138,7 +141,7 @@ module limit_switch_holder() {
     
     module top_clamp() {
         translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
-        rotation = [0, 90, 0];
+        rotation = [0, 90 + ay_barrel, 0];
         translate(translation) rotate(rotation) 
             nsrsh_top_clamp(
                 show_vitamins=show_vitamins && mode != PRINTING , 
@@ -168,20 +171,20 @@ module limit_switch_holder() {
         }
     }
     module unprintable_overhang() {
-        // Need to cut off a corner of the base,
-        s_upo  = 50;
-        
-        dx_upo = dx_nut_clearance - s_upo*sqrt(2)/2;
-        translate([dx_upo, dy_upo, switch_support.z])  {
-            hull() {
-                rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
-                translate([0, 0, -20]) rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
-            }
-        }
+//        // Need to cut off a corner of the base,
+//        s_upo  = 50;
+//        
+//        dx_upo = dx_nut_clearance - s_upo*sqrt(2)/2;
+//        translate([dx_upo, dy_upo, switch_support.z])  {
+//            hull() {
+//                rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
+//                translate([0, 0, -20]) rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
+//            }
+//        }
     }
     module blank() {
         top_clamp();
-        joiner();
+        // joiner();
         printing_support();        
     }
     difference() {
@@ -191,16 +194,16 @@ module limit_switch_holder() {
 } 
 
 module barrel_assembly(daz_offset = 0) {
-    daz = 360/barrel_count;
+   
     for (idx = [0: barrel_count - 1]) {
         az = idx * daz + daz_offset;
         rotate([0, 0, az]) {
-            translate([r_barrel, 0, 0]) {
+            translate([r_barrel, 0, 10]) {
                 filament_detector_barrel(ay_barrel = ay_barrel, rib = r_barrel - 3.2);
                 limit_switch_holder();
-                if (show_vitamins) {
-                    rotate([0, 0, 45]) flute_collet_nut(); 
-                }             
+//                if (show_vitamins) {
+//                    rotate([0, 0, 45]) flute_collet_nut(); 
+//                }             
             } 
         }
     }
@@ -219,7 +222,7 @@ module barrel_assembly(daz_offset = 0) {
     }
     module cone() {
         render() difference() {
-            cone_shape(d = 7);
+            cone_shape(d = 5);
             hull() {
                 cone_shape(d=3);
                 translate([0, 0, -5]) cone_shape(d=3);
@@ -232,9 +235,9 @@ module barrel_assembly(daz_offset = 0) {
     if (use_center_barrel) {
         filament_detector_barrel(ay_barrel = 0);
         ///limit_switch_holder();
-        if (show_vitamins) {
-            rotate([0, 0, 45]) flute_collet_nut(); 
-        } 
+//        if (show_vitamins) {
+//            rotate([0, 0, 45]) flute_collet_nut(); 
+//        } 
         cone();
         dz_outlet = z_barrel + clamp_extent.z + 58;
         translate([0, 0, dz_outlet]) rotate([180, 0, 0]) flute_collet();
@@ -243,7 +246,31 @@ module barrel_assembly(daz_offset = 0) {
 
 barrel_assembly();
 
+module base(daz_offset=0) {
+    cam_wall = 2;
+    cam = gtcc_cam(connector);
+    d = 2 * (r_barrel + cam.y + cam_wall);
+    module blank() {
+        can(d = d, h = connector_extent.z + 2, center=ABOVE);
+    }
+    
+    module cavity() {
+        for (idx = [0: barrel_count - 1]) {
+            az = idx * daz + daz_offset;
+            rotate([0, 0, az]) {
+                translate([r_barrel, 0, 0])
+                    flute_keyhole(is_filament_entrance=false, print_from_key_opening=true);
+            }
+        }        
+    }
+    
+    difference() {
+        blank();
+        cavity();
+    }
 
+}
 
+base(daz_offset = 0);
 
             

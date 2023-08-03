@@ -11,7 +11,7 @@ use <ScadApotheka/no_solder_roller_limit_switch_holder.scad>
 ASSEMBLE_SUBCOMPONENTS = 3 + 0;
 PRINTING = 4 + 0;
 
-a_lot = 30 + 0;
+a_lot = 100 + 0;
  /* [Output Control] */
  
  mode = 3; // [3: "Assembly", 4: "Printing"]
@@ -35,6 +35,7 @@ part_to_print = "barrel"; // [barrel]
 r_barrel = 25;
 barrel_count = 6;
 use_center_barrel = true;
+dz_cone = 80;
 
 /* [Filament Barrel Design] */
 core_length = 1;
@@ -203,12 +204,40 @@ module barrel_assembly(daz_offset = 0) {
             } 
         }
     }
+    module cone_shape(d = 5) {
+        hull() {
+            translate([0, 0, dz_cone]) sphere(d=d, $fn=15);
+            for (idx = [0: barrel_count - 1]) {
+                az = idx * daz + daz_offset;
+                rotate([0, 0, az]) {
+                    translate([r_barrel-3, 0, z_barrel + clamp_extent.z ]) {
+                        sphere(d=d , $fn=15);
+                    }
+                }
+            }
+        }
+    }
+    module cone() {
+        render() difference() {
+            cone_shape(d = 7);
+            hull() {
+                cone_shape(d=3);
+                translate([0, 0, -5]) cone_shape(d=3);
+            }
+            can(d=2, h=200, center=ABOVE);
+            
+        }
+        
+    }
     if (use_center_barrel) {
         filament_detector_barrel(ay_barrel = 0);
         ///limit_switch_holder();
         if (show_vitamins) {
             rotate([0, 0, 45]) flute_collet_nut(); 
-        }           
+        } 
+        cone();
+        dz_outlet = z_barrel + clamp_extent.z + 58;
+        translate([0, 0, dz_outlet]) rotate([180, 0, 0]) flute_collet();
     }
 }
 

@@ -20,22 +20,32 @@ show_filament = true;
 show_parts = true; // But nothing here has parts yet.
 show_legend = false;
 
+barrel = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+limit_switch_support = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+
+/* [Animation] */    
+
 roller_switch_depressed = false;
 
-/* [Filament Barrel] */
+/* [Printing] */
+print_one_part = false;
+part_to_print = "barrel"; // [barrel]
+
+/* [Multiplexer Design] */
+r_barrel = 25;
+barrel_count = 6;
+use_center_barrel = true;
+
+/* [Filament Barrel Design] */
 core_length = 1;
 // Adjust to go beyond barrel, so that the detector is independ of the path to the junction
 z_barrel = 24;
 d_barrel = 4;
 
 
-
-
-
-
 /* [Limit Switch Holder Design] */
 // Adjust the angle, so that the limit switch is triggered when the filament is loaded.
-ay_barrel = -6;
+ay_barrel = -8;
 // Should not have to move from center line. 
 dy_limit_switch_holder = 0;  // [0:20]
 // Set to clear nut 
@@ -50,22 +60,53 @@ limit_switch_holder_base_thickness = 4;
 roller_arm_length = 20; // [18:Short, 20:Long]
 
 module end_of_customization() {}
+
  
+
+function layout_from_mode(mode) = 
+    mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
+    mode == PRINTING ? "printing" :
+    "unknown";
+
+layout = layout_from_mode(mode);
+
+function show(variable, name) = 
+    (print_one_part && (mode == PRINTING)) ? name == part_to_print :
+    variable;
     
+ 
+visualization_barrel  =        
+    visualize_info(
+        "Barrel", PART_2, show(barrel, "barrel") , layout, show_parts);  
+
+visualization_limit_switch_support =        
+    visualize_info(
+        "Limit Switch Support ", PART_3, show(limit_switch_support, "limit_switch_support") , layout, show_parts);  
+        
 connector = flute_connector_dimensions();         
 clamp = flute_clamp_dimensions();    
 clamp_extent = gtcc_extent(clamp);
 
       
-module filament_detector_barrel() {     
+module filament_detector_barrel(ay_barrel, rib = false) {     
     module blank() {
-        quarter_turn_clamping_connector_key(core_length = core_length,  dimensions_1=clamp);
-       
-        translate([0, 0, clamp_extent.z]) rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
+        visualize(visualization_barrel) {
+            quarter_turn_clamping_connector_key(core_length = core_length,  dimensions_1=clamp);
+            translate([0, 0, clamp_extent.z]) {
+                hull() {
+                    rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
+                    if (is_num(rib)) {
+                        z_contact = 5;
+                        translate([-rib, 0, 0]) can(d = d_barrel, h = z_barrel, center=ABOVE);
+                        translate([-4, -6, z_barrel- z_contact]) rotate([0, ay_barrel, 0]) can(d = d_barrel, h = z_contact, center=ABOVE);
+                    }
+                }
+            }
+        }
         
     } 
     module shape() {
-        render(convexity=10) difference() {
+        difference() {
            blank(); 
            flute_barbed_tubing_clearance();
            translate([0, 0, clamp_extent.z]) rotate([0, ay_barrel, 0]) flute_filament_path(is_entrance=false, multiplier = 5, include_below=false);
@@ -73,9 +114,7 @@ module filament_detector_barrel() {
             
         }   
     }
-    color(PART_15) {
-        shape();
-    }
+    shape();
 }  
 
 module limit_switch_holder() {
@@ -92,7 +131,9 @@ module limit_switch_holder() {
     x_t = 10;
     y_t = 12;
     z_t = dz_limit_switch_holder - 11;
-    dx_t = dx_limit_switch_holder + 10;    
+    terminal_support = [x_t, y_t, z_t];
+    dx_t = dx_limit_switch_holder + 10;  
+    dy_upo = -3.25; // TODO: Get from limit switch dimensions!   
     
     module top_clamp() {
         translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
@@ -108,21 +149,38 @@ module limit_switch_holder() {
                 roller_arm_length = roller_arm_length,
                 switch_depressed = roller_switch_depressed); 
     }
-    module printing_support() {
-        terminal_support = [x_t, y_t, z_t];
-        translate([dx_nut_clearance, -8, 0])  block(switch_support, center = ABOVE +FRONT+RIGHT);
-        translate([dx_t, -8, 0])  block(terminal_support, center = ABOVE +FRONT+RIGHT);
+    module joiner() {
+        // join the limit switch holder to the ribs
+        joiner = [24, 3, z_barrel + 4];
+        visualize(visualization_limit_switch_support) {
+            hull() {
+                translate([dx_nut_clearance -2, dy_upo-0.5, 0])  block(joiner, center = ABOVE+BEHIND+LEFT);
+            }
+        }
         
+    }
+    module printing_support() {
+        visualize(visualization_limit_switch_support) {
+        
+            translate([dx_nut_clearance, -8, 0])  block(switch_support, center = ABOVE+FRONT+RIGHT);
+            translate([dx_t, -8, 0])  block(terminal_support, center = ABOVE+FRONT+RIGHT);
+        }
     }
     module unprintable_overhang() {
         // Need to cut off a corner of the base,
-        s_upo  = 17;
-        dy_upo = -3.25; // TODO: Get from limit switch dimensions! 
+        s_upo  = 50;
+        
         dx_upo = dx_nut_clearance - s_upo*sqrt(2)/2;
-        translate([dx_upo, dy_upo, switch_support.z]) rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
+        translate([dx_upo, dy_upo, switch_support.z])  {
+            hull() {
+                rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
+                translate([0, 0, -20]) rotate([0, 45, 0]) block([s_upo, a_lot, s_upo], center=LEFT);
+            }
+        }
     }
     module blank() {
         top_clamp();
+        joiner();
         printing_support();        
     }
     difference() {
@@ -131,12 +189,32 @@ module limit_switch_holder() {
     }
 } 
 
-    
+module barrel_assembly(daz_offset = 0) {
+    daz = 360/barrel_count;
+    for (idx = [0: barrel_count - 1]) {
+        az = idx * daz + daz_offset;
+        rotate([0, 0, az]) {
+            translate([r_barrel, 0, 0]) {
+                filament_detector_barrel(ay_barrel = ay_barrel, rib = r_barrel - 3.2);
+                limit_switch_holder();
+                if (show_vitamins) {
+                    rotate([0, 0, 45]) flute_collet_nut(); 
+                }             
+            } 
+        }
+    }
+    if (use_center_barrel) {
+        filament_detector_barrel(ay_barrel = 0);
+        ///limit_switch_holder();
+        if (show_vitamins) {
+            rotate([0, 0, 45]) flute_collet_nut(); 
+        }           
+    }
+}
 
-filament_detector_barrel();
+barrel_assembly();
 
-limit_switch_holder();
+
+
+
             
-if (show_vitamins) {
-    rotate([0, 0, 45]) flute_collet_nut(); 
-}             

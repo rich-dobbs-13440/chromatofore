@@ -7,9 +7,9 @@ use <PolyGear/PolyGear.scad>
 use <ScadApotheka/9g_servo.scad>
 use <ScadApotheka/hs_311_standard_servo.scad>
 use <ScadApotheka/roller_limit_switch.scad>
-use <ScadApotheka/ptfe_tubing_quick_connect.scad> 
 use <ScadApotheka/no_solder_roller_limit_switch_holder.scad>
 use <ScadApotheka/quarter_turn_clamping_connector.scad>
+use <ScadApotheka/ptfe_filament_tubing_connector.scad>
     
 
 a_lot = 200 + 0;
@@ -526,7 +526,7 @@ module fixed_clamp_body() {
     module outlet_tubing_connector(as_clearance = false) {
         if (as_clearance) {
             translate([filament_translation.x, y_base_pillar/2 + y_outlet, filament_translation.z]) { 
-                rotate([90, 0, 0]) qtcc_ptfe_tubing_connector_keyhole(); 
+                rotate([90, 0, 0]) flute_keyhole(is_filament_entrance = true, print_from_key_opening=true); 
                 block([6, 20, 6]);
             }
         }
@@ -882,7 +882,7 @@ module pusher_body() {
     module inlet_tubing_connector(as_clearance = false) {
         if (as_clearance) {
             translate([filament_translation.x, dy_locked_guides, filament_translation.z]) { 
-                rotate([-90, 0, 0]) qtcc_ptfe_tubing_connector_keyhole(); 
+                rotate([-90, 0, 0]) flute_keyhole(is_filament_entrance = false, print_from_key_opening=true); 
             }
         }
     } 

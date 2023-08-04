@@ -41,56 +41,67 @@ connector_count = 6;
 
 /* [Manifold Design] */
 
-// [r_connection, d_sphere, h_i, z_i]
-f4 = 0.15; //[0:0.01:1]
-f3 = 0.4; //[0:0.01:1]
-f2 = 0.85; //[0:0.01:1]
 
 
 
-r1 = r_hub;
-r2 = f2*r_hub;
-r3 = f3*r_hub;
-r4 = f4*r_hub;
-r5 = 0;
-
-//d1 = 2;
-//d2 = 2;
-//d3 = 2;
-//d4 = 2;
-//d5 = 2;
-
-h1 = 10;  
-h2 = 10;  
-h3 = 10; 
-h4 = 10;
+h1 = 5;  
+h2 = 20;  
+h3 =2; 
+h4 = 2;
+h5 = 2;
 
 d_outer = 5;
 d_inner = 3;
 d_outlet = 9;
 
-manifold_outer = [
-    [r1, d_outer, h1, 0],
-    [r2, d_outer, h2, h1],
-    [r3, d_outer, h3, h1 + h2],
-    [r4, d_outer , h4, h1 + h2 + h3],
-    [r5, d_outlet, 0, h1 + h2 + h3 + h4],
-];
 
-manifold_inner = [
-    [r1, d_inner, h1, 0],
-    [r2, d_inner, h2, h1],
-    [r3, d_inner, h3, h1 + h2],
-    [r4, d_inner, h4, h1 + h2 + h3],
-    [r5, d_filament_with_clearance, 0, h1 + h2 + h3 + h4],
-];
+
+
 
 h_manifold = h1 + h2 + h3 + h4;
 
 module end_of_customization() {}
 
+function filament_offset(z, z_t, path_offset) = 
+    let(
+        c_1 = 12*path_offset/z_t^3,
+        c_2 = -c_1 * z_t/2)   
+    c_1 * z ^ 3/ 6 - c_1 * z_t * z ^2 / 4 + path_offset;
 
 
+z1 = 0;
+z2 = h1;
+z3 = z2 + h2;
+z4 = z3 + h3;
+z5 = z4 + h4;
+z6 = z5 + h5;
+
+z_total = z6;
+
+r1 = filament_offset(z1,  z_total, r_hub);
+r2 = filament_offset(z2,  z_total, r_hub);
+r3 = filament_offset(z3,  z_total, r_hub);
+r4 = filament_offset(z4,  z_total, r_hub);
+r5 = filament_offset(z5, z_total, r_hub);
+r6 = filament_offset(z6,  z_total, r_hub);
+
+manifold_outer = [
+    [r1, d_outer, h1, z1],
+    [r2, d_outer, h2, z2],
+    [r3, d_outlet, h3, z3],
+    [r4, d_outlet , h4, z4],
+    [r5, d_outlet, h5, z5],
+    [r6, d_outlet, 0, z5],
+];
+
+manifold_inner = [
+    [r1, d_inner, h1, z1],
+    [r2, d_inner, h2, z2],
+    [r3, d_filament_with_clearance, h3, z3],
+    [r4, d_filament_with_clearance, h4, z4],
+    [r5, d_filament_with_clearance, h5, z5],
+    [r6, d_filament_with_clearance, 0, z6],
+];
 
 
 function layout_from_mode(mode) = 

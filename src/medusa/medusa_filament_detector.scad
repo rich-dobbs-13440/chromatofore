@@ -42,7 +42,7 @@ roller_arm_length = 20; // [18:Short, 20:Long]
 
 // These are in coordinate system of switch before tilt
 dx_limit_switch_holder = 10;  // [0:20]
-dy_limit_switch_holder = -12;  // [-20:0 
+dy_limit_switch_holder = -11;  // [-20:0 
 dz_limit_switch_holder = -0.5;  // [0:25]
 
 tilt_limit_switch = -45;
@@ -89,27 +89,26 @@ module limit_switch_holder() {
     
     module  adjustment_screw(as_clearance = false) {
         head_height = 5;
-        translate([4, -17,-1]) rotate([90, 0, 0]) {
+        translate([-6, -17,-0.5]) rotate([90, 0, 0]) {
             if (as_clearance) {
-                translate([0, 0, head_height]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
+                translate([0, 0, head_height-3]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
                 // Rotate down
-                translate([0, 0, -8])  rotate([0, 0, -90]) nutcatch_sidecut(
+                translate([0, 0, -4])  rotate([0, 0, -90]) nutcatch_sidecut(
 
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                     l      = 50.0,  // length of slot
-                    clk    =  0.2,  // key width clearance
-                    clh    =  0.2,  // height clearance
-                    clsl   =  0.2); // slot width clearance
+                    clk    =  0.5,  // key width clearance
+                    clh    =  0.5,  // height clearance
+                    clsl   =  0.5); // slot width clearance
             } else {
                 color(STAINLESS_STEEL)  screw("M2x16");
             }
         }
     }
     translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
-    dx_base = -4;  // This leaves a gap that will be used to fine tune triggerring of switch. 
-    base = [roller_switch_body.x, 12.5, 3];
-    pedistal = [roller_switch_body.x, 5, 3];
-    joiner = [4, 2, 3];
+    dx_pedistal = -10;
+    pedistal = [roller_switch_body.x + abs(dx_pedistal), 6, 5.5];
+    joiner = [8, 8, 3];
     rotation = [90, 0, 0];
         rotate([tilt_limit_switch, 0, 0])
             translate(translation) rotate(rotation)
@@ -125,11 +124,8 @@ module limit_switch_holder() {
     visualize(visualization_limit_switch_support) {
         render(convexity=10) difference() {
             union() {
-                translate([0, dx_base, 0]) {
-                    block(base, center=LEFT+BELOW+FRONT);
-                    translate([roller_switch_body.x, 0, 0]) block(joiner, center=RIGHT+BELOW+BEHIND);
-                }
-                translate([0, -12, 0]) {
+                translate([roller_switch_body.x, -1, 0]) block(joiner, center=LEFT+BELOW+BEHIND);
+                translate([dx_pedistal, -10.8, -3]) {
                     hull() {
                         block(pedistal, center = ABOVE + FRONT);
                         block([pedistal.x, pedistal.y + 3.5, 0.1], center = ABOVE + FRONT);
@@ -137,10 +133,13 @@ module limit_switch_holder() {
                 }
                 // Add a rib so that structure is less tippy
                  s= 16;
-                translate([roller_switch_body.x/2, -10, 0]) rotate([tilt_limit_switch, 0, 0]) block([5, 16, 20], center=BELOW+LEFT);
+                translate([roller_switch_body.x/2, -10, 0]) hull() {
+                    rotate([tilt_limit_switch, 0, 0]) block([4, 14, 1], center=BELOW+LEFT);
+                    translate([0, 0, -3]) block([4, 11, 0.1], center = ABOVE+LEFT);
+                }
             }
             adjustment_screw(as_clearance=true);
-            translate([0, 0, -3]) plane_clearance(BELOW);
+            //translate([0, 0, -3]) plane_clearance(BELOW);
         }
     }
     if (show_vitamins) {
@@ -167,11 +166,11 @@ module filament_holder() {
         render(convexity=10) difference() {
             union() {
                 hull() {
-                    block([x_fh_front, 4, 3], center=BELOW+FRONT);
-                    translate([0, 0, 0.5]) rod(d=4, l=x_fh_front, center=FRONT);
+                    translate([0, 0, -3]) block([x_fh_front, 6, 0.1], center=ABOVE+FRONT);
+                    translate([0, 0, 0.5]) rod(d=5, l=x_fh_front, center=FRONT);
                 }
                 hull() {
-                    block([x_fh_behind, 4, 3], center=BELOW+BEHIND);
+                    translate([0, 0, -3])  block([x_fh_behind, 6, 0.1], center=ABOVE+BEHIND);
                     translate([0, 0, 0.5]) rod(d=6, l=x_fh_behind, center=BEHIND);
                     
                 }
@@ -211,7 +210,7 @@ module inlet() {
 }
 
 
-module filament_detecter() {
+module medusa_filament_detecter() {
     inlet();
     filament_holder();
     outlet();
@@ -219,7 +218,7 @@ module filament_detecter() {
 }
 
 
-filament_detecter();
+medusa_filament_detecter();
 
 
 

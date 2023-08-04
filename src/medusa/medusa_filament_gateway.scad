@@ -18,6 +18,7 @@ d_filament_with_clearance = 2;
  mode = 3; // [3: "Assembly", 4: "Printing"]
 show_vitamins = true;
 show_filament = true;
+show_cross_section = false;
 show_parts = true; // But nothing here has parts yet.
 show_legend = false;
 
@@ -94,7 +95,7 @@ manifold_outer = [
 manifold_inner = [
     [r1, d_inner, h1, z1],
     [r2, d_inner, h2, z2],
-    [r3, d_filament_with_clearance, h3, z3],
+    [r3, d_inner, h3, z3],
     [r4, d_filament_with_clearance, h4, z4],
     [r5, d_filament_with_clearance, h5, z5],
     [r6, d_filament_with_clearance, 0, z6],
@@ -142,30 +143,6 @@ clamp_extent = gtcc_extent(clamp);
     } 
  }
  
-//module cone_shape(d = 5, dz_cone=40) {
-//    hull() {
-//        translate([0, 0, dz_cone]) sphere(d=d, $fn=15);
-//        for_all_connections() {
-//            translate([r_hub, 0, h_hub]) {
-//                sphere(d=d , $fn=15);
-//            }
-//        }
-//    }
-//}
-//
-//module cone() {
-//    dz_cone = 40;
-//    dz_outlet = dz_cone + 8;
-//    render() difference() {
-//        cone_shape(d = 5);
-//        hull() {
-//            cone_shape(d=3, dz_cone=dz_cone);
-//            translate([0, 0, -5]) cone_shape(d=3, dz_cone=dz_cone);
-//        }
-//        can(d=2, h=200, center=ABOVE);
-//       
-//    }
-//}
 
 module hub() {
     cam_wall = 2;
@@ -261,8 +238,18 @@ module outlet() {
     }
 }
         
+module medusa_filament_gateway() {
+    difference() {
+        union() {
+            hub();
+            pipes();
+            outlet(); 
+        }
+        if (show_cross_section) {
+            plane_clearance(LEFT);
+        }
+    }
+}
 
-hub();
-pipes();
-outlet(); 
+medusa_filament_gateway();
             

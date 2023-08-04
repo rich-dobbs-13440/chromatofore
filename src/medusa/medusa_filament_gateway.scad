@@ -36,11 +36,65 @@ part_to_print = "hub"; // [hub]
 r_hub = 15;
 connector_count = 6;
 
+/* [Manifold Design] */
 
+// [r_connection, d_sphere, h_i, z_i]
+
+f2 = 0.75; //[0:0.05:1]
+f3 = 0.5; //[0:0.05:1]
+f4 = 0.25; //[0:0.05:1]
+f5 = 0; //[0:0.05:1]
+
+r1 = r_hub;
+r2 = f2*r_hub;
+r3 = f3*r_hub;
+r4 = f4*r_hub;
+r5 = 0;
+
+//d1 = 2;
+//d2 = 2;
+//d3 = 2;
+//d4 = 2;
+//d5 = 2;
+
+h1 = 10;  
+h2 = 10;  
+h3 = 10; 
+h4 = 10; 
+h5 = 10;  
+
+d_outer = 5;
+d_inner = 3;
+manifold_outer = [
+    [r1, d_outer, h1, 0],
+    [r2, d_outer, h2, h1],
+    [r3, d_outer, h3, h1 + h2],
+    [r4, d_outer, h4, h1 + h2 + h3],
+    [r5, d_outer, h5, h1 + h2 + h3 + h4],
+];
+
+manifold_inner = [
+    [r1, d_inner, h1, 0],
+    [r2, d_inner, h2, h1],
+    [r3, d_inner, h3, h1 + h2],
+    [r4, d_inner, h4, h1 + h2 + h3],
+    [r5, d_inner, h5, h1 + h2 + h3 + h4],
+];
 
 module end_of_customization() {}
 
- 
+ module generate_manifold(manifold) {
+     function r(i) = manifold[i][0];
+     function d(i) = manifold[i][1];
+     function z(i) = manifold[i][3];
+     for (i = [1: len(manifold)-1]) {
+        hull() {
+            translate([r(i-1), 0, z(i-1)]) sphere(d=d(i-1));
+            translate([r(i), 0, z(i)]) sphere(d=d(i));
+         }
+     }
+     
+} 
 
 function layout_from_mode(mode) = 
     mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
@@ -75,6 +129,10 @@ clamp_extent = gtcc_extent(clamp);
         }
     } 
  }
+ 
+
+
+
       
 
 module cone_shape(d = 5, dz_cone=40) {
@@ -157,7 +215,17 @@ module hub() {
 
 }
 
-hub();
-cone() ;
+module pipes() {
+    difference() {
+        for_all_connections() {
+                generate_manifold() {
+                }
+        }
+    }
+}
+        
+
+//hub();
+pipes();
 
             

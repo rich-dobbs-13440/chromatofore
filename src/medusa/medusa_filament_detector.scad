@@ -42,7 +42,7 @@ roller_arm_length = 20; // [18:Short, 20:Long]
 
 // These are in coordinate system of switch before tilt
 dx_limit_switch_holder = 10;  // [0:20]
-dy_limit_switch_holder = -11;  // [-20:0 
+dy_limit_switch_holder = -13.0;  // [-20:0] 
 dz_limit_switch_holder = -0.5;  // [0:25]
 
 tilt_limit_switch = -45;
@@ -86,60 +86,89 @@ clamp_extent = gtcc_extent(clamp);
 
 
 module limit_switch_holder() {
+    base_thickness = connector_extent.y/2;
+    dy_beneath_limit_switch = cos(tilt_limit_switch) * dy_limit_switch_holder;
+    echo("dy_beneath_limit_switch", dy_beneath_limit_switch);
+    switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
+    tilt = [tilt_limit_switch, 0, 0];
     
-    module  adjustment_screw(as_clearance = false) {
+    nut_block = [7, 7, 6];
+    joiner = [3, abs(dy_beneath_limit_switch), 5];
+    
+    module  adjustment_screw(as_clearance = false, as_nut_block=false) {
         head_height = 5;
-        translate([-6, -17,-0.5]) rotate([90, 0, 0]) {
+        // screw_offset is in the coordinate system of the limit switch body
+        screw_offset = [-roller_switch_body.x/2 - 6, 0, 0];
+        rotate(tilt) translate(switch_translation + screw_offset) rotate([90, 0, 0]) {
             if (as_clearance) {
-                translate([0, 0, head_height-3]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
+                translate([0, 0, head_height]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
                 // Rotate down
-                translate([0, 0, -4])  rotate([0, 0, -90]) nutcatch_sidecut(
+                translate([0, 0, -2])  rotate([0, 0, 90]) nutcatch_sidecut(
 
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                     l      = 50.0,  // length of slot
                     clk    =  0.5,  // key width clearance
                     clh    =  0.5,  // height clearance
                     clsl   =  0.5); // slot width clearance
+            } else if (as_nut_block) {
+                block(nut_block, center=BELOW);
             } else {
                 color(STAINLESS_STEEL)  screw("M2x16");
             }
         }
     }
-    translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
-    dx_pedistal = -10;
-    pedistal = [roller_switch_body.x + abs(dx_pedistal), 6, 5.5];
-    joiner = [8, 8, 3];
-    rotation = [90, 0, 0];
-        rotate([tilt_limit_switch, 0, 0])
-            translate(translation) rotate(rotation)
-                nsrsh_top_clamp(
-                    show_vitamins=show_vitamins && mode != PRINTING , 
-                    right_handed = right_handed_limit_switch_holder,
-                    alpha=1, 
-                    thickness=limit_switch_holder_base_thickness, 
-                    recess_mounting_screws = false,
-                    use_dupont_connectors = true,
-                    roller_arm_length = roller_arm_length,
-                    switch_depressed = roller_switch_depressed); 
+    module adjustment_screw_block() {
+        base = [nut_block.x, nut_block.y, base_thickness];
+        hull() {
+            adjustment_screw(as_nut_block = true);
+            translate([-2, dy_beneath_limit_switch+2, 0]) block(base, center = LEFT+BEHIND+BELOW);
+        }
+        translate([+1, dy_beneath_limit_switch+2, 0]) block(base, center = LEFT+BEHIND+BELOW);
+    }
+    module pedistal() {
+        x_extra = 9;
+        x = roller_switch_body.x + x_extra;
+        dx = -x_extra;
+        target = [x, 5, limit_switch_holder_base_thickness];
+        base = [x, target.y/cos(tilt_limit_switch) , base_thickness];
+        target_offset = [-roller_switch_body.x/2, -1, -roller_switch_body.y/2];
+        translate([dx, 0, 0]) {
+            hull() {
+                rotate(tilt) translate(switch_translation + target_offset) 
+                    block(target, center=BELOW + FRONT);
+                translate([0, dy_beneath_limit_switch, 0]) block(base,  center=BELOW + LEFT +FRONT);
+            }  
+        }      
+    }
+    
+    module rib() {
+        // Add a rib so that structure is less tippy
+         s= 16;
+        translate([roller_switch_body.x/2, -10, 0]) hull() {
+            rotate([tilt_limit_switch, 0, 0]) block([4, 14, 1], center=BELOW+LEFT);
+            translate([0, 0, -base_thickness]) block([4, 11, 0.1], center = ABOVE+LEFT);
+        }        
+    }
+    
+    rotate(tilt) translate(switch_translation) rotate([90, 0, 0])
+            nsrsh_top_clamp(
+                show_vitamins=show_vitamins && mode != PRINTING , 
+                right_handed = right_handed_limit_switch_holder,
+                alpha=1, 
+                thickness=limit_switch_holder_base_thickness, 
+                recess_mounting_screws = false,
+                use_dupont_connectors = true,
+                roller_arm_length = roller_arm_length,
+                switch_depressed = roller_switch_depressed); 
     visualize(visualization_limit_switch_support) {
         render(convexity=10) difference() {
             union() {
-                translate([roller_switch_body.x, -1, 0]) block(joiner, center=LEFT+BELOW+BEHIND);
-                translate([dx_pedistal, -10.8, -3]) {
-                    hull() {
-                        block(pedistal, center = ABOVE + FRONT);
-                        block([pedistal.x, pedistal.y + 3.5, 0.1], center = ABOVE + FRONT);
-                    }
-                }
-                // Add a rib so that structure is less tippy
-                 s= 16;
-                translate([roller_switch_body.x/2, -10, 0]) hull() {
-                    rotate([tilt_limit_switch, 0, 0]) block([4, 14, 1], center=BELOW+LEFT);
-                    translate([0, 0, -3]) block([4, 11, 0.1], center = ABOVE+LEFT);
-                }
+                translate([roller_switch_body.x, -1, -base_thickness]) block(joiner, center=LEFT+ABOVE+BEHIND);
+                pedistal();
+                rib();
+                adjustment_screw_block();
             }
             adjustment_screw(as_clearance=true);
-            //translate([0, 0, -3]) plane_clearance(BELOW);
         }
     }
     if (show_vitamins) {
@@ -149,12 +178,14 @@ module limit_switch_holder() {
 
 
 module filament_holder() {
+    dx_roller_clearance = 1;
+    x_roller_clearance = 10;
     module roller_clearance() {
-        rotate([45, 0, 0]) block([10, 8, 5], center=ABOVE);
+        translate([1, 0, 0]) rotate([45, 0, 0]) block([x_roller_clearance, 8, 5], center=ABOVE);
     }
     module filament_recapture_clearance() {
         //directs the filament  back into the path, even if the limit switch roller allows it deviate a bit. 
-        translate([-5, 0, 0]) intersection() {
+        translate([-x_roller_clearance/2 + dx_roller_clearance, 0, 0]) intersection() {
             rod(d=0, taper=6, l=4, center=BEHIND);
             roller_clearance(); 
         }

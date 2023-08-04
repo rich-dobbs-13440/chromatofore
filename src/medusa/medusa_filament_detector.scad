@@ -47,9 +47,10 @@ tilt = [tilt_limit_switch, 0, 0];
 dx_roller_clearance = 1;
 x_roller_clearance = 10;
 x_extra_for_inlet = 4;
+nut_block = [7, 7, 6];
 
 /* [Outlet Design] */
-dx_outlet = -18;
+dx_outlet = -20;
 x_wrench = 6;
 y_wrench = 24;
 
@@ -85,7 +86,7 @@ connector = flute_connector_dimensions();
 connector_extent = gtcc_extent(connector);
 clamp = flute_clamp_dimensions();    
 clamp_extent = gtcc_extent(clamp);
-
+dx_filament_recapture = -x_roller_clearance/2 + dx_roller_clearance;
 
 module limit_switch_holder() {
     base_thickness = connector_extent.y/2;
@@ -93,33 +94,41 @@ module limit_switch_holder() {
     echo("dy_beneath_limit_switch", dy_beneath_limit_switch);
     switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
 
-    
-    nut_block = [7, 7, 6];
-    
-    
-    module  adjustment_screw(as_clearance = false, as_nut_block=false) {
+    module  adjustment_screw(as_clearance = false, as_nut_block=false,  as_filament_nut_block= false) {
         head_height = 5;
+        dy_screw_offset = -10;
+        dz_filament_nutcatch = dy_screw_offset - 1;
+         
         // screw_offset is in the coordinate system of the limit switch body
-        screw_offset = [-roller_switch_body.x/2 - 6, -5, 0];
-        rotate(tilt) translate(switch_translation + screw_offset) rotate([90, 0, 0]) {
-            if (as_clearance) {
-                translate([0, 0, head_height]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
-                // Rotate down
-                translate([0, 0, -2])  rotate([0, 0, 90]) nutcatch_sidecut(
+        screw_offset = [-roller_switch_body.x/2 - nut_block.x/2 + dx_filament_recapture, dy_screw_offset, 0];
+        
+        module  nut_catch() {
+            rotate([0, 0, 90]) nutcatch_sidecut(
 
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                     l      = 50.0,  // length of slot
                     clk    =  0.5,  // key width clearance
                     clh    =  0.5,  // height clearance
-                    clsl   =  0.5); // slot width clearance
+                    clsl   =  0.2); // slot width clearance
+        }
+        rotate(tilt) translate(switch_translation + screw_offset) rotate([90, 0, 0]) {
+            if (as_clearance) {
+                translate([0, 0, head_height]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
+                translate([0, 0, -2]) nut_catch();
+                // Attach a nut_catch to the filament holder 
+                translate([0, 0, dz_filament_nutcatch-2]) nut_catch();
+                
+
             } else if (as_nut_block) {
                 block(nut_block, center=BELOW);
+            } else if (as_filament_nut_block) {  
+                translate([0, 0, dz_filament_nutcatch]) block(nut_block + [0, 0, 2], center=BELOW);
             } else {
                 color(STAINLESS_STEEL)  screw("M2x16");
             }
         }
     }
-    dy_adjustment_screw_base = -4;
+    dy_adjustment_screw_base = -8;
     module adjustment_screw_block() {
         dy = dy_beneath_limit_switch + dy_adjustment_screw_base;
         base = [nut_block.x, nut_block.y, base_thickness];
@@ -127,6 +136,7 @@ module limit_switch_holder() {
             adjustment_screw(as_nut_block = true);
             translate([-2, dy, 0]) block(base, center = LEFT+BEHIND+BELOW);
         }
+        adjustment_screw(as_filament_nut_block = true);
         translate([+1, dy, 0]) block(base, center = LEFT+BEHIND+BELOW);
     }
     module pedistal() {
@@ -166,7 +176,7 @@ module limit_switch_holder() {
                 translate([1,  dz_spring, 0]) block([attachment.x, attachment.y, spring.z], center=LEFT+FRONT);
                 translate([0, dz_spring, dz_attachment]) block(attachment, center=LEFT+BELOW+FRONT);
             }
-            # translate([0, dz_spring, dz_attachment]) block(attachment, center=LEFT+BELOW);
+            translate([0, dz_spring, dz_attachment]) block(attachment, center=LEFT+BELOW);
         }
     }
     
@@ -203,8 +213,8 @@ module filament_holder() {
     x_fh_front = roller_switch_body.x + x_extra_for_inlet;
     x_fh_behind = abs(dx_outlet);
     above_to_tilt =  [-tilt_limit_switch, 0, 0];
-    adjustment_screw_contact = [4, 4, connector_extent.y/2];
-    dx_filament_recapture = -x_roller_clearance/2 + dx_roller_clearance;
+    adjustment_screw_contact = [nut_block.x, nut_block.y+1, connector_extent.y/2];
+    
     module roller_clearance() {
         translate([dx_roller_clearance, 0, -1]) rotate(above_to_tilt) block([x_roller_clearance, 10, 5], center=ABOVE);
     }
@@ -227,7 +237,7 @@ module filament_holder() {
                     block([x_fh_behind, y_pedistal, z_base], center=BELOW+BEHIND);
                     translate([0, 0, 0.5]) rod(d=6, l=x_fh_behind, center=BEHIND);
                 }
-                rotate(above_to_tilt) translate([dx_filament_recapture, 0, 1]) block(adjustment_screw_contact, center=BEHIND+ABOVE);
+                rotate(above_to_tilt) translate([dx_filament_recapture, 0, 0.5]) block(adjustment_screw_contact, center=BEHIND+ABOVE);
             }
             
             // Teardrop filament path
@@ -251,8 +261,8 @@ module outlet() {
                 translate([0, 0, -2]) plane_clearance(BELOW);
             }
         }
-        // Offset the wrench to avoid interference with keyhole sur
-        translate([2, 0, 0]) block(wrench, center=FRONT+LEFT);
+        // Offset the wrench to avoid interference with keyhole surface
+        translate([2, -1, 0]) block(wrench, center=FRONT+LEFT);
         // TODO: Use wrench to make a slot, to prevent twisting  with adjustment screw changes
     }
 }

@@ -30,6 +30,8 @@ outlet  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 roller_switch_depressed = false;
 az_lock_connection = 90; // [90:Locked, 0:Unlocked]
+// TODO:  Retrieve offset from filament detector file. 
+dz_filament_detectors = -18; // [-20:0.5:-10]
 
 /* [Printing] */
 print_one_part = false;
@@ -37,12 +39,10 @@ part_to_print = "hub"; // [hub]
 
 /* [Hub Design] */
 r_hub = 15;
-connector_count = 6;
+connector_count = 1; // [1:1:8]
+az_keyhole = -70; // [-90:5:90]
 
 /* [Manifold Design] */
-
-
-
 
 h1 = 5;  
 h2 = 20;  
@@ -56,10 +56,6 @@ d_outlet = 9;
 
 
 
-
-
-h_manifold = h1 + h2 + h3 + h4;
-
 module end_of_customization() {}
 
 function filament_offset(z, z_t, path_offset) = 
@@ -68,6 +64,7 @@ function filament_offset(z, z_t, path_offset) =
         c_2 = -c_1 * z_t/2)   
     c_1 * z ^ 3/ 6 - c_1 * z_t * z ^2 / 4 + path_offset;
 
+h_manifold = h1 + h2 + h3 + h4;
 
 z1 = 0;
 z2 = h1;
@@ -145,31 +142,30 @@ clamp_extent = gtcc_extent(clamp);
     } 
  }
  
-module cone_shape(d = 5, dz_cone=40) {
-    hull() {
-        translate([0, 0, dz_cone]) sphere(d=d, $fn=15);
-        for_all_connections() {
-            translate([r_hub, 0, h_hub]) {
-                sphere(d=d , $fn=15);
-            }
-        }
-    }
-}
-
-module cone() {
-    dz_cone = 40;
-    dz_outlet = dz_cone + 8;
-    render() difference() {
-        cone_shape(d = 5);
-        hull() {
-            cone_shape(d=3, dz_cone=dz_cone);
-            translate([0, 0, -5]) cone_shape(d=3, dz_cone=dz_cone);
-        }
-        can(d=2, h=200, center=ABOVE);
-       
-    }
-}
-
+//module cone_shape(d = 5, dz_cone=40) {
+//    hull() {
+//        translate([0, 0, dz_cone]) sphere(d=d, $fn=15);
+//        for_all_connections() {
+//            translate([r_hub, 0, h_hub]) {
+//                sphere(d=d , $fn=15);
+//            }
+//        }
+//    }
+//}
+//
+//module cone() {
+//    dz_cone = 40;
+//    dz_outlet = dz_cone + 8;
+//    render() difference() {
+//        cone_shape(d = 5);
+//        hull() {
+//            cone_shape(d=3, dz_cone=dz_cone);
+//            translate([0, 0, -5]) cone_shape(d=3, dz_cone=dz_cone);
+//        }
+//        can(d=2, h=200, center=ABOVE);
+//       
+//    }
+//}
 
 module hub() {
     cam_wall = 2;
@@ -181,16 +177,16 @@ module hub() {
     
     module cavity() {
         for_all_connections() {
-            translate([r_hub, 0, 0]) {
-                flute_keyhole(is_filament_entrance=false, print_from_key_opening=true);
-            }
+            translate([r_hub, 0, 0])             
+                rotate([0, 0, az_keyhole])
+                    flute_keyhole(is_filament_entrance=false, print_from_key_opening=true);
         } 
         flute_keyhole(is_filament_entrance=false, print_from_key_opening=true);
     }
     if (show_vitamins) {
         for_all_connections() {
-            translate([r_hub, 0, -10]) {
-                rotate([0, 0, az_lock_connection]) rotate([0, 90, 0]) medusa_filament_detecter();
+            translate([r_hub, 0, dz_filament_detectors]) {
+                rotate([0, 0, 90 + az_keyhole + az_lock_connection]) rotate([0, 90, 0]) medusa_filament_detecter();
                 
             }
         }
@@ -204,9 +200,10 @@ module hub() {
     
     if (show_vitamins) {
         for_all_connections() {
-            translate([r_hub, 0, -10]) {
+            translate([r_hub, 0, dz_filament_detectors]) {
                 // Show insertion as ghost
-                color("Ivory", alpha=0.1) rotate([0, 90, 0]) medusa_filament_detecter();                
+                color("Ivory", alpha=0.2) 
+                    rotate([0, 0, 90 + az_keyhole]) rotate([0, 90, 0]) medusa_filament_detecter();                
             }
         }
     }    

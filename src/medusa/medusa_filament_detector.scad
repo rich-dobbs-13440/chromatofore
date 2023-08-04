@@ -7,11 +7,6 @@ use <ScadApotheka/ptfe_filament_tubing_connector.scad>
 use <ScadApotheka/quarter_turn_clamping_connector.scad>
 
 
-
-
-
-
-
 ASSEMBLE_SUBCOMPONENTS = 3 + 0;
 PRINTING = 4 + 0;
 
@@ -24,7 +19,6 @@ show_filament = true;
 show_parts = true; // But nothing here has parts yet.
 show_legend = false;
 
-barrel = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_support = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_holder = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
@@ -42,14 +36,22 @@ roller_arm_length = 20; // [18:Short, 20:Long]
 
 // These are in coordinate system of switch before tilt
 dx_limit_switch_holder = 10;  // [0:20]
-dy_limit_switch_holder = -13.0;  // [-20:0] 
+dy_limit_switch_holder = -12.0;  // [-20:0] 
 dz_limit_switch_holder = -0.5;  // [0:25]
 
 tilt_limit_switch = -45;
+tilt = [tilt_limit_switch, 0, 0];
 
-/* [Barrel Design] */
+/* [Filament Holder Design] */
 
-dx_inlet_collet = 34; // [10:40]
+dx_roller_clearance = 1;
+x_roller_clearance = 10;
+x_extra_for_inlet = 4;
+
+/* [Outlet Design] */
+dx_outlet = -18;
+x_wrench = 6;
+y_wrench = 24;
 
 /* [Printing] */
 print_one_part = false;
@@ -90,15 +92,15 @@ module limit_switch_holder() {
     dy_beneath_limit_switch = cos(tilt_limit_switch) * dy_limit_switch_holder;
     echo("dy_beneath_limit_switch", dy_beneath_limit_switch);
     switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
-    tilt = [tilt_limit_switch, 0, 0];
+
     
     nut_block = [7, 7, 6];
-    joiner = [3, abs(dy_beneath_limit_switch), 5];
+    
     
     module  adjustment_screw(as_clearance = false, as_nut_block=false) {
         head_height = 5;
         // screw_offset is in the coordinate system of the limit switch body
-        screw_offset = [-roller_switch_body.x/2 - 6, 0, 0];
+        screw_offset = [-roller_switch_body.x/2 - 6, -5, 0];
         rotate(tilt) translate(switch_translation + screw_offset) rotate([90, 0, 0]) {
             if (as_clearance) {
                 translate([0, 0, head_height]) hole_through("M2", h=head_height, cld=0.4, $fn=12);
@@ -117,16 +119,18 @@ module limit_switch_holder() {
             }
         }
     }
+    dy_adjustment_screw_base = -4;
     module adjustment_screw_block() {
+        dy = dy_beneath_limit_switch + dy_adjustment_screw_base;
         base = [nut_block.x, nut_block.y, base_thickness];
         hull() {
             adjustment_screw(as_nut_block = true);
-            translate([-2, dy_beneath_limit_switch+2, 0]) block(base, center = LEFT+BEHIND+BELOW);
+            translate([-2, dy, 0]) block(base, center = LEFT+BEHIND+BELOW);
         }
-        translate([+1, dy_beneath_limit_switch+2, 0]) block(base, center = LEFT+BEHIND+BELOW);
+        translate([+1, dy, 0]) block(base, center = LEFT+BEHIND+BELOW);
     }
     module pedistal() {
-        x_extra = 9;
+        x_extra = 3;
         x = roller_switch_body.x + x_extra;
         dx = -x_extra;
         target = [x, 5, limit_switch_holder_base_thickness];
@@ -135,7 +139,7 @@ module limit_switch_holder() {
         translate([dx, 0, 0]) {
             hull() {
                 rotate(tilt) translate(switch_translation + target_offset) 
-                    block(target, center=BELOW + FRONT);
+                    block(target, center=BELOW + FRONT+RIGHT);
                 translate([0, dy_beneath_limit_switch, 0]) block(base,  center=BELOW + LEFT +FRONT);
             }  
         }      
@@ -148,6 +152,22 @@ module limit_switch_holder() {
             rotate([tilt_limit_switch, 0, 0]) block([4, 14, 1], center=BELOW+LEFT);
             translate([0, 0, -base_thickness]) block([4, 11, 0.1], center = ABOVE+LEFT);
         }        
+    }
+    
+    module spring() {
+        spring = [2, 16, 4];
+        dz_spring = -spring.y;
+        clearance =0.5;
+        dz_attachment = -roller_switch_body.y/2 - clearance ;
+        attachment = [3, 2, limit_switch_holder_base_thickness];
+        translate([roller_switch_body.x, 0 , 0]) rotate(tilt) {
+             translate([1, -2, 0]) block(spring, center=LEFT+FRONT);
+            hull() {
+                translate([1,  dz_spring, 0]) block([attachment.x, attachment.y, spring.z], center=LEFT+FRONT);
+                translate([0, dz_spring, dz_attachment]) block(attachment, center=LEFT+BELOW+FRONT);
+            }
+            # translate([0, dz_spring, dz_attachment]) block(attachment, center=LEFT+BELOW);
+        }
     }
     
     rotate(tilt) translate(switch_translation) rotate([90, 0, 0])
@@ -163,8 +183,8 @@ module limit_switch_holder() {
     visualize(visualization_limit_switch_support) {
         render(convexity=10) difference() {
             union() {
-                translate([roller_switch_body.x, -1, -base_thickness]) block(joiner, center=LEFT+ABOVE+BEHIND);
                 pedistal();
+                spring();
                 rib();
                 adjustment_screw_block();
             }
@@ -176,36 +196,40 @@ module limit_switch_holder() {
     }
 }
 
-
 module filament_holder() {
-    dx_roller_clearance = 1;
-    x_roller_clearance = 10;
+    z_base = connector_extent.y/2;
+    y_base = 8;
+    y_pedistal = 6;
+    x_fh_front = roller_switch_body.x + x_extra_for_inlet;
+    x_fh_behind = abs(dx_outlet);
+    above_to_tilt =  [-tilt_limit_switch, 0, 0];
+    adjustment_screw_contact = [4, 4, connector_extent.y/2];
+    dx_filament_recapture = -x_roller_clearance/2 + dx_roller_clearance;
     module roller_clearance() {
-        translate([1, 0, 0]) rotate([45, 0, 0]) block([x_roller_clearance, 8, 5], center=ABOVE);
+        translate([dx_roller_clearance, 0, -1]) rotate(above_to_tilt) block([x_roller_clearance, 10, 5], center=ABOVE);
     }
     module filament_recapture_clearance() {
         //directs the filament  back into the path, even if the limit switch roller allows it deviate a bit. 
-        translate([-x_roller_clearance/2 + dx_roller_clearance, 0, 0]) intersection() {
+        translate([dx_filament_recapture, 0, 0]) intersection() {
             rod(d=0, taper=6, l=4, center=BEHIND);
             roller_clearance(); 
         }
     }
-    l_collet = connector_extent.z + clamp_extent.z;
-    x_fh_front = dx_inlet_collet - l_collet;
-    x_fh_behind = 10;
+
     visualize(visualization_filament_holder) {
         render(convexity=10) difference() {
             union() {
                 hull() {
-                    translate([0, 0, -3]) block([x_fh_front, 6, 0.1], center=ABOVE+FRONT);
+                    block([x_fh_front, y_pedistal, z_base], center=BELOW+FRONT);
                     translate([0, 0, 0.5]) rod(d=5, l=x_fh_front, center=FRONT);
                 }
                 hull() {
-                    translate([0, 0, -3])  block([x_fh_behind, 6, 0.1], center=ABOVE+BEHIND);
+                    block([x_fh_behind, y_pedistal, z_base], center=BELOW+BEHIND);
                     translate([0, 0, 0.5]) rod(d=6, l=x_fh_behind, center=BEHIND);
-                    
                 }
+                rotate(above_to_tilt) translate([dx_filament_recapture, 0, 1]) block(adjustment_screw_contact, center=BEHIND+ABOVE);
             }
+            
             // Teardrop filament path
             hull() {
                 rod(d=2, l=a_lot);
@@ -217,8 +241,9 @@ module filament_holder() {
     }
 
 }
+
 module outlet() {
-    dx_outlet = -10;
+    wrench = [x_wrench, y_wrench, clamp_extent.y];
     translate([dx_outlet, 0, 0]) {
         rotate([0, -90, 0]) rotate([0, 0, 90]) {
             render(convexity = 10) difference() {
@@ -226,11 +251,14 @@ module outlet() {
                 translate([0, 0, -2]) plane_clearance(BELOW);
             }
         }
+        // Offset the wrench to avoid interference with keyhole sur
+        translate([2, 0, 0]) block(wrench, center=FRONT+LEFT);
+        // TODO: Use wrench to make a slot, to prevent twisting  with adjustment screw changes
     }
 }
 
 module inlet() {
-    dx_inlet = roller_switch_body.x;
+    dx_inlet = roller_switch_body.x + x_extra_for_inlet;
     translate([dx_inlet, 0, 0]) 
         rotate([0, -90, 0]) rotate([0, 0, 90]) {
             difference() {

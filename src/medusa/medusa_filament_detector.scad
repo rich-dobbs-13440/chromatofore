@@ -36,10 +36,9 @@ right_handed_limit_switch_holder = false;
 limit_switch_holder_base_thickness = 4;
 roller_arm_length = 20; // [18:Short, 20:Long]
 
-// These are in coordinate system of switch before tilt
 dx_limit_switch_holder = 10;  // [0:20]
 dy_limit_switch_holder = 0;  // [-20:0] 
-dz_limit_switch_holder = 13;  // [0:25]
+dz_limit_switch_holder = -1;  // [-3:0.1:3]
 
 
 /* [Filament Holder Design] */
@@ -52,10 +51,12 @@ nut_block = [7, 7, 6];
 
 /* [Adjuster design] */
 
-adjustable_mount_slide_length = 11;
+adjustable_mount_slide_length = 12;
 adjuster_slide_length = 20;
 adjuster_screw_length = 20;
 
+
+switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, adjustable_mount_slide_length + dz_limit_switch_holder];
 
 /* [Outlet Design] */
 dx_outlet = -10;
@@ -101,7 +102,7 @@ module filament_holder() {
     y_pedistal = 6;
     x_fh_front = roller_switch_body.x + x_extra_for_inlet;
     x_fh_behind = abs(dx_outlet);
-    roller_clearance_stiffener = [x_roller_clearance + 8, y_roller_clearance/2 + 4, 2 * z_base];
+    roller_clearance_stiffener = [x_roller_clearance + 10, y_roller_clearance/2 + 4, 2 * z_base];
     
     module roller_clearance() {
         translate([dx_roller_clearance, 0, -1]) block([x_roller_clearance, y_roller_clearance, 5], center=ABOVE);
@@ -121,14 +122,13 @@ module filament_holder() {
                 screw_length=adjuster_screw_length,
                 slide_length = adjustable_mount_slide_length);     
         }
-        // Join the mount to the underneath the filament path
-        translate([dx_limit_switch_holder, 0, -z_base]) block([10, 4, 2], center=ABOVE+RIGHT);
+
         
     } 
    
     if (show_vitamins && ! mode_is_printing(mode)) {
         visualize_vitamins(visualization_filament_holder) {
-            switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
+            
             translate(switch_translation) {
                 nsrsh_terminal_end_clamp(
                     show_vitamins=show_vitamins && ! mode_is_printing(mode), 
@@ -156,6 +156,8 @@ module filament_holder() {
                     translate([0, 0, 0.5]) rod(d=6, l=x_fh_behind, center=BEHIND);
                 }
                 translate([dx_roller_clearance, 0, 0]) block(roller_clearance_stiffener, center = LEFT); 
+                // Join the mount to the underneath the filament path
+                translate([dx_limit_switch_holder, 0, -z_base]) block([10, 6, connector_extent.y], center=ABOVE+RIGHT);                
             }
             
             // Teardrop filament path
@@ -206,8 +208,6 @@ module inlet() {
 
 
 module adjuster() {
-    
-    switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
     translation = mode_is_printing(mode) ? [0, -20, -roller_switch_body.y/2] : switch_translation;
     rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 180];
     translate(translation) {
@@ -239,7 +239,7 @@ if (show_adjuster) {
 }
 
 if (show_adjustable_mount_clip) {
-    dz_clip = 8;
+    dz_clip = adjustable_mount_slide_length-2;
    dy_clip = roller_switch_body.y + 8; // dy_limit_switch_holder; 
     translation = mode_is_printing(mode) ? [0, -25, -roller_switch_body.y/2] : [dx_limit_switch_holder, dy_clip, dz_clip];
     rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 0];

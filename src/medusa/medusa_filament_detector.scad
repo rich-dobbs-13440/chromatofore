@@ -14,11 +14,15 @@ a_lot = 100 + 0;
  mode = 3; // [3: "Assembly", 4: "Printing"]
 show_vitamins = true;
 show_filament = true;
+show_filament_holder = true;
+show_adjuster = true;
+show_adjustable_mount_clip = true;
 show_parts = true; // But nothing here has parts yet.
 show_legend = false;
 
-limit_switch_support = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+
 filament_holder = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+adjuster = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation] */    
 
@@ -35,7 +39,7 @@ roller_arm_length = 20; // [18:Short, 20:Long]
 // These are in coordinate system of switch before tilt
 dx_limit_switch_holder = 10;  // [0:20]
 dy_limit_switch_holder = 0;  // [-20:0] 
-dz_limit_switch_holder = 14;  // [0:25]
+dz_limit_switch_holder = 13;  // [0:25]
 
 
 /* [Filament Holder Design] */
@@ -54,7 +58,7 @@ adjuster_screw_length = 20;
 
 
 /* [Outlet Design] */
-dx_outlet = -20;
+dx_outlet = -10;
 x_wrench = 6;
 y_wrench = 0;
 
@@ -71,13 +75,15 @@ function show(variable, name) =
     (print_one_part && mode_is_print(mode)) ? name == part_to_print :
     variable;
 
-visualization_limit_switch_support =        
-    visualize_info(
-        "Limit Switch Support ", PART_1, show(limit_switch_support, "limit_switch_support") , layout, show_parts);  
+
 
 visualization_filament_holder =        
     visualize_info(
         "Filament Holder ", PART_4, show(filament_holder, "filament_holder") , layout, show_parts);  
+
+visualization_adjuster =        
+    visualize_info(
+        "Adjuster ", PART_1, show(adjuster, "adjuster") , layout, show_parts);  
 
 roller_switch_body = rls_base();
 
@@ -133,16 +139,12 @@ module filament_holder() {
                     use_dupont_connectors = true,
                     roller_arm_length = roller_arm_length,
                     switch_depressed = roller_switch_depressed); 
-                rotate([0, 0, 180]) 
-                    nsrsh_adjuster(
-                        show_vitamins=show_vitamins, 
-                        screw_length=adjuster_screw_length, 
-                        slide_length=adjuster_slide_length);
+
             }
         }
     }
-
-    visualize(visualization_filament_holder) {
+    
+    module shape() {
         render(convexity=10) difference() {
             union() {
                 hull() {
@@ -166,7 +168,11 @@ module filament_holder() {
             
             
         }
-        adjustable_mount();
+        adjustable_mount();        
+    }
+
+    visualize(visualization_filament_holder) {
+        shape();
     }
 
 }
@@ -180,9 +186,10 @@ module outlet() {
                 translate([0, 0, -2]) plane_clearance(BELOW);
             }
         }
-        // Offset the wrench to avoid interference with keyhole surface
-        translate([2, -1, 0]) block(wrench, center=FRONT+LEFT);
-        // TODO: Use wrench to make a slot, to prevent twisting  with adjustment screw changes
+        if (y_wrench > 0) {
+            // Offset the wrench to avoid interference with keyhole surface
+            translate([2, -1, 0]) block(wrench, center=FRONT+LEFT);
+        }
     }
 }
 
@@ -198,14 +205,50 @@ module inlet() {
 }
 
 
-module medusa_filament_detecter() {
-    inlet();
-    filament_holder();
-    outlet();
+module adjuster() {
+    
+    switch_translation = [dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder];
+    translation = mode_is_printing(mode) ? [0, -20, -roller_switch_body.y/2] : switch_translation;
+    rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 180];
+    translate(translation) {
+        rotate(rotation) {
+            nsrsh_adjuster(
+                show_vitamins=show_vitamins, 
+                screw_length=adjuster_screw_length, 
+                slide_length=adjuster_slide_length);
+        }
+    }
 }
 
 
-medusa_filament_detecter();
+module medusa_filament_detecter() {
+    translation = mode_is_printing(mode) ? [0, 0, clamp_extent.y/2] : [0, 0, 0];
+    translate(translation) {
+        inlet();
+        filament_holder();
+        outlet();
+    }
+}
+
+if (show_filament_holder) {
+    medusa_filament_detecter();
+}
+
+if (show_adjuster) {
+    adjuster();
+}
+
+if (show_adjustable_mount_clip) {
+    dz_clip = 8;
+   dy_clip = roller_switch_body.y + 8; // dy_limit_switch_holder; 
+    translation = mode_is_printing(mode) ? [0, -25, -roller_switch_body.y/2] : [dx_limit_switch_holder, dy_clip, dz_clip];
+    rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 0];
+    translate(translation) {
+        rotate(rotation) {
+            nsrsh_adjustable_mount_clip(show_vitamins=show_vitamins && !mode_is_printing(mode));
+        }
+    }
+}
 
 
 

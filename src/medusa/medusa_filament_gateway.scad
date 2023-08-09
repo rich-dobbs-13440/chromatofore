@@ -8,8 +8,7 @@ use <medusa_filament_detector.scad>
 
 //     flute_collet(is_filament_entrance = true, as_clearance = false);
 //     
-ASSEMBLE_SUBCOMPONENTS = 3 + 0;
-PRINTING = 4 + 0;
+
 
 a_lot = 100 + 0;
 d_filament_with_clearance = 2.5;
@@ -125,10 +124,7 @@ manifold_inner = [
 ];
 
 
-function layout_from_mode(mode) = 
-    mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
-    mode == PRINTING ? "printing" :
-    "unknown";
+
 
 layout = layout_from_mode(mode);
 

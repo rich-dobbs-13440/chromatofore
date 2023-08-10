@@ -1,5 +1,6 @@
 include <ScadStoicheia/centerable.scad>
 use <ScadStoicheia/visualization.scad>
+use <ScadStoicheia/hermetian_cubic_spline.scad>
 include <ScadApotheka/material_colors.scad>
 use <ScadApotheka/ptfe_filament_tubing_connector.scad>
 use <ScadApotheka/quarter_turn_clamping_connector.scad>
@@ -30,8 +31,9 @@ outlet  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 roller_switch_depressed = false;
 az_lock_connection = 90; // [90:Locked, 0:Unlocked]
-// TODO:  Retrieve offset from filament detector file. 
-dz_filament_detectors = -19; // [-20:0.5:-10]
+// TODO:  Retrieve offset from filament detector file and calculations 
+dz_filament_detectors = -8; // [-10:0.1:0]
+dr_filament_detector = 2; // [0: 0.1 : 5]
 
 i_manifold_focus = 1; // [1:6]
 
@@ -40,46 +42,69 @@ print_one_part = false;
 part_to_print = "hub"; // [hub, pipes]
 
 /* [Hub Design] */
-r_hub =22;
+r_hub = 20;
+cam_wall = 2;
+h_base = 2;
+
 connector_count = 1; // [1:1:8]
+dz_keyhole = 0;
 
 // Tilt of the keyhole radially.
-ay_keyhole = -25; // [-45: 5: 0]
+ay_keyhole = -15; // [-45: 5: 0]
 // Rotation of the keyhole , in the locking plane.
-az_keyhole = -70; // [-90:5:90]
+az_keyhole = 200;
 h_tilt = abs(sin(ay_keyhole)) * (r_hub + 5); // [0:10]
 //echo("h_tilt", h_tilt, "h_tilt_calc", sin(ay_keyhole) * r_hub);
 
 
 /* [Manifold Design] */
 
-//TODO: Calculate r_pipe
-r_pipe = 16; // [0:20]
 
 z_convergence = 40; //[20:40]
-dz_manifold_exit = 10;
+dz_manifold_exit = 0;
 
-use_central_pipe = false;
-
-
+use_central_pipe = true;
 
 d_outer = 7;
 d_inner = 3;
 d_outlet = 9;
 d_inner_entrance = 5;
-d_outer_entrance = d_inner_entrance + 4;
+d_outer_entrance = d_inner_entrance + 2;
 
 
 module end_of_customization() {}
 
-function filament_offset(z, z_t, path_offset) = 
-    z > z_t ? 0 :
-    let(
-        c_1 = 12*path_offset/z_t^3,
-        c_2 = -c_1 * z_t/2)   
-    c_1 * z ^ 3/ 6 - c_1 * z_t * z ^2 / 4 + path_offset;
+
+// Calculations
+
+connector = flute_connector();    
+connector_extent = gtcc_extent(connector);
+clamp = flute_clamp_connector();    
+clamp_extent = gtcc_extent(clamp);
+cam = gtcc_cam(connector);
+
+h_hub = connector_extent.z + 2; 
+
+r_pipe = r_hub  + connector_extent.z* sin(ay_keyhole);
+dz_pipes = abs(connector_extent.z* cos(ay_keyhole)) + 1.5;
+
+d_cam_blank = 2 * (cam.y + cam_wall);
+
+r_filament_detector = r_hub + dr_filament_detector;
+
+function filament_offset(z, z_t, path_offset) =
+    let(M = tan(ay_keyhole), Y=path_offset) 
+    hermetian_cubic_spline(z, z_t, M, Y);
+
+//function filament_offset(z, z_t, path_offset) = 
+//    z > z_t ? 0 :
+//    let(
+//        c_1 = 12*path_offset/z_t^3,
+//        c_2 = -c_1 * z_t/2)   
+//    c_1 * z ^ 3/ 6 - c_1 * z_t * z ^2 / 4 + path_offset;
 
 h_manifold = z_convergence + dz_manifold_exit;
+
 
 h0 = z_convergence/5;  
 h1 = z_convergence/5;  
@@ -114,8 +139,8 @@ manifold_outer = [
 ];
 
 manifold_inner = [
-    [r0, d_inner_entrance, h0, z0],
-    [r1, d_inner_entrance, h1, z1],
+    [r0, d_inner, h0, z0],
+    [r1, d_inner, h1, z1],
     [r2, d_inner, h2, z2],
     [r3, d_inner, h3, z3],
     [r4, d_inner, h4, z4],
@@ -135,23 +160,17 @@ function show(variable, name) =
  
 visualization_hub  =        
     visualize_info(
-        "Hub", PART_2, show(hub, "hub") , layout, show_parts);  
+        "Hub", PART_21, show(hub, "hub") , layout, show_parts);  
 
 visualization_pipes  =        
     visualize_info(
-        "Pipes", PART_3, show(pipes, "pipes") , layout, show_parts);  
+        "Pipes", PART_22, show(pipes, "pipes") , layout, show_parts);  
         
 visualization_outlet =         
     visualize_info(
-        "Outlet", PART_4, show(outlet, "outlet") , layout, show_parts);  
+        "Outlet", PART_23, show(outlet, "outlet") , layout, show_parts);  
         
-connector = flute_connector_dimensions();    
-connector_extent = gtcc_extent(connector);
-clamp = flute_clamp_dimensions();    
-clamp_extent = gtcc_extent(clamp);
 
- h_hub = connector_extent.z + 2  + h_tilt; 
- 
  module for_all_connections(daz_offset=0) {
     daz = 360/connector_count; 
     for (idx = [0: connector_count - 1]) {
@@ -164,36 +183,43 @@ clamp_extent = gtcc_extent(clamp);
  
 
 module hub() {
-    cam_wall = 2;
-    cam = gtcc_cam(connector);
-    d = 2 * (r_hub + cam.y + cam_wall);
-    dz_keyhole = -r_hub*sin(ay_keyhole);
+    dz = 5;
+    z_offset = 5;
+    r_offset = 1;
     module blank() {
-        can(d = d, h = h_hub, center=ABOVE);
+        for_all_connections() {
+                translate([r_hub, 0, 0]) {
+                    rotate([0, ay_keyhole, 0]) {
+                        can(d = d_cam_blank, h = h_hub, center=ABOVE);
+                        // Central post to make joining with pipes easier
+                        can(d = 8, h = h_hub + 2, center=ABOVE);
+                    }
+                }
+        }
+        can(d = d_cam_blank, h = h_hub, center=ABOVE);
+        can(d = 2*r_hub, h = h_base, center=ABOVE, $fn=connector_count);
     }
     
     module cavity() {
         for_all_connections() {
             translate([r_hub, 0, dz_keyhole]) {  
                 rotate([0, ay_keyhole, 0]) rotate([0, 0, az_keyhole]) {
-                    // Not really an entrance, but the flair will help with connecting to pipes!
-                    flute_keyhole(is_filament_entrance=false, print_from_key_opening=true) {
-                        translate([-8, -8, 0]) block([30, 30, 30], center=BELOW+RIGHT+FRONT);
+                    flute_keyhole(is_filament_entrance=false, print_from_key_opening=false) {
                     }
-                    translate([-8, -8, 0]) block([30, 30, 30], center=BELOW+RIGHT+FRONT);
                 }
             }
         } 
-        use_bridging = abs(ay_keyhole) < 15;
+        use_bridging = false; // will print from top!  abs(ay_keyhole) < 15;
         flute_keyhole(is_filament_entrance=false, print_from_key_opening=use_bridging);
     }
     if (show_vitamins) {
         for_all_connections() {
-            translate([r_hub, 0, dz_keyhole + dz_filament_detectors]) {
+            translate([r_filament_detector, 0, dz_keyhole + dz_filament_detectors]) {
                 rotate([0, ay_keyhole, 0])
                     rotate([0, 0, 90 + az_keyhole + az_lock_connection]) 
-                        rotate([0, 90, 0]) 
-                            medusa_filament_detecter();
+                        rotate([0, 90, 0]) {
+                            medusa_filament_detecter_assembly();  
+                        }
                 
             }
         }
@@ -207,13 +233,13 @@ module hub() {
     
     if (show_vitamins) {
         for_all_connections() {
-            translate([r_hub, 0, dz_keyhole + dz_filament_detectors]) {
+            translate([r_filament_detector, 0, dz_keyhole + dz_filament_detectors]) {
                 // Show insertion as ghost
                 color("Ivory", alpha=0.2) 
                     rotate([0, ay_keyhole, 0]) 
                         rotate([0, 0, 90 + az_keyhole]) 
                             rotate([0, 90, 0]) 
-                                medusa_filament_detecter();                
+                                medusa_filament_detecter_assembly();                
             }
         }
     }    
@@ -252,23 +278,24 @@ module pipes() {
             can(d = d_filament_with_clearance, h =  z_convergence, center=ABOVE); 
         }
     }
-    //visualize(visualization_pipes) {
-        translate([0, 0, h_hub]) {
+    visualize(visualization_pipes) {
+        translate([0, 0, dz_pipes]) {
             difference() {
                 blank();
                 cavity();
             }
         }
-    //}
+    }
 }
 
 module outlet() {
-    dz_outlet = h_hub + h_manifold;
-    visualize(visualization_outlet) {
-        translate([0, 0, dz_outlet]) rotate([180, 0, 0]) {
+    dz_outlet = h_manifold + dz_pipes + h_hub;
+//    visualize(visualization_outlet) {
+    translate([0, 0, dz_outlet]) {
+        rotate([180, 0, 0]) {
             render(convexity = 10) difference() {
-                translate([0, 0, -clamp_extent.z]) flute_collet();
-                plane_clearance(ABOVE);
+                can(d = d_cam_blank+4, h = h_hub, center=ABOVE);
+                flute_keyhole(is_filament_entrance=false, print_from_key_opening=true);
             }
         }
     }

@@ -15,6 +15,7 @@ a_lot = 100 + 0;
 show_vitamins = true;
 show_filament = true;
 show_filament_holder = true;
+show_end_clamp = true;
 show_adjuster = true;
 show_adjustable_mount_clip = true;
 show_parts = true; // But nothing here has parts yet.
@@ -33,7 +34,7 @@ roller_switch_depressed = true;
 
 dz_switch_body = 0; // [-20:0]
 right_handed_limit_switch_holder = false;
-limit_switch_holder_base_thickness = 4;
+limit_switch_holder_base_thickness = 2;
 roller_arm_length = 20; // [18:Short, 20:Long]
 
 dx_limit_switch_holder = 10;  // [0:20]
@@ -129,18 +130,7 @@ module filament_holder() {
     if (show_vitamins && ! mode_is_printing(mode)) {
         visualize_vitamins(visualization_filament_holder) {
             
-            translate(switch_translation) {
-                nsrsh_terminal_end_clamp(
-                    show_vitamins=show_vitamins && ! mode_is_printing(mode), 
-                    right_handed = right_handed_limit_switch_holder,
-                    alpha=1, 
-                    thickness=limit_switch_holder_base_thickness, 
-                    recess_mounting_screws = false,
-                    use_dupont_connectors = true,
-                    roller_arm_length = roller_arm_length,
-                    switch_depressed = roller_switch_depressed); 
 
-            }
         }
     }
     
@@ -207,7 +197,7 @@ module inlet() {
 }
 
 
-module adjuster() {
+module medusa_filament_detecter_adjuster() {
     translation = mode_is_printing(mode) ? [0, -20, -roller_switch_body.y/2] : switch_translation;
     rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 180];
     translate(translation) {
@@ -217,6 +207,25 @@ module adjuster() {
                 screw_length=adjuster_screw_length, 
                 slide_length=adjuster_slide_length);
         }
+    }
+}
+
+module medusa_filament_detecter_end_clamp() {
+    translation = mode_is_printing(mode) ? [0, -50, roller_switch_body.y/2 + limit_switch_holder_base_thickness] :switch_translation;
+    rotation = mode_is_printing(mode) ? [90, 0, 0] : [0, 0, 0];    
+    translate(translation) {
+        rotate(rotation) {
+            nsrsh_terminal_end_clamp(
+                show_vitamins=show_vitamins && ! mode_is_printing(mode), 
+                right_handed = right_handed_limit_switch_holder,
+                alpha=1, 
+                thickness=limit_switch_holder_base_thickness, 
+                recess_mounting_screws = false,
+                use_dupont_connectors = true,
+                roller_arm_length = roller_arm_length,
+                switch_depressed = roller_switch_depressed); 
+
+        }    
     }
 }
 
@@ -230,12 +239,20 @@ module medusa_filament_detecter() {
     }
 }
 
+
+module medusa_filament_detecter_assembly() {
+    medusa_filament_detecter();
+    medusa_filament_detecter_adjuster();
+    medusa_filament_detecter_end_clamp();
+    
+}
+
 if (show_filament_holder) {
     medusa_filament_detecter();
 }
 
 if (show_adjuster) {
-    adjuster();
+    medusa_filament_detecter_adjuster();
 }
 
 if (show_adjustable_mount_clip) {
@@ -248,6 +265,13 @@ if (show_adjustable_mount_clip) {
             nsrsh_adjustable_mount_clip(show_vitamins=show_vitamins && !mode_is_printing(mode));
         }
     }
+}
+
+
+
+    
+if (show_end_clamp) {    
+    medusa_filament_detecter_end_clamp();
 }
 
 

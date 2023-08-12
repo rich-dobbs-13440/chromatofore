@@ -60,15 +60,15 @@ h_tilt = abs(sin(ay_keyhole)) * (r_hub + 5); // [0:10]
 /* [Manifold Design] */
 
 
-z_convergence = 40; //[20:40]
-dz_manifold_exit = 0;
+z_convergence = 50; //[20:40]
+dz_manifold_exit = 5;
 
 use_central_pipe = true;
 
 d_outer = 7;
-d_inner = 3;
+d_inner = 3.5;
 d_outlet = 9;
-d_inner_entrance = 5;
+d_inner_entrance = 7;
 d_outer_entrance = d_inner_entrance + 2;
 
 
@@ -96,12 +96,6 @@ function filament_offset(z, z_t, path_offset) =
     let(M = tan(ay_keyhole), Y=path_offset) 
     hermetian_cubic_spline(z, z_t, M, Y);
 
-//function filament_offset(z, z_t, path_offset) = 
-//    z > z_t ? 0 :
-//    let(
-//        c_1 = 12*path_offset/z_t^3,
-//        c_2 = -c_1 * z_t/2)   
-//    c_1 * z ^ 3/ 6 - c_1 * z_t * z ^2 / 4 + path_offset;
 
 h_manifold = z_convergence + dz_manifold_exit;
 
@@ -190,13 +184,18 @@ module hub() {
         for_all_connections() {
                 translate([r_hub, 0, 0]) {
                     rotate([0, ay_keyhole, 0]) {
-                        can(d = d_cam_blank, h = h_hub, center=ABOVE);
-                        // Central post to make joining with pipes easier
-                        can(d = 8, h = h_hub + 2, center=ABOVE);
+                        hull() {
+                            can(d = d_cam_blank, h = h_hub, center=ABOVE);
+                            // Central post to make joining with pipes easier
+                            can(d = 4, h = h_hub + 8, center=ABOVE);
+                        }
                     }
                 }
         }
-        can(d = d_cam_blank, h = h_hub, center=ABOVE);
+        hull() {
+            can(d = d_cam_blank, h = h_hub, center=ABOVE);
+            can(d = 4, h = h_hub + 8, center=ABOVE);
+        }
         can(d = 2*r_hub, h = h_base, center=ABOVE, $fn=connector_count);
     }
     

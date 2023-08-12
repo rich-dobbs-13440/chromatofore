@@ -122,18 +122,9 @@ module filament_holder() {
                 show_vitamins=show_vitamins, 
                 screw_length=adjuster_screw_length,
                 slide_length = adjustable_mount_slide_length);     
-        }
-
-        
+        }      
     } 
    
-    if (show_vitamins && ! mode_is_printing(mode)) {
-        visualize_vitamins(visualization_filament_holder) {
-            
-
-        }
-    }
-    
     module shape() {
         render(convexity=10) difference() {
             union() {
@@ -147,7 +138,7 @@ module filament_holder() {
                 }
                 translate([dx_roller_clearance, 0, 0]) block(roller_clearance_stiffener, center = LEFT); 
                 // Join the mount to the underneath the filament path
-                translate([dx_limit_switch_holder, 0, -z_base]) block([10, 6, connector_extent.y], center=ABOVE+RIGHT);                
+                translate([dx_limit_switch_holder, 0, -z_base]) block([10, roller_switch_body.y/2, connector_extent.y], center=ABOVE+RIGHT);                
             }
             
             // Teardrop filament path
@@ -198,7 +189,7 @@ module inlet() {
 
 
 module medusa_filament_detecter_adjuster() {
-    translation = mode_is_printing(mode) ? [0, -20, -roller_switch_body.y/2] : switch_translation;
+    translation = mode_is_printing(mode) ? [0, -24, -roller_switch_body.y/2] : switch_translation;
     rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 180];
     translate(translation) {
         rotate(rotation) {
@@ -257,8 +248,8 @@ if (show_adjuster) {
 
 if (show_adjustable_mount_clip) {
     dz_clip = adjustable_mount_slide_length-2;
-   dy_clip = roller_switch_body.y + 8; // dy_limit_switch_holder; 
-    translation = mode_is_printing(mode) ? [0, -25, -roller_switch_body.y/2] : [dx_limit_switch_holder, dy_clip, dz_clip];
+   dy_clip = roller_switch_body.y + 8;  
+    translation = mode_is_printing(mode) ? [13, -11, -roller_switch_body.y/2] : [dx_limit_switch_holder, dy_clip, dz_clip];
     rotation = mode_is_printing(mode) ? [-90, 0, 0] : [0, 0, 0];
     translate(translation) {
         rotate(rotation) {
@@ -266,8 +257,6 @@ if (show_adjustable_mount_clip) {
         }
     }
 }
-
-
 
     
 if (show_end_clamp) {    

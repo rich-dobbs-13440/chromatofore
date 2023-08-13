@@ -87,12 +87,12 @@ y_base_pillar = 12;
 z_base_pillar = 8.8;
 z_base_joiner = 3.8;
 dx_base_offset = -5;
-dy_base_offset = 10;
+dy_base_offset = 5;
 dy_base_offset_moving_clamp = 12;
 
 
 /* [Outlet Design] */
-y_outlet = 15;
+y_outlet = 18;
 
 
 /* [Cam Design] */
@@ -162,6 +162,9 @@ dx_limit_switch_bumper = 0;
 dy_limit_switch_bumper = 8;
 // Relative to top of nut block
 dz_limit_switch_bumper = 6; 
+
+/* [Filament Holder Design] */
+dy_filament_loader_clip = 12;
 
 
 /* [Build Plate Layout] */
@@ -471,7 +474,6 @@ module fixed_clamp_body() {
     module rails_screws(as_clearance = true) {
         module item() {
             if (as_clearance) {
-                horizontal_rail_screws(as_clearance=true, cld=0.2); // Tight fit, will hold screws    
                 translate([0, 2, 0]) vertical_rail_screws(as_clearance=true, cld=0.4); // Loose fit, screws pass through                
             } else {
                 translate([0, 2, 0]) vertical_rail_screws(as_clearance=false);
@@ -518,7 +520,7 @@ module fixed_clamp_body() {
             // The part to the right of the servo:
             block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=BELOW+RIGHT);
             // The part to the right and above servo   
-            # block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=ABOVE+RIGHT);
+            block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=ABOVE+RIGHT);
         }
         rail_engagement();
     }
@@ -526,6 +528,7 @@ module fixed_clamp_body() {
         render(convexity=10) difference() {
             blank();
             cavity();
+            hull() filament_loader_clip(as_clearance=true);
         }
     }
     z_printing = y_base_pillar/2 + y_outlet;
@@ -851,9 +854,9 @@ module moving_clamp_body() {
 }
 
 
-filament_loader_clip();
+//filament_loader_clip();
 
-module filament_loader_clip() {
+module filament_loader_clip(as_clearance=false) {
     blank = [7, 12, 20];
     base = [7, 14, 4];
     connector =  flute_clamp_connector();
@@ -865,56 +868,64 @@ module filament_loader_clip() {
     z_slit = 6;
     
     z_printing = blank.z;
-    rotation = 
-        mode == PRINTING ? [180, 0, 0] :
-        [0, 0, -90];
-    translation = 
-        mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
-        [filament_translation.x, 105, filament_translation.z-2];
-    translate(translation) {
-        rotate(rotation) {
-            render(convexity=10) difference() {
-                union() {
-                    block(blank, center = ABOVE);
-                    hull() {
-                        translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
-                        translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
-                        translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
-                    }
-                }
-                // Spreader - slot is narrow then connector
-                translate([0, 0, 4]) block([x_loose, y_tight, 8], center=ABOVE);
-                // Wedging cut above clip
+    
+    module shape() {
+        render(convexity=10) difference() {
+            union() {
+                block(blank, center = ABOVE);
                 hull() {
-                    translate([0, 0, 3]) rod(d=0.5, l=x_loose);
-                    translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
-                }                  
-                // Clearance for arm
-                translate([0, 0, 10])  {
-                    hull() {
-                        block([x_loose, y_loose, 11.5], center=ABOVE);
-                        translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
-                    }
-                    translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
+                    translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
+                    translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
+                    translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
                 }
-                // Clearance for arm insertion    
-                translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
-                // vertical slit through clamp
-                block([10, 0.5, blank.z-z_slit], center=ABOVE);
-                // Clamp for filament
-                translate([0, 0, 2]) {
-                    rod(d=1.25, l=20);
-                    block([20, 1.25, 1.25/2], center=ABOVE);
-                }
-                // Cut below clip
+            }
+            // Spreader - slot is narrow then connector
+            translate([0, 0, 4]) block([x_loose, y_tight, 8], center=ABOVE);
+            // Wedging cut above clip
+            hull() {
+                translate([0, 0, 3]) rod(d=0.5, l=x_loose);
+                translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
+            }                  
+            // Clearance for arm
+            translate([0, 0, 10])  {
                 hull() {
-                    translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
-                    block([a_lot, 1.75, 0.1], center=BELOW);
+                    block([x_loose, y_loose, 11.5], center=ABOVE);
+                    translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
                 }
-                // Cut near top to make back side flexible
-                //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
-            }  
-        }    
+                translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
+            }
+            // Clearance for arm insertion    
+            translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
+            // vertical slit through clamp
+            block([10, 0.5, blank.z-z_slit], center=ABOVE);
+            // Clamp for filament
+            translate([0, 0, 2]) {
+                rod(d=1.25, l=20);
+                block([20, 1.25, 1.25/2], center=ABOVE);
+            }
+            // Cut below clip
+            hull() {
+                translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
+                block([a_lot, 1.75, 0.1], center=BELOW);
+            }
+            // Cut near top to make back side flexible
+            //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
+        }          
+    }
+    if (as_clearance) {  
+        translate([filament_translation.x, dy_filament_loader_clip, filament_translation.z]) rotate([0, 0, -90])  shape();
+    } else {
+        rotation = 
+            mode == PRINTING ? [180, 0, 0] :
+            [0, 0, -90];
+        translation = 
+            mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
+            [filament_translation.x, 105, filament_translation.z-2];
+        translate(translation) {
+            rotate(rotation) {
+                shape() ;
+            }    
+        }
     }
 }
 

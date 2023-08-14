@@ -45,7 +45,7 @@ print_frame = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
+part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -53,6 +53,7 @@ filament_length = 200; // [50:200]
 // Order to match the legend:
 adjustable_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_loader  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
+filament_loader_clip  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -92,7 +93,7 @@ dy_base_offset_moving_clamp = 12;
 
 
 /* [Outlet Design] */
-y_outlet = 18;
+y_outlet = 20;
 
 
 /* [Cam Design] */
@@ -319,12 +320,18 @@ visualization_tie_bracket =
 visualization_filament_loader =       
     visualize_info(
         "Filament Loader", PART_13, show(filament_loader, "filament_loader") , layout, show_parts);   
+        
+visualization_filament_loader_clip =       
+    visualize_info(
+        "Filament Loader Clip", PART_14, show(filament_loader_clip, "filament_loader_clip") , layout, show_parts);         
 
   
 
         
 visualization_infos = [
     visualization_adjustable_linkage,
+    visualization_filament_loader, 
+    visualization_filament_loader_clip, 
     visualization_fixed_clamp_body,
     visualization_horn_cam,
     visualization_horn_linkage,
@@ -490,7 +497,7 @@ module fixed_clamp_body() {
     module outlet_tubing_connector(as_clearance = false) {
         if (as_clearance) {
             translate([filament_translation.x, y_base_pillar/2 + y_outlet, filament_translation.z]) { 
-                rotate([90, 0, 0]) flute_keyhole(is_filament_entrance = true, print_from_key_opening=true); 
+                rotate([90, 0, 0]) flute_keyhole(is_filament_entrance = true, print_from_key_opening=true, entrance_multiplier=1); 
                 block([6, 20, 6]);
             }
         }
@@ -502,6 +509,7 @@ module fixed_clamp_body() {
         overhang();
         servo_screws(as_clearance = true, recess = true);
         rails_screws(as_clearance = true);
+        filament_loader_clip(as_clearance=true);
     }
     module rail_engagement() {
         blank_offset = 8;
@@ -528,7 +536,6 @@ module fixed_clamp_body() {
         render(convexity=10) difference() {
             blank();
             cavity();
-            hull() filament_loader_clip(as_clearance=true);
         }
     }
     z_printing = y_base_pillar/2 + y_outlet;
@@ -854,7 +861,7 @@ module moving_clamp_body() {
 }
 
 
-//filament_loader_clip();
+//
 
 module filament_loader_clip(as_clearance=false) {
     blank = [7, 12, 20];
@@ -865,7 +872,7 @@ module filament_loader_clip(as_clearance=false) {
     y_tight = connector_extent.y - 1;
     y_spring = connector_extent.y - 3;
     x_loose = 3.5; 
-    z_slit = 6;
+    z_slit = 4;
     
     z_printing = blank.z;
     
@@ -880,7 +887,7 @@ module filament_loader_clip(as_clearance=false) {
                 }
             }
             // Spreader - slot is narrow then connector
-            translate([0, 0, 4]) block([x_loose, y_tight, 8], center=ABOVE);
+            translate([0, 0, 5.0]) block([x_loose, y_tight, 8], center=ABOVE);
             // Wedging cut above clip
             hull() {
                 translate([0, 0, 3]) rod(d=0.5, l=x_loose);
@@ -899,7 +906,7 @@ module filament_loader_clip(as_clearance=false) {
             // vertical slit through clamp
             block([10, 0.5, blank.z-z_slit], center=ABOVE);
             // Clamp for filament
-            translate([0, 0, 2]) {
+            translate([0, 0, 4]) {
                 rod(d=1.25, l=20);
                 block([20, 1.25, 1.25/2], center=ABOVE);
             }
@@ -913,17 +920,30 @@ module filament_loader_clip(as_clearance=false) {
         }          
     }
     if (as_clearance) {  
-        translate([filament_translation.x, dy_filament_loader_clip, filament_translation.z]) rotate([0, 0, -90])  shape();
+        translate([filament_translation.x, dy_filament_loader_clip, filament_translation.z]) rotate([0, 0, -90])  {
+            hull() {
+                translate([0, -2, -4]) shape();
+                translate([-0, +2, -4]) shape();
+            }
+            // Slit for filament to come in, plus remove unprintable overhand
+            x = 10;
+            hull() {
+                rod(d=7, l=x, center= FRONT);
+                translate([0, 0, 10]) block([x, 22, 0.1], center=ABOVE+FRONT);
+            }
+        }
     } else {
         rotation = 
             mode == PRINTING ? [180, 0, 0] :
             [0, 0, -90];
         translation = 
             mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
-            [filament_translation.x, 105, filament_translation.z-2];
+            [filament_translation.x, 105, filament_translation.z-4];
         translate(translation) {
             rotate(rotation) {
-                shape() ;
+                visualize(visualization_filament_loader_clip) {
+                    shape() ;
+                }
             }    
         }
     }
@@ -966,8 +986,6 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
             rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE + RIGHT);        
         }
     }
-    
-
     
     if (as_inlet_clip_clearance) {
         translate([filament_translation.x, 0, filament_translation.z]) {
@@ -1295,6 +1313,7 @@ module visualize_assemblies() {
     rails();
     frame();
      filament_loader(as_holder = true);
+     filament_loader_clip();
      if (show_legend) {
         generate_legend_for_visualization(
             visualization_infos, legend_position, font6_legend_text_characteristics());
@@ -1336,6 +1355,7 @@ module print_assemblies() {
     }
     if (print_filament_loader) {
         filament_loader(as_holder = true);
+        filament_loader_clip();
     }
  }
  

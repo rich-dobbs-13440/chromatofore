@@ -988,10 +988,14 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
     }
     
     if (as_inlet_clip_clearance) {
+        
         translate([filament_translation.x, 0, filament_translation.z]) {
-            center_reflect([1, 0, 0]) translate([dx_clip, 0, dz_clip]) block(clip);
-            rod(d= 6, l=a_lot, center=SIDEWISE);
+            block([connector_extent.y, 100, 4]);
         }
+            
+//            center_reflect([1, 0, 0]) translate([dx_clip, 0, dz_clip]) block(clip);
+//            rod(d= 6, l=a_lot, center=SIDEWISE);
+//        }
     } else if (as_holder) {
         z_printing = connector_extent.y/2;
         rotation = 
@@ -1033,7 +1037,11 @@ module pusher_body() {
             block(locked_guide, center=ABOVE+RIGHT+BEHIND);
         translate([dx_m_locked_guide, dy_locked_guides, -frame_clearance]) 
             block(locked_guide, center=ABOVE+RIGHT+FRONT);
-        translate([filament_translation.x, dy_locked_guides, 0])  block([32, 4, 10], center=BELOW+RIGHT);
+        translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
+            block([32, 4, 10], center=BELOW+RIGHT);
+            block([20, 4, 2], center=ABOVE+RIGHT);
+           center_reflect([1, 0, 0]) translate([3.5, 0, 2.0]) rod(d=2, l=4, center=RIGHT+SIDEWISE);
+        }
        
     }
     module shape() {
@@ -1312,7 +1320,7 @@ module visualize_assemblies() {
     fixed_clamp();
     rails();
     frame();
-     filament_loader(as_holder = true);
+     filament_loader(as_holder = true, show_bow = true, show_tip = true);
      filament_loader_clip();
      if (show_legend) {
         generate_legend_for_visualization(
@@ -1354,7 +1362,7 @@ module print_assemblies() {
         tie(item = 3);         
     }
     if (print_filament_loader) {
-        filament_loader(as_holder = true);
+        filament_loader(as_holder = true, show_bow = true, show_tip = true);
         filament_loader_clip();
     }
  }

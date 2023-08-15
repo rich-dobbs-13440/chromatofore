@@ -45,7 +45,7 @@ print_frame = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
+part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -57,7 +57,6 @@ filament_loader_clip  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print"
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-limit_switch_bumper = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -142,28 +141,18 @@ y_pusher_assembly = 24;
 dy_pusher_servo = 2;
 
 /* [Limit Switch Holder Design] */
-dx_limit_switch_holder = -17.1; // [-30:0]
-dz_limit_switch_holder = -11; // [-30:0]
+dx_limit_switch_holder = -25; 
+dy_limit_switch_holder = 4;
+dz_limit_switch_holder = -24; // [-30:0]
 
-dx_top_clamp = -7.2; // [-15: 0.1: -5]
+//dx_top_clamp = -6; // [-15: 0.1: -5]
 // Displacement of cl of switch body to cl of servo
-dy_switch_body = 0; // [-20:15]
+dy_switch_body = 4; // [-20:15]
 // Displayment relative to bottom of nut block
-dz_switch_body = 0; // [-20:0]
+dz_switch_body = 2; // [-20:0]
 right_handed_limit_switch_holder = false;
-limit_switch_holder_base_thickness = 4;
+limit_switch_holder_base_thickness = 3;
 
-/* [Limit Switch Bumper Design] */
-x_limit_switch_bumper = 10;
-y_limit_switch_bumper = 14;
-z_limit_switch_bumper = 12;
-
-// Relative to inside of nut block
-dx_limit_switch_bumper = 0;
-// Relative to center line of nut block
-dy_limit_switch_bumper = 8;
-// Relative to top of nut block
-dz_limit_switch_bumper = 6; 
 
 /* [Filament Holder Design] */
 dy_filament_loader_clip = 12;
@@ -212,14 +201,13 @@ dx_tie_bp = dx_rail_bp;
 x_limit_switch_holder_bp = -20; 
 y_limit_switch_holder_bp = -30;
 
-x_limit_switch_bumper_bp = -40;
-y_limit_switch_bumper_bp = -50;
 
-x_filament_loader_clip_bp = 10;
+
+x_filament_loader_clip_bp = -40;
 y_filament_loader_clip_bp = 10;
 
-x_filament_loader_bp = 10;
-y_filament_loader_bp = 10;
+x_filament_loader_bp = -60;
+y_filament_loader_bp = -10;
 
 
 module end_of_customization() {}
@@ -302,9 +290,9 @@ visualization_limit_switch_holder =
     visualize_info(
         "Limit Switch Holder", PART_8, show(limit_switch_holder, "limit_switch_holder") , layout, show_parts); 
   
-visualization_limit_switch_bumper =   
-    visualize_info(
-        "Limit Switch Bumper", PART_9, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
+//visualization_limit_switch_bumper =   
+//    visualize_info(
+//        "Limit Switch Bumper", PART_9, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
         
  visualization_rails =         
     visualize_info(
@@ -338,7 +326,6 @@ visualization_infos = [
     visualization_fixed_clamp_body,
     visualization_horn_cam,
     visualization_horn_linkage,
-    visualization_limit_switch_bumper,
     visualization_limit_switch_holder,
     visualization_linkage,
     visualization_moving_clamp_body,
@@ -526,6 +513,32 @@ module fixed_clamp_body() {
         translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
         translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
     }
+    
+    module limit_switch_holder() {
+        limit_switch_base = rls_base();
+        z_terminal_block = 11.75;
+        attachment = [limit_switch_holder_base_thickness + limit_switch_base.y, z_terminal_block, 6];
+        //dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
+        dx_attachment = -21.75;  
+        dy_attachment = 26; 
+        dz_attachment = -10; 
+        translate([dx_attachment, dy_attachment, dz_attachment]) block(attachment, center = BEHIND +LEFT);
+        translate([dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder]) {
+            rotate([0, 90, 90]) {
+                nsrsh_terminal_end_clamp(
+                    show_vitamins=show_vitamins && mode != PRINTING , 
+                    right_handed = true,
+                    alpha=1, 
+                    thickness=limit_switch_holder_base_thickness, 
+                    recess_mounting_screws = false,
+                    use_dupont_connectors = true,
+                    roller_arm_length = roller_arm_length,
+                    switch_depressed = roller_switch_depressed,
+                    extra_terminals = 0, 
+                    z_terminal_block= z_terminal_block); 
+            }
+        }     
+    }
     module blank() {
         // The part around the servo:
         translate([dx_base_offset, 0, 0]) 
@@ -537,12 +550,14 @@ module fixed_clamp_body() {
             block([x_base_pillar + 16, y_outlet,  z_base_pillar], center=ABOVE+RIGHT);
         }
         rail_engagement();
+        
     }
     module shape() {
         render(convexity=10) difference() {
             blank();
             cavity();
         }
+        
     }
     z_printing = y_base_pillar/2 + y_outlet;
     rotation = 
@@ -558,6 +573,9 @@ module fixed_clamp_body() {
             rails_screws(as_clearance = false);
         }  
         visualize(visualization_fixed_clamp_body) shape();
+        visualize_vitamins(visualization_fixed_clamp_body) { 
+            limit_switch_holder();
+        }
     }
 }
 
@@ -687,96 +705,8 @@ module linkage() {
     translate(translation) rotate(rotation) visualize(visualization_linkage) shape();  
 }
 
-module limit_switch_bumper() {
-    dx_screw = -2.6;
-    nut_block = [6, 6, 6];
-    bumper = [x_limit_switch_bumper, y_limit_switch_bumper, z_limit_switch_bumper];
-    support = [0.1, 2, 4];
-    connection = [5, nut_block.y, 0.1];
-    bumper_translation = [dx_limit_switch_bumper, dy_limit_switch_bumper, dz_limit_switch_bumper - nut_block.z];
-    module shape() {  
-        color(PART_29) 
-            render(convexity = 10) difference() {
-                union() { 
-                    block(nut_block, center = BELOW+BEHIND);
-                    hull() {
-                        translate(bumper_translation) block(bumper,  center = BELOW+BEHIND+LEFT);
-                    }
-                }
-                translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
-                translate([dx_screw, 0, -2]) {
-                    rotate([0, 0, 180]) 
-                        nutcatch_sidecut(
-                            name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
-                            l      = 50.0,  // length of slot
-                            clk    =  0.5,  // key width clearance
-                            clh    =  0.5,  // height clearance
-                            clsl   =  0.1); 
-                } 
-            }
-    }
-    rotation = 
-        mode == PRINTING ? [0,  90, 0] :
-        [0,  0, 0];
-    translation = 
-        mode == PRINTING ? [x_limit_switch_bumper_bp, y_limit_switch_bumper_bp, , 0]:
-        [dx_limit_switch_holder, 0, dz_limit_switch_holder];
-    translate(translation) rotate(rotation)  visualize(visualization_limit_switch_bumper) shape();
-}
 
-module limit_switch_holder() {
-    limit_switch_base = rls_base();
-    dx_screw = -2.6;
-    joiner = [limit_switch_holder_base_thickness, 15, 3];
-    dx_joiner = right_handed_limit_switch_holder ? -6.5 : 0;
-    dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
-    nut_block = right_handed_limit_switch_holder ? [8.5, 10, 6] : [5, 8, 6];
-    az_nutcatch_sidecut = right_handed_limit_switch_holder ? 0 : 180;
-    module blank() {
-        block(nut_block, center = BELOW+BEHIND);
-        block([nut_block.x, 19.25, nut_block.z], center = BELOW+BEHIND+RIGHT);
-    }
-    module shape() {  
-        color(visualization_limit_switch_holder[1]) 
-            render(convexity = 10) difference() {
-                blank();
-                translate([dx_screw, 0, 25]) hole_through("M2", $fn=12);
-                translate([dx_screw, 0, -2.]) {
-                    rotate([0, 0, az_nutcatch_sidecut]) 
-                        nutcatch_sidecut(
-                            name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
-                            l      = 50.0,  // length of slot
-                            clk    =  0.3,  // key width clearance
-                            clh    =  0.5,  // height clearance
-                            clsl   =  0.1); 
-                } 
-            }
-        translate([dx_top_clamp - dx_top_clamp_adjustment, dy_switch_body, dz_switch_body - nut_block.z - limit_switch_base.x/2])
-            rotate([0, 90, 90]) {
-                nsrsh_terminal_end_clamp(
-                    show_vitamins=show_vitamins && mode != PRINTING , 
-                    right_handed = right_handed_limit_switch_holder,
-                    alpha=1, 
-                    thickness=limit_switch_holder_base_thickness, 
-                    recess_mounting_screws = true,
-                    use_dupont_connectors = true,
-                    roller_arm_length = roller_arm_length,
-                    switch_depressed = roller_switch_depressed,
-                    extra_terminals = 0); 
-            }  
-    }
-    ay_printing = right_handed_limit_switch_holder ? -90 : 90;
-    rotation = 
-        mode == PRINTING ? [0,  ay_printing, 0] :
-        [0,  0, 0];
-    dz_printing = right_handed_limit_switch_holder ? limit_switch_base.y + limit_switch_holder_base_thickness : 0;
-    translation = 
-        mode == PRINTING ? [x_limit_switch_holder_bp, y_limit_switch_holder_bp, dz_printing]:
-        [dx_limit_switch_holder, 0, dz_limit_switch_holder];
-    if (visualization_limit_switch_holder[2]) {
-        translate(translation) rotate(rotation) shape();
-    }
-}
+
 
 module moving_clamp_body() {
     dx_pivot = 2;
@@ -837,17 +767,8 @@ module moving_clamp_body() {
         translate([dx_base_offset, dy_base_offset_moving_clamp, 0]) {
             block([x_base_pillar-1, 20, z_base_pillar], center=BELOW+LEFT);
         }
-        inner_bumper_support = [4, 6, 15];
-        outer_bumper_support = [4, 6, 13];
-        top_bumper_support = [10, 6, 2];
-        bumper = [10, 2, outer_bumper_support.z];
-        translate([-19, dy_base_offset_moving_clamp, -8]) {
-            translate([0, -inner_bumper_support.y, -2]) block(bumper, center=BELOW+RIGHT+BEHIND);
-            block(inner_bumper_support, center=BELOW+LEFT);
-            translate([-10, 0, -2]) block(outer_bumper_support, center=BELOW+LEFT);
-            translate([0, 0, -2])  block(top_bumper_support, center=BELOW+LEFT+ BEHIND);
-            
-        }        
+        bumper = [10, 2, 10];
+        translate([-18, dy_base_offset_moving_clamp, -8.8]) block(bumper, center=BELOW+LEFT+BEHIND);     
         translate([dx_pivot, -d_horn_cam_clearance/2, 0]) block([4, 6,2], center=BELOW+LEFT);
     }
     
@@ -1278,7 +1199,6 @@ module moving_clamp() {
         moving_clamp_body();
         one_arm_horn(servo_angle=servo_angle_moving_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_moving_clamp); 
-        limit_switch_bumper();
     }
 }
 
@@ -1290,8 +1210,6 @@ module fixed_clamp() {
         fixed_clamp_body();
         one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=az_cam);
         horn_cam(servo_angle=servo_angle_fixed_clamp);
-        limit_switch_holder();
-        //ptfe_clamp();
     }
 }
 
@@ -1354,12 +1272,10 @@ module print_assemblies() {
     if (print_moving_clamp) {
         moving_clamp_body();
         horn_cam(item=0);
-        limit_switch_bumper();
     }
     if (print_fixed_clamp) {
         fixed_clamp_body();
-        horn_cam(item=1);
-        limit_switch_holder();       
+        horn_cam(item=1);   
     }
     if (print_pusher) {
         pusher_body();

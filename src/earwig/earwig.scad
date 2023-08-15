@@ -123,6 +123,7 @@ z_rail_attachment = 8;
 y_rail_screw_offset = 3;
 rail_wall = 2;
 dz_rail_screws = -4;
+dy_pusher_rail_screws = -18; // [-20:0.1:-15]
 
 /* [Dove Tail Design] */
 x_dovetail = 4;
@@ -217,6 +218,8 @@ y_limit_switch_bumper_bp = -50;
 x_filament_loader_clip_bp = 10;
 y_filament_loader_clip_bp = 10;
 
+x_filament_loader_bp = 10;
+y_filament_loader_bp = 10;
 
 
 module end_of_customization() {}
@@ -473,27 +476,30 @@ module adjustable_linkage() {
 }
 
 
+module rails_screws(as_clearance = true) {
+    module item() {
+        if (as_clearance) {
+            translate([0, 2, 0]) vertical_rail_screws(as_clearance=true, cld=0.4); // Loose fit, screws pass through                
+        } else {
+            translate([0, 2, 0]) vertical_rail_screws(as_clearance=false);
+        }
+    }
+    translate([dx_base_offset, 0, 0]) {
+        center_reflect([1, 0, 0]) {
+            translate([21.6, -2, 0]) {
+                item();
+            }
+        }            
+    }
+}
+
+
 module fixed_clamp_body() {
       
     module overhang() {
         translate([-1.5, 0, 0]) block([15, y_base_pillar, a_lot], center=LEFT);
     }
-    module rails_screws(as_clearance = true) {
-        module item() {
-            if (as_clearance) {
-                translate([0, 2, 0]) vertical_rail_screws(as_clearance=true, cld=0.4); // Loose fit, screws pass through                
-            } else {
-                translate([0, 2, 0]) vertical_rail_screws(as_clearance=false);
-            }
-        }
-        translate([dx_base_offset, 0, 0]) {
-            center_reflect([1, 0, 0]) {
-                translate([21.6, -2, 0]) {
-                    item();
-                }
-            }            
-        }
-    }
+
     module outlet_tubing_connector(as_clearance = false) {
         if (as_clearance) {
             translate([filament_translation.x, y_base_pillar/2 + y_outlet, filament_translation.z]) { 
@@ -774,6 +780,7 @@ module limit_switch_holder() {
 
 module moving_clamp_body() {
     dx_pivot = 2;
+    
     module pusher_pivot(as_clearance=false) {
         
         if (as_clearance) {
@@ -827,8 +834,20 @@ module moving_clamp_body() {
     }
     module blank() {
         filament_guide();
-        translate([dx_base_offset, dy_base_offset_moving_clamp, 0]) 
-            block([x_base_pillar, 20, z_base_pillar], center=BELOW+LEFT);
+        translate([dx_base_offset, dy_base_offset_moving_clamp, 0]) {
+            block([x_base_pillar-1, 20, z_base_pillar], center=BELOW+LEFT);
+        }
+        inner_bumper_support = [4, 6, 15];
+        outer_bumper_support = [4, 6, 13];
+        top_bumper_support = [10, 6, 2];
+        bumper = [10, 2, outer_bumper_support.z];
+        translate([-19, dy_base_offset_moving_clamp, -8]) {
+            translate([0, -inner_bumper_support.y, -2]) block(bumper, center=BELOW+RIGHT+BEHIND);
+            block(inner_bumper_support, center=BELOW+LEFT);
+            translate([-10, 0, -2]) block(outer_bumper_support, center=BELOW+LEFT);
+            translate([0, 0, -2])  block(top_bumper_support, center=BELOW+LEFT+ BEHIND);
+            
+        }        
         translate([dx_pivot, -d_horn_cam_clearance/2, 0]) block([4, 6,2], center=BELOW+LEFT);
     }
     
@@ -968,8 +987,8 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
         rotate([0, 90, 0]) {
             rotate([-90, 0, 0]) {
                 if (show_bow) {
-                    translate([0, 0, -2 * connector_extent.z]) flute_collet(is_filament_entrance=false);
-                    translate([0, 0, 0]) block([4, connector_extent.y, 34], center=ABOVE);
+                    translate([0, 0, -2 * connector_extent.z-4]) flute_collet(is_filament_entrance=false);
+                    translate([0, 0, -6]) block([4, connector_extent.y, 40], center=ABOVE);
                     translate([0, 0, 30]) block([8, connector_extent.y, 4], center=ABOVE+BEHIND);
                     translate([-8, 0, 30]) block([4, connector_extent.y, 76], center=ABOVE+BEHIND);
                 }
@@ -988,21 +1007,16 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
     }
     
     if (as_inlet_clip_clearance) {
-        
         translate([filament_translation.x, 0, filament_translation.z]) {
-            block([connector_extent.y, 100, 4]);
+            scale([1.1, 1.1, 1.1]) block([connector_extent.y, 100, 4]);
         }
-            
-//            center_reflect([1, 0, 0]) translate([dx_clip, 0, dz_clip]) block(clip);
-//            rod(d= 6, l=a_lot, center=SIDEWISE);
-//        }
     } else if (as_holder) {
         z_printing = connector_extent.y/2;
         rotation = 
             mode == PRINTING ? [0,  -90, 0] :
             [0, 0, 0];
         translation = 
-            mode == PRINTING ? [x_pusher_body_bp, y_pusher_body_bp, z_printing] :
+            mode == PRINTING ? [x_filament_loader_bp, y_filament_loader_bp, z_printing] :
             [filament_translation.x, 0, filament_translation.z];
         translate(translation) rotate(rotation) {
             visualize(visualization_filament_loader) shape();
@@ -1039,17 +1053,19 @@ module pusher_body() {
             block(locked_guide, center=ABOVE+RIGHT+FRONT);
         translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
             block([32, 4, 10], center=BELOW+RIGHT);
-            block([20, 4, 2.2], center=ABOVE+RIGHT);
+            block([9, 4, 2.2], center=ABOVE+RIGHT);
             center_reflect([1, 0, 0]) translate([3.9, 0, 3.]) rod(d=2.4, l=4, center=RIGHT+SIDEWISE);
         }
        
     }
+    
     module shape() {
         render(convexity=10) difference() {
             blank();
             translate([0, dy_pusher_servo, dz_linkage]) rotate(servo_rotation) 9g_servo(as_clearance = true);
             translate([0, dy_pusher_servo, 0]) rotate(servo_rotation) servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=false);
-            scale([1, 1, 1.1]) filament_loader(as_inlet_clip_clearance=true); 
+            filament_loader(as_inlet_clip_clearance=true); 
+            translate([0, dy_pusher_rail_screws, 0]) rails_screws(as_clearance = true);
         }
     }
     z_printing = -dy_locked_guides;

@@ -1039,8 +1039,8 @@ module pusher_body() {
             block(locked_guide, center=ABOVE+RIGHT+FRONT);
         translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
             block([32, 4, 10], center=BELOW+RIGHT);
-            block([20, 4, 2], center=ABOVE+RIGHT);
-           center_reflect([1, 0, 0]) translate([3.5, 0, 2.0]) rod(d=2, l=4, center=RIGHT+SIDEWISE);
+            block([20, 4, 2.2], center=ABOVE+RIGHT);
+            center_reflect([1, 0, 0]) translate([3.9, 0, 3.]) rod(d=2.4, l=4, center=RIGHT+SIDEWISE);
         }
        
     }
@@ -1049,7 +1049,7 @@ module pusher_body() {
             blank();
             translate([0, dy_pusher_servo, dz_linkage]) rotate(servo_rotation) 9g_servo(as_clearance = true);
             translate([0, dy_pusher_servo, 0]) rotate(servo_rotation) servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=false);
-            filament_loader(as_inlet_clip_clearance=true); 
+            scale([1, 1, 1.1]) filament_loader(as_inlet_clip_clearance=true); 
         }
     }
     z_printing = -dy_locked_guides;

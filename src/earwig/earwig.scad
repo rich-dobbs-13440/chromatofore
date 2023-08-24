@@ -45,7 +45,7 @@ print_frame = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
+part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -62,8 +62,9 @@ linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 pusher_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-tie =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-tie_bracket  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+tie =  0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+tie_bracket  = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+foundation  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 
 
 /* [Legend] */
@@ -90,6 +91,23 @@ dx_base_offset = -5;
 dy_base_offset = 5;
 dy_base_offset_moving_clamp = 12;
 
+/* [Foundation Design] */
+
+x_foundation = 45;
+y_foundation = 117.5;
+z_foundation = 4;
+
+
+x_foundation_ls_terminal =  9.5;
+y_foundation_ls_terminal = 11.8;
+z_foundation_ls_terminal = 4; // [4,8]
+
+dx_foundation = -33;
+dy_foundation = 5;
+dz_foundation = -30; // [-50:30]
+
+dx_pusher_servo_clip  = 25;
+dy_pusher_servo_clip = 30;
 
 /* [Outlet Design] */
 y_outlet = 20;
@@ -134,7 +152,7 @@ tie_length = 30;
 /* [Linkage Design] */
 az_horn_linkage_pivot = 20;
 r_horn_linkage = 14;
-linkage_length = 29;
+linkage_length = 28;
 linkage_shorten_range = 4;
 dz_linkage = -16; // [-20: 0]
 y_pusher_assembly = 24;
@@ -175,7 +193,7 @@ y_moving_clamp_body_bp = -40;
 
 x_horn_cam_bp = 15;
 y_horn_cam_bp = -15;
-dx_horn_cam_bp = -15;
+dx_horn_cam_bp = -8;
 
 x_pusher_body_bp = 0;
 y_pusher_body_bp = 20;
@@ -316,7 +334,9 @@ visualization_filament_loader_clip =
     visualize_info(
         "Filament Loader Clip", PART_14, show(filament_loader_clip, "filament_loader_clip") , layout, show_parts);         
 
-  
+visualization_foundation = 
+    visualize_info(
+        "Foundation", PART_17, show(foundation, "foundation") , layout, show_parts);   
 
         
 visualization_infos = [
@@ -331,8 +351,7 @@ visualization_infos = [
     visualization_moving_clamp_body,
     visualization_pusher_body,
     visualization_rails,
-    visualization_tie_bracket,
-    visualization_tie,
+    visualization_foundation,
 ];
 
 
@@ -534,7 +553,7 @@ module fixed_clamp_body() {
                     use_dupont_connectors = true,
                     roller_arm_length = roller_arm_length,
                     switch_depressed = roller_switch_depressed,
-                    extra_terminals = 0, 
+                    extra_terminals = 1, 
                     z_terminal_block= z_terminal_block); 
             }
         }     
@@ -591,8 +610,7 @@ module horizontal_rail_screws(as_clearance=false, cld=0.2) {
     }
 } 
 
-
-module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
+module old_horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     h_above =2.2;
     h_barrel = 3.77;
     h_arm = 1.3; 
@@ -621,6 +639,48 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
             // The horn itself
             translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
 //                    translate([-5, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
+        }
+    }
+    z_printing = -dx_clear_horn;
+    rotation = 
+        mode == PRINTING ? [0, -90, 0] :
+        [0, 0, servo_angle + servo_offset_angle + az_cam];
+    translation = 
+        mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
+        [0, 0, dz_assembly];
+    translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
+}
+
+
+module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
+    h_above =  0.5; //2.2;
+    h_barrel = 3.77;
+    h_arm = 1.3; 
+    h_below = 2.5;
+    dx_clear_horn = -3.9;
+    h = h_above + h_arm + h_below;
+    dz_horn_engagement = -1;
+    dz_horn = dz_horn_engagement -h_barrel + h_arm + h_below;
+    dz_assembly = h_barrel-dz_horn_engagement-h_arm-h_below;      
+    module shape() {
+        d_lock = 0.1;
+        render(convexity=10) difference() {
+            can(d=od_cam, h=h, center=ABOVE);
+            // Push filament out of way to avoid catching on horn when filament loader is inserted. 
+            // Angle at 45 to provide more options for printing
+            translate([-7, 0, 0]) rotate([0, 45, 0]) plane_clearance(BEHIND); 
+            // Provide path for filament to reach bottom of slot
+            translate([dx_clear_horn, 0, 0]) plane_clearance(BEHIND); 
+            // Slot to lock filament when cam is rotated
+            hull() {
+                translate([-3.7, 3, 0])  rod(d=d_filament_with_tight_clearance, l=50, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
+                rotate([0, 0, -90]) translate([-3.7, 0, 1.5])  rod(d=d_lock, l=5, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
+            }
+            // Screw used to attach horn
+            can(d=2.5, h=a_lot); //Screw 
+            // The horn itself, coming from above
+            translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
+            translate([0, 0, dz_horn+ 0.5])  one_arm_horn(as_clearance=true);
         }
     }
     z_printing = -dx_clear_horn;
@@ -1241,6 +1301,46 @@ module frame() {
         translate([dx_base_offset - x_guide/2 - rail_wall, y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket(); 
         translate([dx_base_offset + x_guide/2 + rail_wall, y_frame - y_rail_attachment/2, 0]) tie_bracket();
         translate([dx_base_offset - x_guide/2 -rail_wall, y_frame - y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket();     
+}
+
+foundation();
+
+module foundation() {
+    
+    foundation = [x_foundation, y_foundation, z_foundation];
+    terminal_cavity = [x_foundation_ls_terminal, y_foundation_ls_terminal, z_foundation_ls_terminal];
+    pusher_servo_cavity = [12, 23., 6];
+    clip_wall = 2;
+    limit_switch_clip = terminal_cavity + [2 * clip_wall, 2 * clip_wall, 0];
+    limit_switch_clip_translation = [0, y_foundation, 0];
+    terminal_translation = [clip_wall, y_foundation - clip_wall, 0];
+    pusher_servo_clip = pusher_servo_cavity + [2 * clip_wall, 2 * clip_wall, 0];
+    pusher_servo_clip_translation = [dx_pusher_servo_clip, dy_pusher_servo_clip, 0];
+    pusher_servo_cavity_translation = [dx_pusher_servo_clip + clip_wall, dy_pusher_servo_clip - clip_wall, 2];
+    
+    module blank() {
+        block([4, y_foundation, z_foundation], center=ABOVE+ RIGHT + FRONT);
+        translate([x_foundation, 0, 0]) block([4, y_foundation, z_foundation], center=ABOVE+ RIGHT + BEHIND);
+        block([x_foundation, 4, z_foundation], center=ABOVE+ RIGHT + FRONT);
+        translate([0, y_foundation, 0])block([x_foundation, 4, z_foundation], center=ABOVE+ LEFT + FRONT);
+        
+        translate(limit_switch_clip_translation) block(limit_switch_clip, center=ABOVE+FRONT+LEFT);
+        translate(pusher_servo_clip_translation) block(pusher_servo_clip, center=ABOVE+FRONT+LEFT);
+    }
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            translate(terminal_translation) block(terminal_cavity, center = ABOVE+FRONT+LEFT) ;
+            translate(pusher_servo_cavity_translation) block(pusher_servo_cavity, center = ABOVE+FRONT+LEFT) ;
+        }
+    }
+    translation = [dx_foundation, dy_foundation, dz_foundation];
+    translate(translation) {
+        visualize(visualization_foundation) {
+            shape();
+        }
+    }
+
 }
 
 

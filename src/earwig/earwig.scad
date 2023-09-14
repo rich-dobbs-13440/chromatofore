@@ -81,6 +81,12 @@ servo_offset_angle_pusher  = 50; // [0:360]
 roller_switch_depressed = true;
 roller_arm_length = 20; // [18:Short, 20:Long]
 
+/* [One Arm Horn Characteristics] */
+dz_engagement_one_arm_horn = 2;// 1;
+h_barrel_one_arm_horn = 3.77;
+h_arm_one_arm_horn = 1.3;    
+dx_one_arm_horn = 14;
+
 /* [Base Design] */
 dz_servo = 3.5;
 x_base_pillar = 34;
@@ -366,20 +372,20 @@ visualization_infos = [
     }
 }
 
-module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
-    h_barrel_one_arm_horn = 3.77;
-    h_arm_one_arm_horn = 1.3;
-    dz_engagement_one_arm_horn = 1;
-    
+module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, show_barrel = true, show_arm=true) {    
     dz_arm = h_barrel_one_arm_horn + dz_engagement_one_arm_horn;
     module blank() {
-        translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
-        translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
-            hull() {
-                can(d=6, h=h_arm_one_arm_horn, center=BELOW);
-                translate([14, 0, 0]) can(d=4, h=h_arm_one_arm_horn, center=BELOW); 
-            }
-        }        
+        if (show_barrel) {
+            translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
+        }
+        if (show_arm) {
+            translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
+                hull() {           
+                    can(d=6, h=h_arm_one_arm_horn, center=BELOW);
+                    translate([dx_one_arm_horn, 0, 0]) can(d=4, h=h_arm_one_arm_horn, center=BELOW); 
+                }
+            }    
+        }    
     }
     module shape() {
         render(convexity=10) difference() {
@@ -591,9 +597,14 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
             can(d=2.5, h=a_lot); //Screw 
             // Slot for horn
             translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-            translate([0, 0, dz_horn-1])  one_arm_horn(as_clearance=true);
-            translate([0, 0, dz_horn-2])  one_arm_horn(as_clearance=true);
-            translate([0, 0, dz_horn-3])  one_arm_horn(as_clearance=true);
+            hull() {
+                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_barrel = false);
+                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_barrel = false);
+            }
+            hull() {
+                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_arm = false);
+                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_arm = false);
+            }            
         }
     }
     z_printing = h;

@@ -45,7 +45,7 @@ print_frame = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "moving_clamp_body"; // [adjustable_linkage, clip, collet, filament_loader, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
+part_to_print = "filament_loader_clip"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, horn_cam, horn_linkage, linkage, limit_switch_bumper, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, tie, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -53,6 +53,7 @@ filament_length = 200; // [50:200]
 // Order to match the legend:
 adjustable_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_loader  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
+filament_loader_clip  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -97,10 +98,13 @@ y_outlet = 15;
 
 /* [Cam Design] */
 od_cam = 11;
-dz_cam = 0.6; // [0: 0.1 : 3]
-ay_cam = 10; // [0: 1: 20]
+od_cam_top = 15;
+dx_cam_slice_top = -8.5; // [-10: 0.1: -6]
+dx_cam_slice_middle = -4.5;  // [-5: 0.1: -3]
+dx_cam_slice_bottom = -2;  // [-10: 0.1: 10]
+ay_cam_slice_bottom = -65; // [-90: 0]
 az_cam = 0;
-d_horn_cam_clearance = 16;  
+d_horn_cam_clearance = 15;  
 
 
 /* [Guide Design] */
@@ -217,7 +221,7 @@ y_filament_loader_clip_bp = 10;
 
 module end_of_customization() {}
 
-/* Linkage kinematicts */
+/* Linkage kinematics */
 
 // Move servo origin
 dx_origin = 0;
@@ -317,11 +321,14 @@ visualization_filament_loader =
     visualize_info(
         "Filament Loader", PART_13, show(filament_loader, "filament_loader") , layout, show_parts);   
 
-  
-
+visualization_filament_loader_clip =   
+    visualize_info(
+        "Filament Loader Clip", PART_13, show(filament_loader_clip, "filament_loader_clip") , layout, show_parts);   
         
 visualization_infos = [
     visualization_adjustable_linkage,
+    visualization_filament_loader,
+    visualization_filament_loader_clip,
     visualization_fixed_clamp_body,
     visualization_horn_cam,
     visualization_horn_linkage,
@@ -563,7 +570,7 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     h_barrel = 3.77;
     h_arm = 1.3; 
     h_below = 2.5;
-    dx_clear_horn = -3.9;
+
     h = h_above + h_arm + h_below;
     dz_horn_engagement = -1;
     dz_horn = dz_horn_engagement -h_barrel + h_arm + h_below;
@@ -571,27 +578,27 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     module shape() {
         d_lock = 0.1;
         render(convexity=10) difference() {
-            can(d=od_cam, h=h, center=ABOVE);
+            can(d=od_cam, taper=od_cam_top, h=h, center=ABOVE);
             // Push filament out of way to avoid catching on horn when filament loader is inserted. 
             // Angle at 45 to provide more options for printing
-            translate([-8, 0, 0]) rotate([0, 45, 0]) plane_clearance(BEHIND); 
+            translate([dx_cam_slice_top, 0, 0]) rotate([0, 45, 0]) plane_clearance(BEHIND); 
             // Provide path for filament to reach bottom of slot
-            translate([dx_clear_horn, 0, 0]) plane_clearance(BEHIND); 
-            // Slot to lock filament when cam is rotated
-            hull() {
-                translate([-3.7, 0, 0.8])  rod(d=d_filament_with_tight_clearance, l=50, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
-                rotate([0, 0, -90]) translate([-3.7, 0, 3])  rod(d=d_lock, l=50, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
-            }
+            translate([dx_cam_slice_middle, 0, 0]) plane_clearance(BEHIND); 
+             // Provide a lip to hold the filament down as well as lock filament against servo
+            translate([dx_cam_slice_bottom, 0, 0]) rotate([0, ay_cam_slice_bottom, 0]) plane_clearance(BEHIND); 
+            
             // Screw used to attach horn
             can(d=2.5, h=a_lot); //Screw 
-            // The horn itself
+            // Slot for horn
             translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-//                    translate([-5, 0, dz_horn])  rotate([0, 0, 180]) one_arm_horn(as_clearance=true);
+            translate([0, 0, dz_horn-1])  one_arm_horn(as_clearance=true);
+            translate([0, 0, dz_horn-2])  one_arm_horn(as_clearance=true);
+            translate([0, 0, dz_horn-3])  one_arm_horn(as_clearance=true);
         }
     }
-    z_printing = -dx_clear_horn;
+    z_printing = h;
     rotation = 
-        mode == PRINTING ? [0, -90, 0] :
+        mode == PRINTING ? [180, 0, 0] :
         [0, 0, servo_angle + servo_offset_angle + az_cam];
     translation = 
         mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
@@ -851,7 +858,6 @@ module moving_clamp_body() {
 }
 
 
-filament_loader_clip();
 
 module filament_loader_clip() {
     blank = [7, 12, 20];
@@ -864,56 +870,61 @@ module filament_loader_clip() {
     x_loose = 3.5; 
     z_slit = 6;
     
-    z_printing = blank.z;
+    
+    
+    module shape() {
+        render(convexity=10) difference() {
+            union() {
+                block(blank, center = ABOVE);
+                hull() {
+                    translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
+                    translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
+                    translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
+                }
+            }
+            // Spreader - slot is narrow then connector
+            translate([0, 0, 4]) block([x_loose, y_tight, 8], center=ABOVE);
+            // Wedging cut above clip
+            hull() {
+                translate([0, 0, 3]) rod(d=0.5, l=x_loose);
+                translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
+            }                  
+            // Clearance for arm
+            translate([0, 0, 10])  {
+                hull() {
+                    block([x_loose, y_loose, 11.5], center=ABOVE);
+                    translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
+                }
+                translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
+            }
+            // Clearance for arm insertion    
+            translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
+            // vertical slit through clamp
+            block([10, 0.5, blank.z-z_slit], center=ABOVE);
+            // Clamp for filament
+            translate([0, 0, 2]) {
+                rod(d=1.25, l=20);
+                block([20, 1.25, 1.25/2], center=ABOVE);
+            }
+            // Cut below clip
+            hull() {
+                translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
+                block([a_lot, 1.75, 0.1], center=BELOW);
+            }
+            // Cut near top to make back side flexible
+            //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
+        }          
+    }
+    z_printing = blank.x/2;
     rotation = 
-        mode == PRINTING ? [180, 0, 0] :
+        mode == PRINTING ? [0, -90, 0] :
         [0, 0, -90];
     translation = 
         mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
         [filament_translation.x, 105, filament_translation.z-2];
     translate(translation) {
         rotate(rotation) {
-            render(convexity=10) difference() {
-                union() {
-                    block(blank, center = ABOVE);
-                    hull() {
-                        translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
-                        translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
-                        translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
-                    }
-                }
-                // Spreader - slot is narrow then connector
-                translate([0, 0, 4]) block([x_loose, y_tight, 8], center=ABOVE);
-                // Wedging cut above clip
-                hull() {
-                    translate([0, 0, 3]) rod(d=0.5, l=x_loose);
-                    translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
-                }                  
-                // Clearance for arm
-                translate([0, 0, 10])  {
-                    hull() {
-                        block([x_loose, y_loose, 11.5], center=ABOVE);
-                        translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
-                    }
-                    translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
-                }
-                // Clearance for arm insertion    
-                translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
-                // vertical slit through clamp
-                block([10, 0.5, blank.z-z_slit], center=ABOVE);
-                // Clamp for filament
-                translate([0, 0, 2]) {
-                    rod(d=1.25, l=20);
-                    block([20, 1.25, 1.25/2], center=ABOVE);
-                }
-                // Cut below clip
-                hull() {
-                    translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
-                    block([a_lot, 1.75, 0.1], center=BELOW);
-                }
-                // Cut near top to make back side flexible
-                //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
-            }  
+            visualize(visualization_filament_loader_clip) shape();
         }    
     }
 }
@@ -1283,7 +1294,8 @@ module visualize_assemblies() {
     fixed_clamp();
     rails();
     frame();
-     filament_loader(as_holder = true);
+    filament_loader(as_holder = true);
+    filament_loader_clip();
      if (show_legend) {
         generate_legend_for_visualization(
             visualization_infos, legend_position, font6_legend_text_characteristics());
@@ -1325,6 +1337,7 @@ module print_assemblies() {
     }
     if (print_filament_loader) {
         filament_loader(as_holder = true);
+        filament_loader_clip();
     }
  }
  

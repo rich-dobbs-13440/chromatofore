@@ -25,6 +25,8 @@ git pull
 
 # Create a new feature branch
 git checkout -b feature/your-feature-name
+
+git push --set-upstream origin feature/your-feature-name
 ```
 
 

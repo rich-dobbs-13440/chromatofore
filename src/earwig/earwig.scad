@@ -123,10 +123,10 @@ y_outlet = 20;
 /* [Cam Design] */
 od_cam = 11;
 od_cam_top = 15;
-dx_cam_slice_top = -8.5; // [-10: 0.1: -6]
+dx_cam_slice_top = -11; // [-15: 0.1: -6]
 dx_cam_slice_middle = -4.5;  // [-5: 0.1: -3]
 dx_cam_slice_bottom = 2;  // [-10: 0.1: 10]
-ay_cam_slice_bottom = -70; // [-90: 0]
+ay_cam_slice_bottom = -65; // [-90: 0]
 az_cam = 0;
 d_horn_cam_clearance = 15;  
 h_above_horn_cam =2.2;
@@ -189,8 +189,8 @@ dy_filament_loader_clip = 12;
 
 
 /* [Build Plate Layout] */
-x_rail_bp = 30; 
-y_rail_bp = 0; 
+x_rail_bp = 33; 
+y_rail_bp = -40; 
 dx_rail_bp = 18;
 
 x_servo_base_bp = 0;
@@ -200,12 +200,12 @@ dx_servo_base_bp = -50;
 x_fixed_clamp_body_bp = 0;
 y_fixed_clamp_body_bp = 0;
 
-x_moving_clamp_body_bp = 0; 
+x_moving_clamp_body_bp = 10; 
 y_moving_clamp_body_bp = -40;
 
 x_horn_cam_bp = 15;
-y_horn_cam_bp = -15;
-dx_horn_cam_bp = -8;
+y_horn_cam_bp = -20;
+dx_horn_cam_bp = -20;
 
 x_pusher_body_bp = 0;
 y_pusher_body_bp = 20;
@@ -231,14 +231,14 @@ dx_tie_bp = dx_rail_bp;
 x_limit_switch_holder_bp = -20; 
 y_limit_switch_holder_bp = -30;
 
-
-
 x_filament_loader_clip_bp = -40;
 y_filament_loader_clip_bp = 10;
 
-x_filament_loader_bp = -60;
-y_filament_loader_bp = -10;
+x_filament_loader_bp = -40;
+y_filament_loader_bp = -30;
 
+x_foundation_bp = 60;
+y_foundation_bp = -40;
 
 module end_of_customization() {}
 
@@ -1348,7 +1348,9 @@ module foundation() {
             translate(pusher_servo_cavity_translation) block(pusher_servo_cavity, center = ABOVE+FRONT+LEFT) ;
         }
     }
-    translation = [dx_foundation, dy_foundation, dz_foundation];
+    dz_printing = 0;
+    translation =  mode == PRINTING ? [x_foundation_bp, y_foundation_bp, dz_printing] :
+        [dx_foundation, dy_foundation, dz_foundation];
     translate(translation) {
         visualize(visualization_foundation) {
             shape();

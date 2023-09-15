@@ -81,6 +81,13 @@ servo_offset_angle_pusher  = 50; // [0:360]
 roller_switch_depressed = true;
 roller_arm_length = 20; // [18:Short, 20:Long]
 
+
+/* [One Arm Horn Characteristics] */
+dz_engagement_one_arm_horn = 2;// 1;
+h_barrel_one_arm_horn = 3.77;
+h_arm_one_arm_horn = 1.3;    
+dx_one_arm_horn = 14;
+
 /* [Base Design] */
 dz_servo = 3.5;
 x_base_pillar = 34;
@@ -115,10 +122,15 @@ y_outlet = 20;
 
 /* [Cam Design] */
 od_cam = 11;
-dz_cam = 0.6; // [0: 0.1 : 3]
-ay_cam = 10; // [0: 1: 20]
+od_cam_top = 15;
+dx_cam_slice_top = -8.5; // [-10: 0.1: -6]
+dx_cam_slice_middle = -4.5;  // [-5: 0.1: -3]
+dx_cam_slice_bottom = 2;  // [-10: 0.1: 10]
+ay_cam_slice_bottom = -70; // [-90: 0]
 az_cam = 0;
-d_horn_cam_clearance = 16;  
+d_horn_cam_clearance = 15;  
+h_above_horn_cam =2.2;
+h_below_horn_cam = 2.5;
 
 
 /* [Guide Design] */
@@ -378,20 +390,20 @@ visualization_infos = [
     }
 }
 
-module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0) {
-    h_barrel_one_arm_horn = 3.77;
-    h_arm_one_arm_horn = 1.3;
-    dz_engagement_one_arm_horn = 1;
-    
+module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, show_barrel = true, show_arm=true) {    
     dz_arm = h_barrel_one_arm_horn + dz_engagement_one_arm_horn;
     module blank() {
-        translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
-        translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
-            hull() {
-                can(d=6, h=h_arm_one_arm_horn, center=BELOW);
-                translate([14, 0, 0]) can(d=4, h=h_arm_one_arm_horn, center=BELOW); 
-            }
-        }        
+        if (show_barrel) {
+            translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
+        }
+        if (show_arm) {
+            translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
+                hull() {           
+                    can(d=6, h=h_arm_one_arm_horn, center=BELOW);
+                    translate([dx_one_arm_horn, 0, 0]) can(d=4, h=h_arm_one_arm_horn, center=BELOW); 
+                }
+            }    
+        }    
     }
     module shape() {
         render(convexity=10) difference() {
@@ -653,39 +665,41 @@ module old_horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) 
 
 
 module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
-    h_above =  0.5; //2.2;
-    h_barrel = 3.77;
-    h_arm = 1.3; 
-    h_below = 2.5;
-    dx_clear_horn = -3.9;
-    h = h_above + h_arm + h_below;
+
+
+    h = h_above_horn_cam + h_barrel_one_arm_horn + h_below_horn_cam;
     dz_horn_engagement = -1;
-    dz_horn = dz_horn_engagement -h_barrel + h_arm + h_below;
-    dz_assembly = h_barrel-dz_horn_engagement-h_arm-h_below;      
+    dz_horn = dz_horn_engagement -h_barrel_one_arm_horn + h_arm_one_arm_horn + h_below_horn_cam;
+    dz_assembly = h_barrel_one_arm_horn - dz_horn_engagement-h_arm_one_arm_horn-h_below_horn_cam;      
     module shape() {
         d_lock = 0.1;
         render(convexity=10) difference() {
-            can(d=od_cam, h=h, center=ABOVE);
+            can(d=od_cam, taper=od_cam_top, h=h, center=ABOVE);
             // Push filament out of way to avoid catching on horn when filament loader is inserted. 
             // Angle at 45 to provide more options for printing
-            translate([-7, 0, 0]) rotate([0, 45, 0]) plane_clearance(BEHIND); 
+            translate([dx_cam_slice_top, 0, 0]) rotate([0, 45, 0]) plane_clearance(BEHIND); 
             // Provide path for filament to reach bottom of slot
-            translate([dx_clear_horn, 0, 0]) plane_clearance(BEHIND); 
-            // Slot to lock filament when cam is rotated
-            hull() {
-                translate([-3.7, 3, 0])  rod(d=d_filament_with_tight_clearance, l=50, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
-                rotate([0, 0, -90]) translate([-3.7, 0, 1.5])  rod(d=d_lock, l=5, center=SIDEWISE+BEHIND+RIGHT+ABOVE);
-            }
+            translate([dx_cam_slice_middle, 0, 0]) plane_clearance(BEHIND); 
+             // Provide a lip to hold the filament down as well as lock filament against servo
+            translate([dx_cam_slice_bottom, 0, 0]) rotate([0, ay_cam_slice_bottom, 0]) plane_clearance(BEHIND); 
+            
             // Screw used to attach horn
             can(d=2.5, h=a_lot); //Screw 
-            // The horn itself, coming from above
+            // Slot for horn
             translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-            translate([0, 0, dz_horn+ 0.5])  one_arm_horn(as_clearance=true);
+            hull() {
+                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_barrel = false);
+                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_barrel = false);
+            }
+            hull() {
+                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_arm = false);
+                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_arm = false);
+            }            
         }
     }
-    z_printing = -dx_clear_horn;
+    z_printing = h;
     rotation = 
-        mode == PRINTING ? [0, -90, 0] :
+        mode == PRINTING ? [180, 0, 0] :
         [0, 0, servo_angle + servo_offset_angle + az_cam];
     translation = 
         mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :

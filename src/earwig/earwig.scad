@@ -104,7 +104,7 @@ z_foundation_ls_terminal = 4; // [4,8]
 
 dx_foundation = -33;
 dy_foundation = 5;
-dz_foundation = -30; // [-50:30]
+dz_foundation = -44; // [-50:30]
 
 dx_pusher_servo_clip  = 25;
 dy_pusher_servo_clip = 30;

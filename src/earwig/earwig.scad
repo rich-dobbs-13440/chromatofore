@@ -383,7 +383,7 @@ visualization_infos = [
                 rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
             }  
     } else if (mode != PRINTING) {
-        filament_luse_dupont_connectorsngth = y_frame + 90;
+        filament_length = y_frame + 90;
         translate(filament_translation + [0, -40, 0]) 
             color("red") 
                 rod(d=d_filament, l=filament_length, center=SIDEWISE+RIGHT);

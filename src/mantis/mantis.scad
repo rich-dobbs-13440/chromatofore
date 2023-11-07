@@ -35,18 +35,15 @@ mode = 3; // [3: "Assembly", 4: "Printing"]
 show_vitamins = true;
 show_filament = true;
 show_parts = true; // But nothing here has parts yet.
-show_legend = false;
+show_legend = true;
 print_slide = true;
-print_rails = true;
-print_both_rails = true;
 print_moving_clamp = true;
 print_fixed_clamp = true;
 print_pusher = true;
-print_frame = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "slide_plate"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_switch_holder, moving_clamp_body, pusher_body, rails, servo_base, slide_plate, tie, tie_bracket]
+part_to_print = "slide_plate"; // [adjustable_linkage, clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_switch_holder, moving_clamp_body, rails, servo_base, slide_plate, tie, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -61,8 +58,6 @@ horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_switch_holder  =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-pusher_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-rails = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_plate = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slider  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 tie =  0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -105,8 +100,8 @@ dy_slide_plate = 0;
 dz_slide_plate = -2;
 // Lateral rim around servos inserted into slide plate
 x_slide_plate_rim = 6;
-// Rim in the direction of sliding around 
-y_slide_plate_rim = 4;
+// Rim in the direction of sliding 
+y_slide_plate_rim = 5;
 // Thickness of slide plate as well as the slides themselves
 z_slide_plate = 4;
 // The distance between the the rims of fixed clamp and the pusher.  Limits the maximum range of motion
@@ -230,10 +225,6 @@ y_slide_plate_bp = 0;
 x_slider_bp = 0;
 y_slider_bp = 0;
 
-x_rail_bp = 33; 
-y_rail_bp = -40; 
-dx_rail_bp = 18;
-
 x_servo_base_bp = 0;
 y_servo_base_bp = 0;
 dx_servo_base_bp = -50;
@@ -244,14 +235,14 @@ y_fixed_clamp_body_bp = 0;
 x_moving_clamp_body_bp = 10; 
 y_moving_clamp_body_bp = -40;
 
-x_horn_cam_bp = 15;
+x_horn_cam_bp = 40;
 y_horn_cam_bp = -20;
 dx_horn_cam_bp = -20;
 
 x_pusher_body_bp = 0;
 y_pusher_body_bp = 20;
 
-x_horn_linkage_bp = 0;
+x_horn_linkage_bp = 20;
 y_horn_linkage_bp = 55;
 
 x_linkage_bp = -30;
@@ -261,13 +252,6 @@ x_adjustable_linkage_bp = -30;
 y_adjustable_linkage_bp = 50;
 dx_adjustable_linkage_bp = -30;
 
-x_tie_bracket_bp = x_rail_bp;
-y_tie_bracket_bp = -15;
-dx_tie_bracket_bp = dx_rail_bp;
-
-x_tie_bp = x_rail_bp;
-y_tie_bp = -50;
-dx_tie_bp = dx_rail_bp;
 
 x_limit_switch_holder_bp = -20; 
 y_limit_switch_holder_bp = -30;
@@ -349,10 +333,6 @@ visualization_fixed_clamp_body =
         "Fixed Clamp Body", PART_5, show(fixed_clamp_body, "fixed_clamp_body") , layout, show_parts); 
  
         
-visualization_pusher_body = 
-    visualize_info(
-        "Pusher Body", PART_6, show(pusher_body, "pusher_body") , layout, show_parts);  
-        
 visualization_horn_cam = 
     visualize_info(
         "Horn Cam", PART_7, show(horn_cam, "horn_cam") , layout, show_parts); 
@@ -364,11 +344,6 @@ visualization_limit_switch_holder =
 //visualization_limit_switch_bumper =   
 //    visualize_info(
 //        "Limit Switch Bumper", PART_9, show(limit_switch_bumper, "limit_switch_bumper") , layout, show_parts);   
-        
- visualization_rails =         
-    visualize_info(
-        "Rails", PART_10, show(rails, "rails") , layout, show_parts);  
-
         
 visualization_tie = 
     visualize_info(
@@ -410,8 +385,6 @@ visualization_infos = [
     visualization_limit_switch_holder,
     visualization_linkage,
     visualization_moving_clamp_body,
-    visualization_pusher_body,
-    visualization_rails,
     visualization_slide_plate,
     visualization_slider,
     visualization_foundation,
@@ -1078,121 +1051,71 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
 
 
 
-module pusher_body() {
-    dy_qc = -15;
-    blank_offset = 8;
-    z_locked_guide = z_guide + 2 * frame_clearance;
-    dx_p_locked_guide = dx_base_offset + x_guide/2 + frame_clearance;
-    dx_m_locked_guide = dx_base_offset - x_guide/2 - frame_clearance;
-    dy_locked_guides = -24;
-    servo_housing = [x_base_pillar + 4, 16, z_base_pillar];
-    
-    module orient_with_servo() {
-        rotate([180, 0, 0]) rotate([0, 0, -90]) children();
-    }
-
-    locked_guide = [14, 16, z_locked_guide];
-    servo_joiner = [servo_housing.y, 4, abs(dz_linkage)];
-
-    module blank() {
-        orient_with_servo()
-            translate([dx_base_offset, blank_offset, 0]) {
-                block(servo_housing,  center=BELOW+LEFT);
-            }
-        translate([0, dy_locked_guides, 0]) 
-            block(servo_joiner, center=BELOW+RIGHT);
-        translate([dx_p_locked_guide, dy_locked_guides, -frame_clearance]) 
-            block(locked_guide, center=ABOVE+RIGHT+BEHIND);
-        translate([dx_m_locked_guide, dy_locked_guides, -frame_clearance]) 
-            block(locked_guide, center=ABOVE+RIGHT+FRONT);
-        translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
-            block([32, 4, 10], center=BELOW+RIGHT);
-            block([9, 4, 2.2], center=ABOVE+RIGHT);
-            center_reflect([1, 0, 0]) translate([3.9, 0, 3.]) rod(d=2.4, l=4, center=RIGHT+SIDEWISE);
-        }
-       
-    }
-    
-    module shape() {
-        render(convexity=10) difference() {
-            blank();
-            translate([0, dy_pusher_servo, dz_linkage]) orient_with_servo() 9g_servo(as_clearance = true);
-            translate([0, dy_pusher_servo, 0]) orient_with_servo() servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=false);
-            filament_loader(as_inlet_clip_clearance=true); 
-            translate([0, dy_pusher_rail_screws, 0]) rails_screws(as_clearance = true);
-        }
-    }
-    z_printing = -dy_locked_guides;
-    rotation = 
-        mode == PRINTING ? [90,  0, 0] :
-        [0, 0, 0];
-    translation = 
-        mode == PRINTING ? [x_pusher_body_bp, y_pusher_body_bp, z_printing] :
-        [0, 0, 0];
-    translate(translation) rotate(rotation) {
-        if (show_vitamins && mode != PRINTING) {
-            visualize_vitamins(visualization_pusher_body) {
-                translate([0, dy_pusher_servo, dz_servo + dz_linkage]) 
-                    orient_with_servo()
-                        color(MIUZEIU_SERVO_BLUE) 
-                            9g_motor_sprocket_at_origin(); 
-                translate([0, dy_pusher_servo, dz_linkage]) 
-                   orient_with_servo() servo_screws(as_clearance=false, recess=true, upper_nutcatch_sidecut=false);
-            }
-        }
-        visualize(visualization_pusher_body) shape();  
-    }
-}
-
-
-module rail(item=0) {
-    module attachment_block() {
-        render(convexity=10) difference() {
-            translate([0, 0, rail_wall-frame_clearance]) 
-                block([x_rail_attachment, y_rail_attachment, z_rail_attachment], center = BELOW+RIGHT+BEHIND);
-            translate([0, y_rail_attachment/2, rail_wall]) {
-                horizontal_rail_screws(as_clearance=true, cld=0.4);
-            }
-        } 
-    }
-    module blank() {
-        translate([rail_wall, 0, -rail_wall]) {
-            block([x_rail, y_frame, z_rail], center = ABOVE+RIGHT+BEHIND);
-            attachment_block();
-            translate([0, y_frame - y_rail_attachment, 0]) attachment_block();
-            
-        } 
-    }
-    module shape() {
-        //render(convexity=10) 
-        difference() {
-            blank();
-                translate([frame_clearance, 0, -frame_clearance]) {
-                block([s_dovetail+2, a_lot, z_guide+2 * frame_clearance ], center=ABOVE+BEHIND);
-                hull() {
-                    block([1 +frame_clearance , a_lot, z_guide + s_dovetail], center=ABOVE+BEHIND);
-                    block([1+s_dovetail, a_lot, z_guide+frame_clearance], center=ABOVE+BEHIND);
-                }
-                translate([-2, y_rail_attachment/2 - 2, rail_wall]) {
-                    vertical_rail_screws(as_clearance=true, cld=0.4);
-                }
-                translate([0, y_frame - y_rail_attachment, 0]) {
-                    translate([-2, y_rail_attachment/2 +2, rail_wall]) {
-                        vertical_rail_screws(as_clearance=true, cld=0.4);
-                    }  
-                }              
-            }
-        }
-    }
-    z_printing = rail_wall;
-    rotation = 
-        mode == PRINTING ? [0, 90, 0] :
-        [0, 0, 0];
-    translation = 
-        mode == PRINTING ? [x_rail_bp + dx_rail_bp*item, y_rail_bp, z_printing]:
-        [0, 0, 0];
-    translate(translation) rotate(rotation)  visualize(visualization_rails) shape();  
-}
+//module pusher_body() {
+//    dy_qc = -15;
+//    blank_offset = 8;
+//    z_locked_guide = z_guide + 2 * frame_clearance;
+//    dx_p_locked_guide = dx_base_offset + x_guide/2 + frame_clearance;
+//    dx_m_locked_guide = dx_base_offset - x_guide/2 - frame_clearance;
+//    dy_locked_guides = -24;
+//    servo_housing = [x_base_pillar + 4, 16, z_base_pillar];
+//    
+//    module orient_with_servo() {
+//        rotate([180, 0, 0]) rotate([0, 0, -90]) children();
+//    }
+//
+//    locked_guide = [14, 16, z_locked_guide];
+//    servo_joiner = [servo_housing.y, 4, abs(dz_linkage)];
+//
+//    module blank() {
+//        orient_with_servo()
+//            translate([dx_base_offset, blank_offset, 0]) {
+//                block(servo_housing,  center=BELOW+LEFT);
+//            }
+//        translate([0, dy_locked_guides, 0]) 
+//            block(servo_joiner, center=BELOW+RIGHT);
+//        translate([dx_p_locked_guide, dy_locked_guides, -frame_clearance]) 
+//            block(locked_guide, center=ABOVE+RIGHT+BEHIND);
+//        translate([dx_m_locked_guide, dy_locked_guides, -frame_clearance]) 
+//            block(locked_guide, center=ABOVE+RIGHT+FRONT);
+//        translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
+//            block([32, 4, 10], center=BELOW+RIGHT);
+//            block([9, 4, 2.2], center=ABOVE+RIGHT);
+//            center_reflect([1, 0, 0]) translate([3.9, 0, 3.]) rod(d=2.4, l=4, center=RIGHT+SIDEWISE);
+//        }
+//       
+//    }
+//    
+//    module shape() {
+//        render(convexity=10) difference() {
+//            blank();
+//            translate([0, dy_pusher_servo, dz_linkage]) orient_with_servo() 9g_servo(as_clearance = true);
+//            translate([0, dy_pusher_servo, 0]) orient_with_servo() servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=false);
+//            filament_loader(as_inlet_clip_clearance=true); 
+//            translate([0, dy_pusher_rail_screws, 0]) rails_screws(as_clearance = true);
+//        }
+//    }
+//    z_printing = -dy_locked_guides;
+//    rotation = 
+//        mode == PRINTING ? [90,  0, 0] :
+//        [0, 0, 0];
+//    translation = 
+//        mode == PRINTING ? [x_pusher_body_bp, y_pusher_body_bp, z_printing] :
+//        [0, 0, 0];
+//    translate(translation) rotate(rotation) {
+//        if (show_vitamins && mode != PRINTING) {
+//            visualize_vitamins(visualization_pusher_body) {
+//                translate([0, dy_pusher_servo, dz_servo + dz_linkage]) 
+//                    orient_with_servo()
+//                        color(MIUZEIU_SERVO_BLUE) 
+//                            9g_motor_sprocket_at_origin(); 
+//                translate([0, dy_pusher_servo, dz_linkage]) 
+//                   orient_with_servo() servo_screws(as_clearance=false, recess=true, upper_nutcatch_sidecut=false);
+//            }
+//        }
+//        visualize(visualization_pusher_body) shape();  
+//    }
+//}
 
 module rail_riders(left_right_centering = 0, y_guide = y_guide) {
     center_reflect([1, 0, 0]) translate([x_guide/2, 0, 0]) {
@@ -1248,49 +1171,49 @@ module 9g_servo(as_clearance=false) {
     }
 }
 
-module tie(item = 0, dovetail_clearance=dovetail_clearance) {
-    module shape() { 
-        center_reflect([0, 0, 1]) translate([0, 0, tie_length/2]) tie_dovetail(as_clearance = false, clearance=dovetail_clearance);
-        block([x_dovetail, y_dovetail, tie_length], center=BEHIND); 
-    }
-    
-    z_printing = x_dovetail;
-    rotation = 
-        mode == PRINTING ? [90,  -90, 0] :
-        [0, 0, 180];
-    translation = 
-        mode == PRINTING ? [x_tie_bp + item*dx_tie_bp, y_tie_bp, z_printing] :
-        [0, 0, 0];
-    translate(translation) rotate(rotation) {
-        visualize(visualization_tie) shape();  
-    }    
-}
+//module tie(item = 0, dovetail_clearance=dovetail_clearance) {
+//    module shape() { 
+//        center_reflect([0, 0, 1]) translate([0, 0, tie_length/2]) tie_dovetail(as_clearance = false, clearance=dovetail_clearance);
+//        block([x_dovetail, y_dovetail, tie_length], center=BEHIND); 
+//    }
+//    
+//    z_printing = x_dovetail;
+//    rotation = 
+//        mode == PRINTING ? [90,  -90, 0] :
+//        [0, 0, 180];
+//    translation = 
+//        mode == PRINTING ? [x_tie_bp + item*dx_tie_bp, y_tie_bp, z_printing] :
+//        [0, 0, 0];
+//    translate(translation) rotate(rotation) {
+//        visualize(visualization_tie) shape();  
+//    }    
+//}
 
-module tie_bracket(item = 0, clearance=dovetail_clearance) {
-    wall = 2;
-    z_bracket = 2*z_dovetail + z_rail;
-    module blank() {
-        blank = [wall, y_rail_attachment, z_bracket];
-        block([wall + x_dovetail, 2*y_dovetail, z_bracket], center=BEHIND);
-    }
-    module shape() {
-        render(convexity=10) difference() {
-            blank();
-            center_reflect([0, 0, 1]) translate([-wall, 0, -z_rail/2 - z_dovetail]) tie_dovetail(as_clearance = true, clearance=clearance);
-            translate([0, 0, -dz_rail_screws]) horizontal_rail_screws(as_clearance=true, cld=0.4); 
-        }
-    }
-    z_printing = 0;
-    rotation = 
-        mode == PRINTING ? [0,  90, 90] :
-        [0, 0, 180];
-    translation = 
-        mode == PRINTING ? [x_tie_bracket_bp + item * dx_tie_bracket_bp, y_tie_bracket_bp, z_printing] :
-        [0, 0, dz_rail_screws];
-    translate(translation) rotate(rotation) {
-        visualize(visualization_tie_bracket) shape();  
-    }
-}
+//module tie_bracket(item = 0, clearance=dovetail_clearance) {
+//    wall = 2;
+//    z_bracket = 2*z_dovetail + z_rail;
+//    module blank() {
+//        blank = [wall, y_rail_attachment, z_bracket];
+//        block([wall + x_dovetail, 2*y_dovetail, z_bracket], center=BEHIND);
+//    }
+//    module shape() {
+//        render(convexity=10) difference() {
+//            blank();
+//            center_reflect([0, 0, 1]) translate([-wall, 0, -z_rail/2 - z_dovetail]) tie_dovetail(as_clearance = true, clearance=clearance);
+//            translate([0, 0, -dz_rail_screws]) horizontal_rail_screws(as_clearance=true, cld=0.4); 
+//        }
+//    }
+//    z_printing = 0;
+//    rotation = 
+//        mode == PRINTING ? [0,  90, 90] :
+//        [0, 0, 180];
+//    translation = 
+//        mode == PRINTING ? [x_tie_bracket_bp + item * dx_tie_bracket_bp, y_tie_bracket_bp, z_printing] :
+//        [0, 0, dz_rail_screws];
+//    translate(translation) rotate(rotation) {
+//        visualize(visualization_tie_bracket) shape();  
+//    }
+//}
 
 module tie_dovetail(as_clearance = false, clearance = dovetail_clearance) {
     if (as_clearance) {
@@ -1442,7 +1365,7 @@ module fixed_clamp() {
 module pusher() {
     
     translate([0, y_pusher_assembly, 0]) {
-        pusher_body();
+//        pusher_body();
         translate([0, dy_pusher_servo, dz_linkage]) 
             one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
         translate([0, dy_pusher_servo, 0]) 
@@ -1456,18 +1379,6 @@ module pusher() {
 
 
 
-module rails() {  
-    translate([dx_base_offset+x_guide/2, 0, 0]) rail(); 
-    translate([dx_base_offset-x_guide/2, y_frame, 0])  rotate([0, 0, 180]) rail(); 
-}
-
-module frame() {
-
-        translate([dx_base_offset + x_guide/2 + rail_wall, y_rail_attachment/2, 0]) tie_bracket();
-        translate([dx_base_offset - x_guide/2 - rail_wall, y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket(); 
-        translate([dx_base_offset + x_guide/2 + rail_wall, y_frame - y_rail_attachment/2, 0]) tie_bracket();
-        translate([dx_base_offset - x_guide/2 -rail_wall, y_frame - y_rail_attachment/2, 0])  rotate([0, 0, 180]) tie_bracket();     
-}
 
 //foundation();
 
@@ -1514,11 +1425,11 @@ module frame() {
 
 module slide() {
     // The slide is a new assembly that integrates the rails, pusher body, fixed clamp
-    // body and maybe the moving clamp body.  By integrating these parts,
+    // body and the moving clamp body.  By integrating these parts,
     // less material will be used and assembly will be simplified. 
     
     // It will have two or three separate parts, but it is expected that they will be printed inplace 
-    // so there will be no separate assembly - just inserting the servos.abs
+    // so there will be no separate assembly - just inserting the servos
     slide_plate();
     slider();
     
@@ -1532,13 +1443,9 @@ module visualize_assemblies() {
         filament();
     }
     slide();
-    
-    
     pusher();
     moving_clamp();
     fixed_clamp();
-    rails();
-    frame();
      filament_loader(as_holder = true, show_bow = true, show_tip = true);
      filament_loader_clip();
      if (show_legend) {
@@ -1552,13 +1459,6 @@ module print_assemblies() {
         slide_plate();
         slider();
     }
-    
-    if (print_rails) {
-        rail(item=0);
-         if (print_both_rails) {
-             rail(item=1);
-         }
-    }
     if (print_moving_clamp) {
         moving_clamp_body();
         horn_cam(item=0);
@@ -1568,20 +1468,9 @@ module print_assemblies() {
         horn_cam(item=1);   
     }
     if (print_pusher) {
-        pusher_body();
         horn_linkage();
         linkage();
         adjustable_linkage();
-    }
-    if (print_frame) {
-        tie_bracket(item = 0);
-        tie_bracket(item = 1);
-        tie_bracket(item = 2);
-        tie_bracket(item = 3);
-        tie(item = 0);
-        tie(item = 1);
-        tie(item = 2);
-        tie(item = 3);         
     }
     if (print_filament_loader) {
         filament_loader(as_holder = true, show_bow = true, show_tip = true);

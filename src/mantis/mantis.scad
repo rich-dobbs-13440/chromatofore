@@ -10,6 +10,10 @@ use <ScadApotheka/roller_limit_switch.scad>
 use <ScadApotheka/no_solder_roller_limit_switch_holder.scad>
 use <ScadApotheka/quarter_turn_clamping_connector.scad>
 use <ScadApotheka/ptfe_filament_tubing_connector.scad>
+use <ScadApotheka/audrey_horizontal_pivot.scad>
+include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
+
+
     
 
 a_lot = 200 + 0;
@@ -92,6 +96,10 @@ dx_one_arm_horn = 14;
 9g_servo_body_length = 22.5; // [22.5, 23.0, 23.5, 24]
 // Adjust so that servos fits into slide plate openings!
 9g_servo_body_width = 12.0; // [12.0, 12.2, 12.4]
+// Adjust so that servo shows as middle of slot.
+9g_servo_offset_origin_to_edge = 6;
+// Adjust so that servo shows as resting on pedistal
+9g_servo_vertical_offset_origin_to_flange = 14.5;
 // Lateral offset between CL of filament to CL of servos
 dx_slide_plate = 1;
 // Offset of the mid point of the slide plate from the mid point of the slide plate, in the direction that the slide moves.
@@ -107,7 +115,7 @@ z_slide_plate = 4;
 // The distance between the the rims of fixed clamp and the pusher.  Limits the maximum range of motion
 y_slide =60;
 // Vertical offset from the CL of the base plate to the bottom of the pusher servo flange.  Constrained by the wiring for the servo!
-dz_pusher_servo= 13; 
+z_pusher_servo_pedistal = 13; 
 // Lateral offset of the clearance, to allow room for the pusher servo wires
 x_offset_pusher_wire_clearance = 3;
 // Offset of the clearance, in the direction of sliding to allow room for pusher servo wires
@@ -198,13 +206,14 @@ dovetail_clearance = 0.25;
 tie_length = 30;
 
 /* [Linkage Design] */
-az_horn_linkage_pivot = 20;
-r_horn_linkage = 14;
+az_horn_linkage_pivot = 40;
+r_horn_linkage = 16;
 linkage_length = 28;
 linkage_shorten_range = 4;
 // *******************************************************
 dz_linkage = -32; // [-40: 0]
-y_pusher_assembly = 24;
+// TODO:  Calculate this from plate dimensions
+y_pusher_assembly = -42;
 dy_pusher_servo = 2;
 
 /* [Limit Switch Holder Design] */
@@ -742,21 +751,36 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
 
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
-    //  The horn linkage sits on top of the horn, to avoid interference with the filament.
-    module pivot(as_clearance) {
-        rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, 1.9]) rotate([180, 0, 0]) {
-            if (as_clearance) {
-                translate([0, 0, 5]) hole_through("M2", h=5, cld=0.0, $fn=12);  // Tap this to avoid a nut!
-            } else {
-                color(BLACK_IRON) screw("M2x8", $fn=12);
-                translate([0, 0, -2]) color(BLACK_IRON) nut("M2", $fn=12);
-                translate([0, 0, -5]) color(BLACK_IRON) nut("M2", $fn=12);
-                rotate([0, 0, 15]) translate([0, 0, -6.6]) color(BLACK_IRON) nut("M2", $fn=12);
-            }
-        }
+//    //  The horn linkage sits on top of the horn, to avoid interference with the filament.
+//    module pivot(as_clearance) {
+//        rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, 1.9]) rotate([180, 0, 0]) {
+//            if (as_clearance) {
+//                translate([0, 0, 5]) hole_through("M2", h=5, cld=0.0, $fn=12);  // Tap this to avoid a nut!
+//            } else {
+//                color(BLACK_IRON) screw("M2x8", $fn=12);
+//                translate([0, 0, -2]) color(BLACK_IRON) nut("M2", $fn=12);
+//                translate([0, 0, -5]) color(BLACK_IRON) nut("M2", $fn=12);
+//                rotate([0, 0, 15]) translate([0, 0, -6.6]) color(BLACK_IRON) nut("M2", $fn=12);
+//            }
+//        }
+//    }
+    
+    module handle_for_bearing() {
     }
+    
+    module handle_for_tcap() {
+    }    
+    
+    module handle_for_lcap() {
+    }
+    
     module shape() {
         h = 4;
+        pin_attachment = [2, 3, 8];
+        
+        barrel_attachment = [14, 3, 8];
+        r_pin_attachment = r_horn_linkage - 4.5;
+        r_barrel_attachment = r_horn_linkage + 4.;
         render(convexity=10) difference() {
             union() {
                 hull() {
@@ -769,25 +793,54 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
                         can(d=od_cam, h=2, center=ABOVE);
                         rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
                     }
+                    rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=BELOW);
+                    rotate([0, 0, az_horn_linkage_pivot])  translate([r_barrel_attachment, 0, 2])  block(barrel_attachment, center=BELOW+FRONT);
                 }
+               
             }
             translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
             can(d=2.2, h=a_lot);  // Central hole for screw!
-            pivot(as_clearance=true); 
+            //pivot(as_clearance=true); 
+            
+
+        }
+        //        // Use the children to generate an attachment
+        clipping_diameter = 9;
+        child_idx_handle_for_bearing = 0;
+        child_idx_handle_for_tcap = 1;
+        child_idx_handle_for_lcap = 2;
+        
+        attachment_instructions = [
+            [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_LCAP, child_idx_handle_for_lcap, clipping_diameter],
+            [ADD_SPRUES, AP_TCAP, [45, 135, 225, 315]],
+        ];        
+        size = 1;
+        angle_bearing = -90; 
+        angle_pin = 90;
+        air_gap = 0.45;
+        dz_print_inplace_pivot = -6;
+        rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, dz_print_inplace_pivot]) {
+            audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions) {
+                handle_for_bearing();
+                handle_for_tcap();
+                handle_for_lcap();
+            }
         }
     }
     z_printing = 4;
     rotation = 
         mode == PRINTING ? [180,  0, 0] :
-        [0, 0, servo_angle + servo_offset_angle];
+        [180, 0, servo_angle + servo_offset_angle];
     translation = 
         mode == PRINTING ? [x_horn_linkage_bp, y_horn_linkage_bp, z_printing] :
         [0, 0, dz_servo + dz_linkage];
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
             visualize_vitamins(visualization_horn_linkage) 
-                translate([0, 0, 0])
-                    pivot(as_clearance = false) ; 
+                //pivot(as_clearance = false) ; 
+                translate([0, 0, -3.5])  one_arm_horn();
         }
         visualize(visualization_horn_linkage) shape();  
     }
@@ -1113,49 +1166,9 @@ module 9g_servo(as_clearance=false) {
     }
 }
 
-//module tie(item = 0, dovetail_clearance=dovetail_clearance) {
-//    module shape() { 
-//        center_reflect([0, 0, 1]) translate([0, 0, tie_length/2]) tie_dovetail(as_clearance = false, clearance=dovetail_clearance);
-//        block([x_dovetail, y_dovetail, tie_length], center=BEHIND); 
-//    }
-//    
-//    z_printing = x_dovetail;
-//    rotation = 
-//        mode == PRINTING ? [90,  -90, 0] :
-//        [0, 0, 180];
-//    translation = 
-//        mode == PRINTING ? [x_tie_bp + item*dx_tie_bp, y_tie_bp, z_printing] :
-//        [0, 0, 0];
-//    translate(translation) rotate(rotation) {
-//        visualize(visualization_tie) shape();  
-//    }    
-//}
 
-//module tie_bracket(item = 0, clearance=dovetail_clearance) {
-//    wall = 2;
-//    z_bracket = 2*z_dovetail + z_rail;
-//    module blank() {
-//        blank = [wall, y_rail_attachment, z_bracket];
-//        block([wall + x_dovetail, 2*y_dovetail, z_bracket], center=BEHIND);
-//    }
-//    module shape() {
-//        render(convexity=10) difference() {
-//            blank();
-//            center_reflect([0, 0, 1]) translate([-wall, 0, -z_rail/2 - z_dovetail]) tie_dovetail(as_clearance = true, clearance=clearance);
-//            translate([0, 0, -dz_rail_screws]) horizontal_rail_screws(as_clearance=true, cld=0.4); 
-//        }
-//    }
-//    z_printing = 0;
-//    rotation = 
-//        mode == PRINTING ? [0,  90, 90] :
-//        [0, 0, 180];
-//    translation = 
-//        mode == PRINTING ? [x_tie_bracket_bp + item * dx_tie_bracket_bp, y_tie_bracket_bp, z_printing] :
-//        [0, 0, dz_rail_screws];
-//    translate(translation) rotate(rotation) {
-//        visualize(visualization_tie_bracket) shape();  
-//    }
-//}
+
+
 
 module tie_dovetail(as_clearance = false, clearance = dovetail_clearance) {
     if (as_clearance) {
@@ -1230,16 +1243,19 @@ module slider() {
 
 module slide_plate() {
     dy_pusher_servo_inner_pedistal = -y_slide/2;
+    dy_pusher_servo_slot = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
+    dy_pusher_servo = dy_pusher_servo_slot + 9g_servo_offset_origin_to_edge;
+    
+    dz_pusher_servo = -(z_pusher_servo_pedistal + 9g_servo_vertical_offset_origin_to_flange);
     
     module pusher_slot() {
-        dy = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
-        translate([0, dy, 0]) block([9g_servo_body_width, 9g_servo_body_length, a_lot]);
+        translate([0, dy_pusher_servo_slot, 0]) block([9g_servo_body_width, 9g_servo_body_length, a_lot]);
     }
     
     module pusher_wire_clearance() {
         // Cut into inner pedistal to allow room for wire and assembly
         dy_pusher_wire_clearance = dy_pusher_servo_inner_pedistal - y_offset_pusher_wire_clearance;
-        dz = -z_slide_plate/2;
+        dz = 0; //-z_slide_plate/2;
         hull() {
             translate([x_offset_pusher_wire_clearance, dy_pusher_wire_clearance, dz]) 
                 block([9g_servo_body_width, y_slide_plate_rim, z_pusher_servo_wires_clearance], center=BELOW+LEFT);
@@ -1275,10 +1291,10 @@ module slide_plate() {
         // Pedistal for outer part of pusher servo:
         dy_pusher_servo_outer_pedistal = -y/2;
         x_outer_pedistal = 9g_servo_body_width;
-        translate([0, dy_pusher_servo_outer_pedistal, 0]) block([x_outer_pedistal, y_slide_plate_rim, dz_pusher_servo], center=BELOW + RIGHT);
+        translate([0, dy_pusher_servo_outer_pedistal, 0]) block([x_outer_pedistal, y_slide_plate_rim, z_pusher_servo_pedistal], center=BELOW + RIGHT);
         // Inner pedistal - must avoid interfering with wire and still allow assembly
         
-        translate([0, dy_pusher_servo_inner_pedistal, 0]) block([9g_servo_body_width, y_slide_plate_rim, dz_pusher_servo], center=BELOW+LEFT);
+        translate([0, dy_pusher_servo_inner_pedistal, 0]) block([9g_servo_body_width, y_slide_plate_rim, z_pusher_servo_pedistal], center=BELOW+LEFT);
     }
     
     module shape() {
@@ -1291,6 +1307,9 @@ module slide_plate() {
                 rail_cavity();      
             }
      }
+     
+     
+     
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [180,  0, 0] : 
@@ -1299,6 +1318,11 @@ module slide_plate() {
         mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :
         [dx_slide_plate, dy_slide_plate, dz_slide_plate];
     translate(translation) rotate(rotation) {
+         if (show_vitamins && mode != PRINTING) {
+             translate([0, dy_pusher_servo, dz_pusher_servo]) 
+                rotate([0, 180, -90]) 
+                    color(MIUZEIU_SERVO_BLUE) 9g_motor_sprocket_at_origin();
+         }
         visualize(visualization_slide_plate) shape();  
     }
     
@@ -1329,8 +1353,7 @@ module pusher() {
     
     translate([0, y_pusher_assembly, 0]) {
 //        pusher_body();
-        translate([0, dy_pusher_servo, dz_linkage]) 
-            one_arm_horn(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher);
+
         translate([0, dy_pusher_servo, 0]) 
             horn_linkage(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher); 
         translate([0, dy_pusher_servo, 0]) 
@@ -1343,48 +1366,6 @@ module pusher() {
 
 
 
-//foundation();
-
-//module foundation() {
-//    
-//    foundation = [x_foundation, y_foundation, z_foundation];
-//    terminal_cavity = [x_foundation_ls_terminal, y_foundation_ls_terminal, z_foundation_ls_terminal];
-//    pusher_servo_cavity = [12, 23., 6];
-//    clip_wall = 2;
-//    limit_switch_clip = terminal_cavity + [2 * clip_wall, 2 * clip_wall, 0];
-//    limit_switch_clip_translation = [0, y_foundation, 0];
-//    terminal_translation = [clip_wall, y_foundation - clip_wall, 0];
-//    pusher_servo_clip = pusher_servo_cavity + [2 * clip_wall, 2 * clip_wall, 0];
-//    pusher_servo_clip_translation = [dx_pusher_servo_clip, dy_pusher_servo_clip, 0];
-//    pusher_servo_cavity_translation = [dx_pusher_servo_clip + clip_wall, dy_pusher_servo_clip - clip_wall, 2];
-//    
-//    module blank() {
-//        block([4, y_foundation, z_foundation], center=ABOVE+ RIGHT + FRONT);
-//        translate([x_foundation, 0, 0]) block([4, y_foundation, z_foundation], center=ABOVE+ RIGHT + BEHIND);
-//        block([x_foundation, 4, z_foundation], center=ABOVE+ RIGHT + FRONT);
-//        translate([0, y_foundation, 0])block([x_foundation, 4, z_foundation], center=ABOVE+ LEFT + FRONT);
-//        
-//        translate(limit_switch_clip_translation) block(limit_switch_clip, center=ABOVE+FRONT+LEFT);
-//        translate(pusher_servo_clip_translation) block(pusher_servo_clip, center=ABOVE+FRONT+LEFT);
-//    }
-//    module shape() {
-//        render(convexity=10) difference() {
-//            blank();
-//            translate(terminal_translation) block(terminal_cavity, center = ABOVE+FRONT+LEFT) ;
-//            translate(pusher_servo_cavity_translation) block(pusher_servo_cavity, center = ABOVE+FRONT+LEFT) ;
-//        }
-//    }
-//    dz_printing = 0;
-//    translation =  mode == PRINTING ? [x_foundation_bp, y_foundation_bp, dz_printing] :
-//        [dx_foundation, dy_foundation, dz_foundation];
-//    translate(translation) {
-//        visualize(visualization_foundation) {
-//            shape();
-//        }
-//    }
-//
-//}
-
 
 module slide() {
     // The slide is a new assembly that integrates the rails, pusher body, fixed clamp
@@ -1393,8 +1374,14 @@ module slide() {
     
     // It will have two or three separate parts, but it is expected that they will be printed inplace 
     // so there will be no separate assembly - just inserting the servos
+    
+
+    
+    
     slide_plate();
     slider();
+    
+    
     
 }
 

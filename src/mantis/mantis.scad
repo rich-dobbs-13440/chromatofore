@@ -106,6 +106,14 @@ y_slide_plate_rim = 5;
 z_slide_plate = 4;
 // The distance between the the rims of fixed clamp and the pusher.  Limits the maximum range of motion
 y_slide =60;
+// Vertical offset from the CL of the base plate to the bottom of the pusher servo flange.  Constrained by the wiring for the servo!
+dz_pusher_servo= 13; 
+// Lateral offset of the clearance, to allow room for the pusher servo wires
+x_offset_pusher_wire_clearance = 3;
+// Offset of the clearance, in the direction of sliding to allow room for pusher servo wires
+y_offset_pusher_wire_clearance = y_slide_plate_rim - 3;
+// Amount of vertical clearance for these wires
+z_pusher_servo_wires_clearance = 6;
 
 
 /* [Slider] */
@@ -239,8 +247,6 @@ x_horn_cam_bp = 40;
 y_horn_cam_bp = -20;
 dx_horn_cam_bp = -20;
 
-x_pusher_body_bp = 0;
-y_pusher_body_bp = 20;
 
 x_horn_linkage_bp = 20;
 y_horn_linkage_bp = 55;
@@ -1051,71 +1057,7 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
 
 
 
-//module pusher_body() {
-//    dy_qc = -15;
-//    blank_offset = 8;
-//    z_locked_guide = z_guide + 2 * frame_clearance;
-//    dx_p_locked_guide = dx_base_offset + x_guide/2 + frame_clearance;
-//    dx_m_locked_guide = dx_base_offset - x_guide/2 - frame_clearance;
-//    dy_locked_guides = -24;
-//    servo_housing = [x_base_pillar + 4, 16, z_base_pillar];
-//    
-//    module orient_with_servo() {
-//        rotate([180, 0, 0]) rotate([0, 0, -90]) children();
-//    }
-//
-//    locked_guide = [14, 16, z_locked_guide];
-//    servo_joiner = [servo_housing.y, 4, abs(dz_linkage)];
-//
-//    module blank() {
-//        orient_with_servo()
-//            translate([dx_base_offset, blank_offset, 0]) {
-//                block(servo_housing,  center=BELOW+LEFT);
-//            }
-//        translate([0, dy_locked_guides, 0]) 
-//            block(servo_joiner, center=BELOW+RIGHT);
-//        translate([dx_p_locked_guide, dy_locked_guides, -frame_clearance]) 
-//            block(locked_guide, center=ABOVE+RIGHT+BEHIND);
-//        translate([dx_m_locked_guide, dy_locked_guides, -frame_clearance]) 
-//            block(locked_guide, center=ABOVE+RIGHT+FRONT);
-//        translate([filament_translation.x, dy_locked_guides, filament_translation.z])  {
-//            block([32, 4, 10], center=BELOW+RIGHT);
-//            block([9, 4, 2.2], center=ABOVE+RIGHT);
-//            center_reflect([1, 0, 0]) translate([3.9, 0, 3.]) rod(d=2.4, l=4, center=RIGHT+SIDEWISE);
-//        }
-//       
-//    }
-//    
-//    module shape() {
-//        render(convexity=10) difference() {
-//            blank();
-//            translate([0, dy_pusher_servo, dz_linkage]) orient_with_servo() 9g_servo(as_clearance = true);
-//            translate([0, dy_pusher_servo, 0]) orient_with_servo() servo_screws(as_clearance=true, recess=false, upper_nutcatch_sidecut=false);
-//            filament_loader(as_inlet_clip_clearance=true); 
-//            translate([0, dy_pusher_rail_screws, 0]) rails_screws(as_clearance = true);
-//        }
-//    }
-//    z_printing = -dy_locked_guides;
-//    rotation = 
-//        mode == PRINTING ? [90,  0, 0] :
-//        [0, 0, 0];
-//    translation = 
-//        mode == PRINTING ? [x_pusher_body_bp, y_pusher_body_bp, z_printing] :
-//        [0, 0, 0];
-//    translate(translation) rotate(rotation) {
-//        if (show_vitamins && mode != PRINTING) {
-//            visualize_vitamins(visualization_pusher_body) {
-//                translate([0, dy_pusher_servo, dz_servo + dz_linkage]) 
-//                    orient_with_servo()
-//                        color(MIUZEIU_SERVO_BLUE) 
-//                            9g_motor_sprocket_at_origin(); 
-//                translate([0, dy_pusher_servo, dz_linkage]) 
-//                   orient_with_servo() servo_screws(as_clearance=false, recess=true, upper_nutcatch_sidecut=false);
-//            }
-//        }
-//        visualize(visualization_pusher_body) shape();  
-//    }
-//}
+
 
 module rail_riders(left_right_centering = 0, y_guide = y_guide) {
     center_reflect([1, 0, 0]) translate([x_guide/2, 0, 0]) {
@@ -1265,9 +1207,7 @@ module slider() {
     module moving_clamp_slot() {
         block([9g_servo_body_width, 9g_servo_body_length, a_lot]);
     }
-    
-    
-    
+     
     module shape() {
         render(convexity=10) 
                 difference() {
@@ -1278,7 +1218,7 @@ module slider() {
     
     z_printing = 0;
     rotation = 
-        mode == PRINTING ? [0,  0, 180] : 
+        mode == PRINTING ? [180,  0, 0] : 
         [0, 0, 0];
     translation = 
         mode == PRINTING ? [x_slider_bp, y_slider_bp, z_printing] :
@@ -1289,10 +1229,24 @@ module slider() {
 }
 
 module slide_plate() {
+    dy_pusher_servo_inner_pedistal = -y_slide/2;
     
     module pusher_slot() {
         dy = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
         translate([0, dy, 0]) block([9g_servo_body_width, 9g_servo_body_length, a_lot]);
+    }
+    
+    module pusher_wire_clearance() {
+        // Cut into inner pedistal to allow room for wire and assembly
+        dy_pusher_wire_clearance = dy_pusher_servo_inner_pedistal - y_offset_pusher_wire_clearance;
+        dz = -z_slide_plate/2;
+        hull() {
+            translate([x_offset_pusher_wire_clearance, dy_pusher_wire_clearance, dz]) 
+                block([9g_servo_body_width, y_slide_plate_rim, z_pusher_servo_wires_clearance], center=BELOW+LEFT);
+            translate([x_offset_pusher_wire_clearance, dy_pusher_wire_clearance - z_pusher_servo_wires_clearance, dz]) 
+                block([9g_servo_body_width, y_slide_plate_rim, 2 * z_pusher_servo_wires_clearance], center=BELOW+LEFT);
+        }
+           
     }
     
     module fixed_clamp_slot() {
@@ -1312,11 +1266,19 @@ module slide_plate() {
     }
     
     module blank() {
+        // The main plate:
         x = 2 * x_slide_plate_rim + 9g_servo_body_width;  
         y = 2 * (2 * y_slide_plate_rim + 9g_servo_body_length)  
               + y_slide;
         z = z_slide_plate;
         block([x, y, z]); 
+        // Pedistal for outer part of pusher servo:
+        dy_pusher_servo_outer_pedistal = -y/2;
+        x_outer_pedistal = 9g_servo_body_width;
+        translate([0, dy_pusher_servo_outer_pedistal, 0]) block([x_outer_pedistal, y_slide_plate_rim, dz_pusher_servo], center=BELOW + RIGHT);
+        // Inner pedistal - must avoid interfering with wire and still allow assembly
+        
+        translate([0, dy_pusher_servo_inner_pedistal, 0]) block([9g_servo_body_width, y_slide_plate_rim, dz_pusher_servo], center=BELOW+LEFT);
     }
     
     module shape() {
@@ -1324,13 +1286,14 @@ module slide_plate() {
                 difference() {
                 blank();
                 pusher_slot();
+                pusher_wire_clearance();
                 fixed_clamp_slot();
                 rail_cavity();      
             }
      }
     z_printing = 0;
     rotation = 
-        mode == PRINTING ? [0,  0, 180] : 
+        mode == PRINTING ? [180,  0, 0] : 
         [0, 0, 0];
     translation = 
         mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :

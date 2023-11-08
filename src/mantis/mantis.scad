@@ -214,6 +214,10 @@ dz_linkage = -32; // [-40: 0]
 y_pusher_assembly = -42;
 dy_pusher_servo = 2;
 
+x_pivot_2 = 11.5; // [0: 0.5 : 20]
+y_pivot_2 = 41; // [40: 0.2 : 50]
+az_pivot_2 = 295; // [0: 360]
+
 /* [Limit Switch Holder Design] */
 dx_limit_switch_holder = -25; 
 dy_limit_switch_holder = 4;
@@ -738,6 +742,25 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
 
 module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     
+    z_moving_clamp_bracket = 10;
+    moving_clamp_rim = 3;
+    module moving_clamp_bracket() {
+        base = [
+            2 * moving_clamp_rim + 9g_servo_body_width,
+            2 * moving_clamp_rim + 9g_servo_body_length,
+            z_moving_clamp_bracket
+        ]; 
+       servo_wire_clearance = [ 6, 20, 6]; 
+        
+        slot = [9g_servo_body_width, 9g_servo_body_length, a_lot];
+        rotate([0, 0, 90]) translate([0, 18, 0]) render(convexity=10) difference() {
+            block(base, center=ABOVE);
+            block(slot);
+            translate([0, 0, 2]) block(servo_wire_clearance, center=RIGHT);
+        }
+    }
+    
+    
     module shape() {
         h = 4;
         pin_attachment = [2, 3, 8];
@@ -745,7 +768,7 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
         r_pin_attachment = r_horn_linkage - 4.5;
         r_barrel_attachment = r_horn_linkage + 4.;
         
-        linkage = [25, 3, 8];
+        linkage = [20, 3, 8];
         render(convexity=10) difference() {
             union() {
                 hull() {
@@ -761,7 +784,7 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
                     rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=BELOW);
                     rotate([0, 0, az_horn_linkage_pivot])  translate([r_barrel_attachment, 0, 2])  {
                         block(barrel_attachment, center=BELOW+FRONT);
-                         translate([barrel_attachment.x - 1, 1, 0]) rotate([0, 0, 75]) block(linkage, center=BELOW+FRONT);
+                        translate([barrel_attachment.x - 1, 1, 0]) rotate([0, 0, 75]) block(linkage, center=BELOW+FRONT);
                     }
                 }
                
@@ -772,11 +795,6 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
             
 
         }
-        //        // Use the children to generate an attachment
-        clipping_diameter = 9;
-        child_idx_handle_for_bearing = 0;
-        child_idx_handle_for_tcap = 1;
-        child_idx_handle_for_lcap = 2;
         
         attachment_instructions = [
             [ADD_SPRUES, AP_TCAP, [45, 135, 225, 315]],
@@ -787,8 +805,12 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
         air_gap = 0.45;
         dz_print_inplace_pivot = -6;
         rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, dz_print_inplace_pivot]) {
-            audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions) {
-            }
+            audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions); 
+        }
+
+        translate([x_pivot_2, y_pivot_2, dz_print_inplace_pivot]) rotate([0, 0, az_pivot_2]) {
+            audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions);
+            moving_clamp_bracket();
         }
     }
     z_printing = 4;
@@ -801,7 +823,6 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
             visualize_vitamins(visualization_horn_linkage) 
-                //pivot(as_clearance = false) ; 
                 translate([0, 0, -3.5])  one_arm_horn();
         }
         visualize(visualization_horn_linkage) shape();  
@@ -1132,25 +1153,25 @@ module 9g_servo(as_clearance=false) {
 
 
 
-module tie_dovetail(as_clearance = false, clearance = dovetail_clearance) {
-    if (as_clearance) {
-        cl = clearance;
-        cl2 = 2*clearance;
-        hull() {
-            translate([0, 0, z_dovetail])  block([0.1, 0.75*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
-            translate([-x_dovetail, 0, z_dovetail + cl]) block([0.1, y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
-            block([0.01,0.375*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
-            translate([-x_dovetail, 0, 0]) block([0.01, 0.5*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
-        }
-    } else {
-        hull() {
-            translate([0, 0, z_dovetail])  block([0.1, 0.75*y_dovetail, 0.1], center=BELOW+BEHIND);
-            translate([-x_dovetail, 0, z_dovetail]) block([0.1, y_dovetail, 0.1], center=BELOW+BEHIND);
-            block([0.01,0.375*y_dovetail, 0.1], center=BELOW+BEHIND);
-            translate([-x_dovetail, 0, 0]) block([0.01, 0.5*y_dovetail, 0.1], center=BELOW+BEHIND);    
-        }    
-    }
-}
+//module tie_dovetail(as_clearance = false, clearance = dovetail_clearance) {
+//    if (as_clearance) {
+//        cl = clearance;
+//        cl2 = 2*clearance;
+//        hull() {
+//            translate([0, 0, z_dovetail])  block([0.1, 0.75*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
+//            translate([-x_dovetail, 0, z_dovetail + cl]) block([0.1, y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
+//            block([0.01,0.375*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
+//            translate([-x_dovetail, 0, 0]) block([0.01, 0.5*y_dovetail + cl2, 0.1], center=BELOW+BEHIND);
+//        }
+//    } else {
+//        hull() {
+//            translate([0, 0, z_dovetail])  block([0.1, 0.75*y_dovetail, 0.1], center=BELOW+BEHIND);
+//            translate([-x_dovetail, 0, z_dovetail]) block([0.1, y_dovetail, 0.1], center=BELOW+BEHIND);
+//            block([0.01,0.375*y_dovetail, 0.1], center=BELOW+BEHIND);
+//            translate([-x_dovetail, 0, 0]) block([0.01, 0.5*y_dovetail, 0.1], center=BELOW+BEHIND);    
+//        }    
+//    }
+//}
 
 
 module vertical_rail_screws(as_clearance=false, cld=0.2) {

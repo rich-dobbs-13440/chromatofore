@@ -52,7 +52,6 @@ filament_length = 200; // [50:200]
 
 /* [Show] */ 
 // Order to match the legend:
-adjustable_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 filament_loader  = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 filament_loader_clip  = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -204,12 +203,12 @@ tie_length = 30;
 
 /* [Linkage Design] */
 debug_kinematics = true; 
-az_horn_linkage_pivot = 25;
+az_horn_linkage_pivot = -25;
 r_horn_linkage = 16;
-linkage_length = 28;
+linkage_length = 24;
 linkage_shorten_range = 4;
 // *******************************************************
-dz_linkage = -32; // [-40: 0]
+dz_linkage = -27; // [-40: 0]
 // TODO:  Calculate this from plate dimensions
 y_pusher_assembly = -42;
 dy_pusher_servo = 2;
@@ -262,10 +261,6 @@ y_horn_linkage_bp = 55;
 
 x_linkage_bp = -30;
 y_linkage_bp = 40;
-
-x_adjustable_linkage_bp = -30;
-y_adjustable_linkage_bp = 50;
-dx_adjustable_linkage_bp = -30;
 
 
 x_limit_switch_holder_bp = -20; 
@@ -334,11 +329,7 @@ visualization_horn_linkage  =
      
 visualization_linkage  =        
     visualize_info(
-        "Linkage", PART_2, show(linkage, "linkage") , layout, show_parts);  
-        
-visualization_adjustable_linkage  =        
-    visualize_info(
-        "Adjustable Linkage", PART_3, show(adjustable_linkage, "adjustable_linkage") , layout, show_parts);          
+        "Linkage", PART_2, show(linkage, "linkage") , layout, show_parts);        
         
 visualization_fixed_clamp_body = 
     visualize_info(
@@ -379,7 +370,6 @@ visualization_slider =
             "Slider", PART_20, show(slider, "slider") , layout, show_parts);               
         
 visualization_infos = [
-    visualization_adjustable_linkage,
     visualization_filament_loader, 
     visualization_filament_loader_clip, 
     visualization_fixed_clamp_body,
@@ -452,75 +442,6 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, sho
 
 
 // Parts
-//module adjustable_linkage() {
-//    // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
-//    // The adjustable linkage constis of two part that serve the purpose of the single piece linkage,
-//    // but can be fine tuned for length.  In the short term this is needed for development and 
-//    // experimentation, but is not likely to be included in the final product as geometry is 
-//    // locked down.
-//    linkage_width = 4;
-//    linkage_height = 6;
-//    pad_height = 4;
-//    pad_diameter = 5;
-//    slider_height = 6;
-//    
-//    slider = [linkage_length - pad_diameter - linkage_shorten_range, linkage_width/2, slider_height];
-//    linkage_adjustment_range = slider.x - 6;
-//    slot_translation = [linkage_adjustment_range/2, -25, slider_height/2];
-//    dy_slot = (pad_diameter-linkage_width)/2;
-//    dx_slot = 2;
-//    module blank() {
-//        hull() {
-//            translate([linkage_length/2, 0, 0]) {
-//                can(d=pad_diameter, h = pad_height, center=ABOVE);
-//                block([pad_diameter, pad_diameter/2, pad_height], center=ABOVE+RIGHT);
-//            }
-//        }
-//        translate([dx_slot, dy_slot, 0]) {
-//            block(slider, center = ABOVE + RIGHT);
-//            block([linkage_length/2, linkage_width/2, pad_height], center=ABOVE+FRONT+RIGHT);
-//        }
-//    }  
-//    module slot() {
-//        translate([dx_slot, 0, 0]) {
-//            hull() {
-//                center_reflect([1, 0, 0]) {
-//                    translate(slot_translation) {
-//                        rotate([90, 0, 0]) hole_through("M2", cld=0.2, $fn=12);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    module shape() {
-//        render(convexity=10) difference() {
-//            blank();
-//            translate([linkage_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
-//            slot();
-//        }
-//    }
-//
-//    z_printing = pad_diameter/2;
-//    rotation = 
-//        mode == PRINTING ? [-90,  0, 0] :
-//        [0, 0, linkage_angle];    
-//    translation = 
-//        mode == PRINTING ? [x_adjustable_linkage_bp, y_adjustable_linkage_bp, z_printing] :
-//        [dx_linkage, dy_linkage, dz_linkage + 8];  
-//    translate(translation) rotate(rotation) {
-//        visualize(visualization_adjustable_linkage) {
-//            shape(); 
-//            if  (mode == PRINTING) {
-//                translate([0, 0, 2 * linkage_width]) shape(); 
-//            } else {
-//                shape(); 
-//                rotate([0, 0, 180]) shape();
-//            }
-//        }
-//    }
-//}
-
-
 module rails_screws(as_clearance = true) {
     module item() {
         if (as_clearance) {
@@ -572,32 +493,6 @@ module fixed_clamp_body() {
         translate([dx_p_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+BEHIND);
         translate([dx_m_locked_guide, blank_offset, -frame_clearance]) block([12, 14, z_locked_guide], center=ABOVE+LEFT+FRONT);
     }
-    
-    module limit_switch_holder() {
-        limit_switch_base = rls_base();
-        z_terminal_block = 11.75;
-        attachment = [limit_switch_holder_base_thickness + limit_switch_base.y, z_terminal_block, 6];
-        //dx_top_clamp_adjustment = right_handed_limit_switch_holder? - limit_switch_holder_base_thickness : 0;
-        dx_attachment = -21.75;  
-        dy_attachment = 26; 
-        dz_attachment = -10; 
-        translate([dx_attachment, dy_attachment, dz_attachment]) block(attachment, center = BEHIND +LEFT);
-        translate([dx_limit_switch_holder, dy_limit_switch_holder, dz_limit_switch_holder]) {
-            rotate([0, 90, 90]) {
-                nsrsh_terminal_end_clamp(
-                    show_vitamins=show_vitamins && mode != PRINTING , 
-                    right_handed = true,
-                    alpha=1, 
-                    thickness=limit_switch_holder_base_thickness, 
-                    recess_mounting_screws = false,
-                    use_dupont_connectors = true,
-                    roller_arm_length = roller_arm_length,
-                    switch_depressed = roller_switch_depressed,
-                    extra_terminals = 1, 
-                    z_terminal_block= z_terminal_block); 
-            }
-        }     
-    }
     module blank() {
         // The part around the servo:
         translate([dx_base_offset, 0, 0]) 
@@ -634,9 +529,6 @@ module fixed_clamp_body() {
             rails_screws(as_clearance = false);
         }  
         visualize(visualization_fixed_clamp_body) shape();
-        visualize_vitamins(visualization_fixed_clamp_body) { 
-            limit_switch_holder();
-        }
     }
 }
 
@@ -738,27 +630,36 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
 }
 
 
-module horn_linkage(servo_angle=0, servo_offset_angle=0) {
-    
+
+module moving_clamp_bracket() {
     z_moving_clamp_bracket = 10;
-    moving_clamp_rim = 3;
-    module moving_clamp_bracket() {
-        base = [
-            2 * moving_clamp_rim + 9g_servo_body_width,
-            2 * moving_clamp_rim + 9g_servo_body_length,
-            z_moving_clamp_bracket
-        ]; 
-       servo_wire_clearance = [ 6, 20, 6]; 
-        
-        slot = [9g_servo_body_width, 9g_servo_body_length, a_lot];
-        rotate([0, 0, 90]) translate([0, 18, 0]) render(convexity=10) difference() {
+    moving_clamp_rim = 3;        
+    base = [
+        2 * moving_clamp_rim + 9g_servo_body_width,
+        2 * moving_clamp_rim + 9g_servo_body_length,
+        z_moving_clamp_bracket
+    ]; 
+    servo_wire_clearance = [ 6, 20, 6]; 
+    slot = [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    module shape() {    
+        render(convexity=10) difference() {
             block(base, center=ABOVE);
             block(slot);
-            translate([0, 0, 2]) block(servo_wire_clearance, center=RIGHT);
+            translate([0, 0, 8]) block(servo_wire_clearance, center=RIGHT);
         }
     }
-    
-    
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0, 0, 0] :
+        [0, 0, 0];
+    // base.y + dy_pivot,
+    translation = 
+        mode == PRINTING ? [x_horn_cam_bp , y_horn_cam_bp, z_printing] :
+        [dx_slide_plate,  base.y/2 + 4 + dy_pivot, dz_linkage];
+    translate(translation) rotate(rotation) visualize(visualization_moving_clamp_bracket) shape();       
+}
+
+module horn_linkage(servo_angle=0, servo_offset_angle=0) {
     module shape() {
         h = 4;
         pin_attachment = [2, 3, 8];
@@ -767,76 +668,41 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
         r_barrel_attachment = r_horn_linkage + 4.;
         
         linkage = [15, 3, 8];
-        visualize(visualization_horn_linkage) render(convexity=10) difference() {
-            union() {
-                hull() {
-                    can(d=od_cam, h=h, center=ABOVE);
-                    translate([12, 0, 0]) can(d=7, h=h, center=ABOVE);
-                    
-                }
-                translate([0, 0, h-2]) {
+        translate([0, 0, -4]) {
+            render(convexity=10) difference() {
+                union() {
                     hull() {
-                        can(d=od_cam, h=2, center=ABOVE);
-                        rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
+                        can(d=od_cam, h=h, center=ABOVE);
+                        translate([12, 0, 0]) can(d=7, h=h, center=ABOVE); 
                     }
-                    rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=BELOW);
-//                    }
-                    
+                    translate([0, 0, h-2]) {
+                        hull() {
+                            can(d=od_cam, h=2, center=ABOVE);
+                            rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
+                        }
+                        rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=BELOW);
+                        
+                    }
                 }
-               
-            }
-            translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
-            can(d=2.2, h=a_lot);  // Central hole for screw!
-            //pivot(as_clearance=true); 
-            
-
+                translate([0, 0, -3.5])  hull() one_arm_horn(as_clearance=true);
+                can(d=2.2, h=a_lot);  // Central hole for screw!
+            }  
         }
-
-        
-        
-        
-        attachment_instructions = [
-            [ADD_SPRUES, AP_TCAP, [45, 135, 225, 315]],
-        ];        
-        size = 1;
-        angle_bearing = -90; 
-        angle_pin = 90;
-        air_gap = 0.45;
-        dz_print_inplace_pivot = -6;
-        * rotate([0, 0, az_horn_linkage_pivot]) translate([r_horn_linkage, 0, dz_print_inplace_pivot]) {
-            audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions); 
-        }
-
-        translate([x_pivot_2, y_pivot_2, dz_print_inplace_pivot]) rotate([0, 0, az_pivot_2]) {
-            * audrey_horizontal_pivot(size, air_gap, angle_bearing, angle_pin, attachment_instructions=attachment_instructions);
-            visualize(visualization_moving_clamp_bracket) moving_clamp_bracket();
-        }
-        
-        * visualize(visualization_linkage) {
-            translate([0, 0, h-2]) {
-                rotate([0, 0, az_horn_linkage_pivot])  translate([r_barrel_attachment, 0, 2])  {
-                    block(barrel_attachment, center=BELOW+FRONT);
-                    translate([barrel_attachment.x - 2, -1, 0]) rotate([0, 0, 75]) block(linkage, center=BELOW+FRONT);
-                }
-            }
-            * translate([x_pivot_2, y_pivot_2, dz_print_inplace_pivot]) 
-                rotate([0, 0, az_pivot_2])
-                    translate([4, 0, 2]) block(barrel_attachment, center=ABOVE+FRONT);
-        }        
     }
-    z_printing = 4;
+    
+    z_printing = 0;
     rotation = 
         mode == PRINTING ? [180,  0, 0] :
         [180, 0, servo_angle + servo_offset_angle];
     translation = 
         mode == PRINTING ? [x_horn_linkage_bp, y_horn_linkage_bp, z_printing] :
-        [dx_origin, 0, dz_servo + dz_linkage]; 
+        [dx_origin, 0, dz_linkage]; 
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
             visualize_vitamins(visualization_horn_linkage) 
-                translate([0, 0, -3.5])  one_arm_horn();
+                translate([0, 0, -7.5])  one_arm_horn();
         }
-        shape();  
+        visualize(visualization_horn_linkage) shape();  
     }
 } 
 
@@ -844,13 +710,11 @@ module horn_linkage(servo_angle=0, servo_offset_angle=0) {
 module linkage() {
     angle_bearing_moving_clamp = -220; 
     l_strut_moving_clamp = 14;
-    angle_bearing_horn_cam = -140;
-    l_strut_horn_cam = 14;
+    angle_bearing_horn_cam = -180;
+    l_strut_horn_cam = 10;
     
     
-    pivot_size = 1;
-
-    
+    pivot_size = 1; 
     angle_pin_moving_clamp = -linkage_angle;
     angle_pin_horn_cam = 90 - az_horn_linkage_pivot 
                                         - linkage_angle
@@ -858,7 +722,7 @@ module linkage() {
                                         + servo_offset_angle_pusher;
     air_gap = 0.45;
     attachment_instructions = [
-        [ADD_SPRUES, AP_TCAP, [45, 135, 225, 315]],
+        [ADD_SPRUES, AP_LCAP, [45, 135, 225, 315]],
     ]; 
     
     
@@ -883,8 +747,7 @@ module linkage() {
             }
             
         }
-            
-        
+
         translate([-linkage_length/2, 0, 0]) {
             audrey_horizontal_pivot(
                 pivot_size, 
@@ -917,7 +780,7 @@ module linkage() {
         [0, 0, linkage_angle];    
     translation = 
         mode == PRINTING ? [x_linkage_bp, y_linkage_bp, z_printing] :
-        [dx_linkage, dy_linkage, dz_linkage + 8];  
+        [dx_linkage, dy_linkage, dz_linkage];  
     translate(translation) rotate(rotation) shape();  
 }
 
@@ -1295,8 +1158,11 @@ module pusher() {
         translate([0, dy_pusher_servo, 0]) 
             horn_linkage(servo_angle=servo_angle_pusher, servo_offset_angle=servo_offset_angle_pusher); 
         translate([0, dy_pusher_servo, 0]) 
-            linkage();
+            linkage(); 
+        
+            
     }
+    moving_clamp_bracket();
 }
 
 module position_sensor(show_vitamins=false) {
@@ -1313,12 +1179,14 @@ module position_sensor(show_vitamins=false) {
        dx_position_sensor, 
         -y_slide/2 - dy_position_sensor, 
         dz_position_sensor];
-    translate(translation) {
-        rotate([0, 0, 90]) nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=show_vitamins);
-    }
-    translate([translation.x, translation.y, 0]) {
-        block([6, 25, 2.3], center = BELOW+RIGHT);
-        block([6, 12.5, 2.3], center = BELOW+LEFT);
+        visualize_vitamins(visualization_slide_plate) {
+        translate(translation) {
+            rotate([0, 0, 90]) nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=show_vitamins);
+        }
+        translate([translation.x, translation.y, 0]) {
+            block([6, 25, 2.3], center = BELOW+RIGHT);
+            block([6, 12.5, 2.3], center = BELOW+LEFT);
+        }
     }
 }
 

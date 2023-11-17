@@ -47,7 +47,7 @@ print_pusher = true;
 print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "limit_cam"; // [clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_cam, moving_clamp_body, rails, servo_base, slide_plate, tie, tie_bracket]
+part_to_print = "slider"; // [clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_cam, moving_clamp_body, rails, servo_base, slide_plate, slider, tie_bracket]
 
 filament_length = 200; // [50:200]
 
@@ -820,59 +820,40 @@ module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_b
 
 
 
+servo_retainer();
 
-module rail_riders(left_right_centering = 0, y_guide = y_guide) {
-    center_reflect([1, 0, 0]) translate([x_guide/2, 0, 0]) {
-        hull() {
-            block([1, y_guide, z_guide + s_guide_dovetail], center=ABOVE+BEHIND + left_right_centering);
-            block([1+s_guide_dovetail, y_guide, z_guide], center=ABOVE+BEHIND + left_right_centering);   
-        }
-    }
-}
-
-
-module servo_screws(as_clearance = true, recess=false, upper_nutcatch_sidecut = false) {
-    h_recess = recess ? 3.8 : 0;
-    h = recess ? 10 : 0;
+module servo_retainer() {
+    // A backup that holds the nuts on the back side of the servo mounting bracket
+    x = 2 * x_slider_rim + 9g_servo_body_width;  
+    y = 2 * y_slide_plate_rim + 9g_servo_body_length;
+    z =  2;    // Just needs to be a bit more than the thickness of a nut.  
+    // The core provides the body into which the servo will be inserted.
+    core = [x, y, z];
+    servo_slot = 1.00 * [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    servo_wire_slot = [4, 9g_servo_body_length/2  + 2, a_lot];
     
-    screw_length = recess ? 12 : 20;
-    screw_name = str("M2x", screw_length);
-    if (as_clearance) {
-        dz = recess ? h-h_recess : 25;
-        translate([8.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
-        translate([-19.5, 0, dz]) hole_through("M2", cld=0.4, h = h, $fn=12);
-        if (upper_nutcatch_sidecut) {
-            translate([-19.5, 0, -16]) {
-                rotate([0, 0, 180]) 
-                    nutcatch_sidecut(
-                        name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
-                        l      = 50.0,  // length of slot
-                        clk    =  0.0,  // key width clearance
-                        clh    =  0.0,  // height clearance
-                        clsl   =  0.1);  // slot width clearance
+    module servo_screws(as_clearance) {
+        center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
+            if (as_clearance) {
+                translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+                translate([0, 0, 1.5]) rotate([180, 0, 0]) nutcatch_parallel(
+                    name   = "M2",  // name of screw family (i.e. M3, M4, ...)
+                    clh    =  10,  // nut height clearance
+                    clk    =  0.4);  // clearance aditional to nominal key width                
+            } else {
+                assert(false, "Not implemented yet");
             }
         }
-    } else {
-        dz = recess ? - h_recess : 2;
-        color(BLACK_IRON) {
-            translate([8.5, 0, dz]) screw(screw_name, $fn=12);
-             translate([-19.5, 0, dz]) screw(screw_name, $fn=12);
-        }
-    }    
-}
-
-
-module 9g_servo(as_clearance=false) {
-    module cavity() {
-        translate([0, 0, dz_servo]) 9g_motor_sprocket_at_origin();
-        servo_screws(as_clearance = true, recess=true);      
     }
-
-    if (as_clearance) {
-        cavity();
-    } else {
-         translate([0, 0, dz_servo]) color(MIUZEIU_SERVO_BLUE) 9g_motor_sprocket_at_origin();
+    
+    difference() {
+        block(core, center = ABOVE);
+        block(servo_slot);
+        block(servo_wire_slot, center=RIGHT);
+        servo_screws(as_clearance=true); 
+        
     }
+    
 }
 
 
@@ -882,22 +863,53 @@ module slider(a_horn_pivot) {
     module blank() {
         x = 2 * x_slider_rim + 9g_servo_body_width - 2 * slider_clearance;  
         y = 2 * y_slide_plate_rim + 9g_servo_body_length;
-        z = z_slide_plate;    
+        z = z_slide_plate;
+        // The core provides the body into which the servo will be inserted.
+        core = [x, y, z_slide_plate];
+        // The waist engages with the slider plate rails with a 45 degree angle.
+        waist = [x + z_slide_plate, y, 0.01];
         hull() {
-            block([x, y, z_slide_plate]);
-            block([x + z_slide_plate, y, 0.01]);
+            block(core);
+            block(waist);
         }
     }
     
-    module moving_clamp_slot() {
+    module servo_slot() {
+        // Currently this is a tight press fit! 
         block([9g_servo_body_width, 9g_servo_body_length, a_lot]);
+        // Note: Once screws are used, add clearance for easier assembly
     }
+    
+    module servo_screw(as_clearance) {
+        rotate([0, 0, 180]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
+            if (as_clearance) {
+                translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+            } else {
+                assert(false, "Not implemented yet");
+            }
+        }
+    }
+    
+    module servo_screw_by_wires(as_clearance) {
+        if (as_clearance) {
+            hull () {
+                rotate([0, 0, 180])  {
+                    servo_screw(as_clearance=true);
+                    //translate([0, -y_slide_plate_rim, 0]) servo_screw(as_clearance=true);
+                }
+            }
+        }
+    }    
      
     module shape() {
-        render(convexity=10) 
+        render(convexity=10) {
                 difference() {
-                blank();
-                moving_clamp_slot();     
+                    blank();
+                    servo_slot();
+                    servo_screw(as_clearance=true);
+                    servo_screw_by_wires(as_clearance=true);
+                    
+                }    
             }        
     }
     
@@ -923,7 +935,9 @@ module slider(a_horn_pivot) {
         mode == PRINTING ? [x_slider_bp, y_slider_bp, z_printing] :
         [dx_slide_plate, 18  + dy_pivot(a_horn_pivot), dz_slide_plate];
     translate(translation) rotate(rotation) {
-        visualize_vitamins(visualization_slider) vitamins();
+        if (show_vitamins && mode != PRINTING) {
+            visualize_vitamins(visualization_slider) vitamins();
+        }
         visualize(visualization_slider) shape();  
     }
 }
@@ -1104,7 +1118,6 @@ module visualize_assemblies() {
     }
     slide();
     pusher();
-    moving_clamp();
     fixed_clamp();
      filament_loader(as_holder = true, show_bow = true, show_tip = true);
      filament_loader_clip();

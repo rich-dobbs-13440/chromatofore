@@ -46,7 +46,7 @@ print_fixed_clamp_cam = true;
 print_pusher = true;
 
 print_one_part = false;
-part_to_print = "pusher_driver_link"; // [clip, collet, fixed_clamp_body, clamp_cam, pusher_driver_link, linkage, limit_cam, moving_clamp_body, rails, servo_base, servo_retainer slide_plate, slider, tie_bracket]
+part_to_print = "pusher_driver_link"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_retainer slide_plate, slider]
 
 
 
@@ -56,7 +56,7 @@ part_to_print = "pusher_driver_link"; // [clip, collet, fixed_clamp_body, clamp_
 clamp_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_cam =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+pusher_coupler_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_bracket = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 pusher_driver_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 servo_retainer = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -66,8 +66,8 @@ slider  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Legend] */
 x_legend = 36; // [-200 : 200]
-y_legend = 120; // [-200 : 200]
-z_legend = -40; // [-200 : 200]
+y_legend = 50; // [-200 : 200]
+z_legend = -30; // [-200 : 200]
 legend_position = [x_legend, y_legend, z_legend];
 
 
@@ -84,34 +84,7 @@ roller_switch_depressed = true;
 roller_arm_length = 20; // [18:Short, 20:Long]
 limit_switch_is_depressed = true;
 
-
-
-/* [One Arm Horn Characteristics] */
-dz_engagement_one_arm_horn = -1;// 1;
-h_barrel_one_arm_horn = 3.77;
-d_barrel_one_arm_horn = 7.5;
-h_arm_one_arm_horn = 1.3;    
-dx_one_arm_horn = 14;
-
-
-/* [Clamp Cam Design] */
-od_cam_bottom = 26;
-od_cam_top = 20;
-id_clamp_cam = 22;
-
-dx_cam_slice_bottom = 5;  // [-10: 0.1: 10]
-ay_cam_slice_bottom = -85; // [-90: 0]
-az_clamp_cam_to_horn = 180; // [-180:180]
-
-// The height from the horn arm to the top of the cam
-z_servo_body_to_horn_barrel = 5.3; // [0: 0.1: 10]
-z_clearance_clamp_cam = 3; 
-// Set to control stiffness of cam to horn attachment
-z_screw_head_to_horn = 2; //[1:0.5:2.5]
-
-
-
-/* [Slide Plate Design] */
+/* [Servo Characteristics] */
 // Adjust so that servos fits into slide plate openings!
 9g_servo_body_length = 23; // [22.5, 23.0, 23.5, 24]
 // Adjust so that servos fits into slide plate openings!
@@ -120,12 +93,42 @@ z_screw_head_to_horn = 2; //[1:0.5:2.5]
 9g_servo_offset_origin_to_edge = 6;
 // Adjust so that servo shows as resting on pedistal
 9g_servo_vertical_offset_origin_to_flange = 14.5;
+
+/* [One Arm Horn Characteristics] */
+dz_engagement_one_arm_horn = -1;// 1;
+h_barrel_one_arm_horn = 3.77;
+d_barrel_one_arm_horn = 7.5;
+h_arm_one_arm_horn = 1.3;    
+dx_one_arm_horn = 14;
+// The height from the horn arm to the top of the cam
+z_servo_body_to_horn_barrel = 5.3; // [0: 0.1: 10]
+
+
+/* [Clamp Cam Design] */
+d_bottom_for_clamp_cam = 26;
+d_top_for_clamp_cam = 20;
+// Needs to clear the gear housing, and probably wire end servo screw
+id_for_clamp_cam = 22;
+
+// Adjust so just a bit of flat exists based on z_clearance_clamp_cam.
+slice_angle_for_clamp_cam = 2.5; // [0: 0.1: 10]
+dz_slice_for_clamp_cam = 2;  // [-10: 0.1: 10]
+az_slice_to_horn_for_clamp_cam =145; // [-180:180]
+delta_z_slice_segment = 0.5; // [0: 0.1: 3]
+z_clearance_clamp_cam = 2.0; 
+// Set to control stiffness of cam to horn attachment
+z_screw_head_to_horn = 2; //[1:0.5:2.5]
+
+
+
+/* [Slide Plate Design] */
+
 // Lateral offset between CL of filament to CL of servos
 dx_slide_plate = 9; 
 // Offset of the mid point of the slide plate from the mid point of the slide plate, in the direction that the slide moves.
 dy_slide_plate = 0; //[-20:0.1:20]
 // Offset of the slide plate vertically from the CL of the filament.  
-dz_slide_plate = -5; //[-20:0.1:20]
+dz_slide_plate = -6; //[-20:0.1:20]
 // Lateral rim around servos inserted into slide plate
 x_slide_plate_rim = 6;
 // Rim in the direction of sliding 
@@ -185,11 +188,11 @@ tie_length = 30;
 
 
 
-/* [Linkage Design] */
+/* [Pusher Linkage Design] */
 // Adjust so that linkage lines up with shaft pusher servo.  
 dz_linkage = -20; // [-22:0.1:-18]
 debug_kinematics = false; 
-az_horn_linkage_pivot = 25;
+az_drive_link_pivot = 25;
 r_horn_linkage = 16;
 linkage_length = 24;
 linkage_shorten_range = 4;
@@ -237,7 +240,10 @@ y_foundation_bp = -40;
 
 module end_of_customization() {}
 
-/* Linkage kinematicts */
+
+
+
+/* Linkage Kinematicts  Calculations*/
 
 dx_origin = dx_slide_plate;
 dy_origin = -40;  // TODO Calculate from frame size?
@@ -261,12 +267,12 @@ dy_linkage = function(a_horn_pivot) dy_horn_pivot(a_horn_pivot)  - dy_origin + s
  y_moving_clamp = function(a_horn_pivot) dy_pivot(a_horn_pivot) + y_pusher_assembly;
 
 
-a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
+a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_drive_link_pivot;
 dy_moving_clamp =  dy_moving_clamp_offset  + dy_pivot(a_horn_pivot);
 
 if (debug_kinematics && mode != PRINTING) {
     translate([dx_origin, dy_origin, 0]) color("yellow") can(d=1, h=a_lot);
-    a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
+    a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_drive_link_pivot;
     translate([dx_horn_pivot(a_horn_pivot), dy_horn_pivot(a_horn_pivot), 0]) color("blue") can(d=1, h=a_lot);
     translate([dx_pivot(a_horn_pivot), dy_pivot(a_horn_pivot), 0]) color("green") can(d=1, h=a_lot);
     translate([dx_linkage_midpoint(a_horn_pivot), dy_linkage_midpoint(a_horn_pivot), 0]) color("brown") can(d=1, h=a_lot);
@@ -288,9 +294,9 @@ visualization_pusher_driver_link  =
     visualize_info(
         "Pusher Driver Link", PART_1, show(pusher_driver_link, "pusher_driver_link") , layout, show_parts);   
      
-visualization_linkage  =        
+visualization_pusher_coupler_link  =        
     visualize_info(
-        "Linkage", PART_2, show(linkage, "linkage") , layout, show_parts);        
+        "Pusher Coupler Link", PART_2, show(pusher_coupler_link, "pusher_coupler_link") , layout, show_parts);        
         
 visualization_fixed_clamp_body = 
     visualize_info(
@@ -300,10 +306,7 @@ visualization_fixed_clamp_body =
 visualization_clamp_cam = 
     visualize_info(
         "Horn Cam", PART_7, show(clamp_cam, "clamp_cam") , layout, show_parts); 
-        
-//visualization_limit_switch_holder =   
-//    visualize_info(
-//        "Limit Switch Holder", PART_8, show(limit_switch_holder, "limit_switch_holder") , layout, show_parts);  
+
   
 visualization_moving_clamp_bracket  =
     visualize_info(
@@ -328,9 +331,10 @@ visualization_slider =
 visualization_infos = [
     visualization_fixed_clamp_body,
     visualization_clamp_cam,
+    visualization_pusher_coupler_link,
     visualization_pusher_driver_link,
     visualization_limit_cam,
-    visualization_linkage,
+    
     visualization_moving_clamp_bracket,
     visualization_servo_retainer,
     visualization_slide_plate,
@@ -403,23 +407,27 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     z_housing_clearance = z_servo_body_to_horn_barrel - z_clearance_clamp_cam;
  
     module gear_housing_clearance() {
-        can(d=12, h=z_housing_clearance, center=ABOVE);
-        intersection() {
-            translate([-4, 0, 0]) block([20, 20, z_housing_clearance], center=ABOVE+FRONT);
-            can(d=id_clamp_cam, h=z_housing_clearance, center=ABOVE);
-        }
+        can(d=id_for_clamp_cam, h=z_housing_clearance, center=ABOVE);
+//        intersection() {
+//            translate([-4, 0, -1]) block([20, 20, z_housing_clearance], center=ABOVE+FRONT);
+//            can(d=id_for_clamp_cam, h=z_housing_clearance, center=ABOVE);
+//        }
     }   
     module shape() {
         d_lock = 0.1;
         ax_clamp_slice = 20;
         //render(convexity=10) 
         difference() {
-            can(d=od_cam_bottom, taper=od_cam_top, h=h, center=ABOVE);
+            can(d=d_bottom_for_clamp_cam, taper=d_top_for_clamp_cam, h=h, center=ABOVE);
              // Provide the camming surface to force the filament down to lock it
-            rotate([0, 0, az_clamp_cam_to_horn]) 
-                translate([0, 0, 0])
-                    rotate([0, ay_cam_slice_bottom, 0]) 
-                        plane_clearance(BEHIND); 
+            rotate([0, 0, az_slice_to_horn_for_clamp_cam]) 
+                for (i = [0:1:2]) {
+                    rotate([0, 0, 90*i])
+                    translate([0, 0, dz_slice_for_clamp_cam + i * delta_z_slice_segment])
+                        rotate([0, slice_angle_for_clamp_cam, 0]) 
+                            //#plane_clearance(BELOW + RIGHT + FRONT); 
+                            block([20, 20, 20], center = BELOW + RIGHT + FRONT); 
+                }
             
             // Screw used to attach horn
             can(d=2.5, h=a_lot); //Screw 
@@ -497,9 +505,9 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
 
         hull() {
             can(d=d_center, h=2, center=ABOVE);
-            rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
+            rotate([0, 0, az_drive_link_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
         }
-        rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=ABOVE);     
+        rotate([0, 0, az_drive_link_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=ABOVE);     
 
     }   
             
@@ -518,7 +526,7 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
         z_printing = 0;
         rotation = 
             mode == PRINTING ? [0,  0, a_horn_pivot] :
-            [0, 0, a_horn_pivot - az_horn_linkage_pivot];
+            [0, 0, a_horn_pivot - az_drive_link_pivot];
         translation = 
             mode == PRINTING ? [x_pusher_bp + dx_origin, y_pusher_bp, z_printing] :
             [dx_origin, 0, dz_slide_plate + dz_linkage]; 
@@ -563,7 +571,7 @@ module limit_cam(a_horn_pivot) {
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [0,  0, 0] :
-        [0, 0, a_horn_pivot - az_horn_linkage_pivot];
+        [0, 0, a_horn_pivot - az_drive_link_pivot];
     translation = 
         mode == PRINTING ? [x_limit_cam_bp, y_limit_cam_bp, z_printing] :
         [dx_origin, 0, dz_slide_plate  + dz_linkage - h_limit_cam + dz_engagement]; 
@@ -573,7 +581,7 @@ module limit_cam(a_horn_pivot) {
 }
 
 
-module linkage(a_horn_pivot) {
+module pusher_coupler_link(a_horn_pivot) {
     angle_bearing_moving_clamp = -220; 
     l_strut_moving_clamp = 14;
     angle_bearing_horn_cam = -180;
@@ -582,7 +590,7 @@ module linkage(a_horn_pivot) {
     
     pivot_size = 1; 
     angle_pin_moving_clamp = -linkage_angle(a_horn_pivot);
-    angle_pin_horn_cam = 90 + az_horn_linkage_pivot 
+    angle_pin_horn_cam = 90 + az_drive_link_pivot 
                                         - linkage_angle(a_horn_pivot)
                                         + servo_angle_pusher
                                         + servo_offset_angle_pusher;
@@ -648,7 +656,7 @@ module linkage(a_horn_pivot) {
         mode == PRINTING ? 
             [x_pusher_bp + dx_linkage(a_horn_pivot), y_pusher_bp + dy_linkage(a_horn_pivot), z_printing] :
         [dx_linkage(a_horn_pivot), dy_linkage(a_horn_pivot), dz_slide_plate + dz_linkage];  
-    translate(translation) rotate(rotation) visualize(visualization_linkage)  shape();  
+    translate(translation) rotate(rotation) visualize(visualization_pusher_coupler_link)  shape();  
 }
 
 
@@ -1060,7 +1068,7 @@ module fixed_clamp() {
         if (show_vitamins) {
             one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=servo_offset_angle_fixed_clamp);
         }
-        clamp_cam(servo_angle=servo_angle_fixed_clamp);
+        * clamp_cam(servo_angle=servo_angle_fixed_clamp);
     }
 }
 
@@ -1077,7 +1085,7 @@ module pusher() {
         translate([0, dy_pusher_servo, 0]) 
             pusher_driver_link(a_horn_pivot=a_horn_pivot); 
         translate([0, dy_pusher_servo, 0]) 
-            linkage(a_horn_pivot=a_horn_pivot); 
+            pusher_coupler_link(a_horn_pivot=a_horn_pivot); 
         translate([0, dy_pusher_servo, 0]) 
             limit_cam(a_horn_pivot=a_horn_pivot);        
     }
@@ -1132,7 +1140,7 @@ module print_assemblies() {
     if (print_pusher) {
         a_horn_pivot = 50;
         pusher_driver_link(a_horn_pivot);
-        linkage(a_horn_pivot=a_horn_pivot);
+        pusher_coupler_link(a_horn_pivot=a_horn_pivot);
         moving_clamp_bracket(a_horn_pivot=a_horn_pivot); 
         limit_cam(a_horn_pivot=a_horn_pivot);
     }

@@ -41,29 +41,27 @@ show_filament = true;
 show_parts = true; // But nothing here has parts yet.
 show_legend = true;
 print_slide = true;
-print_moving_clamp_horn_cam = true;
-print_fixed_clamp_horn_cam = true;
+print_moving_clamp_cam = true;
+print_fixed_clamp_cam = true;
 print_pusher = true;
-print_filament_loader = true;
 
 print_one_part = false;
-part_to_print = "slider"; // [clip, collet, filament_loader, filament_loader_clip, fixed_clamp_body, foundation, horn_cam, horn_linkage, linkage, limit_cam, moving_clamp_body, rails, servo_base, slide_plate, slider, tie_bracket]
+part_to_print = "pusher_driver_link"; // [clip, collet, fixed_clamp_body, clamp_cam, pusher_driver_link, linkage, limit_cam, moving_clamp_body, rails, servo_base, servo_retainer slide_plate, slider, tie_bracket]
 
-filament_length = 200; // [50:200]
+
 
 /* [Show] */ 
 // Order to match the legend:
-filament_loader  = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
-filament_loader_clip  = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
+
+clamp_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 fixed_clamp_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-horn_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-horn_linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_cam =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 linkage = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_bracket = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+pusher_driver_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+servo_retainer = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_plate = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slider  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-foundation  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 
 
 /* [Legend] */
@@ -71,6 +69,8 @@ x_legend = 36; // [-200 : 200]
 y_legend = 120; // [-200 : 200]
 z_legend = -40; // [-200 : 200]
 legend_position = [x_legend, y_legend, z_legend];
+
+
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -84,16 +84,20 @@ roller_switch_depressed = true;
 roller_arm_length = 20; // [18:Short, 20:Long]
 limit_switch_is_depressed = true;
 
+
+
 /* [One Arm Horn Characteristics] */
 dz_engagement_one_arm_horn = -1;// 1;
 h_barrel_one_arm_horn = 3.77;
+d_barrel_one_arm_horn = 7.5;
 h_arm_one_arm_horn = 1.3;    
 dx_one_arm_horn = 14;
 
 
 /* [Clamp Cam Design] */
-od_cam = 22;
-od_cam_top = 22;
+od_cam_bottom = 26;
+od_cam_top = 20;
+id_clamp_cam = 22;
 
 dx_cam_slice_bottom = 5;  // [-10: 0.1: 10]
 ay_cam_slice_bottom = -85; // [-90: 0]
@@ -101,13 +105,15 @@ az_clamp_cam_to_horn = 180; // [-180:180]
 
 // The height from the horn arm to the top of the cam
 z_servo_body_to_horn_barrel = 5.3; // [0: 0.1: 10]
-z_clearance_horn_cam = 1; 
+z_clearance_clamp_cam = 3; 
 // Set to control stiffness of cam to horn attachment
 z_screw_head_to_horn = 2; //[1:0.5:2.5]
 
+
+
 /* [Slide Plate Design] */
 // Adjust so that servos fits into slide plate openings!
-9g_servo_body_length = 22.5; // [22.5, 23.0, 23.5, 24]
+9g_servo_body_length = 23; // [22.5, 23.0, 23.5, 24]
 // Adjust so that servos fits into slide plate openings!
 9g_servo_body_width = 12.0; // [12.0, 12.2, 12.4]
 // Adjust so that servo shows as middle of slot.
@@ -115,11 +121,11 @@ z_screw_head_to_horn = 2; //[1:0.5:2.5]
 // Adjust so that servo shows as resting on pedistal
 9g_servo_vertical_offset_origin_to_flange = 14.5;
 // Lateral offset between CL of filament to CL of servos
-dx_slide_plate = 2.5;
+dx_slide_plate = 9; 
 // Offset of the mid point of the slide plate from the mid point of the slide plate, in the direction that the slide moves.
-dy_slide_plate = 0;
+dy_slide_plate = 0; //[-20:0.1:20]
 // Offset of the slide plate vertically from the CL of the filament.  
-dz_slide_plate = -2;
+dz_slide_plate = -5; //[-20:0.1:20]
 // Lateral rim around servos inserted into slide plate
 x_slide_plate_rim = 6;
 // Rim in the direction of sliding 
@@ -138,13 +144,14 @@ y_offset_pusher_wire_clearance = y_slide_plate_rim - 3;
 z_pusher_servo_wires_clearance = 9;
 
 
-/* [Slider] */
-// TODO:  Calculate value based on animation and kinematics!
-dy_slider = 0; // Good enough to start printing!
+/* [Slider Design] */
 // Lateral clearance between slider and guide.  Needs to big enough that the parts print separately.  Small enough relative to thickness of plate so that slider doesn't fall out or move too much vertically.
 slider_clearance = 0.4;
 // Lateral rim around servos inserted into slider
 x_slider_rim = 2;
+
+// The offset between the linkage centerline and the centerline of servo
+dy_moving_clamp_offset = 18;
 
 /* [Base Design] */
 dz_servo = 3.5;
@@ -154,41 +161,19 @@ z_base_pillar = 8.8;
 z_base_joiner = 3.8;
 dx_base_offset = -5;
 dy_base_offset = 5;
-dy_base_offset_moving_clamp = 12;
 
-/* [Foundation Design] */
-
-x_foundation = 45;
-y_foundation = 117.5;
-z_foundation = 4;
-
-
-x_foundation_ls_terminal =  9.5;
-y_foundation_ls_terminal = 11.8;
-z_foundation_ls_terminal = 4; // [4,8]
-
-dx_foundation = -33;
-dy_foundation = 5;
-dz_foundation = -44; // [-50:30]
-
-dx_pusher_servo_clip  = 25;
-dy_pusher_servo_clip = 30;
 
 /* [Outlet Design] */
 y_outlet = 20;
 
-
-
-
-
 /* [Guide Design] */
-filament_translation = [-4.5, 0, 1.7];
 x_guide = 46;
 y_guide = 16;
 z_guide =2;
 d_guide = 3.2;
 s_guide_dovetail = 2;
 y_guide_moving_clamp = 26;
+
 
 
 /* [Dove Tail Design] */
@@ -198,22 +183,22 @@ z_dovetail = 5;
 dovetail_clearance = 0.25;
 tie_length = 30;
 
+
+
 /* [Linkage Design] */
+// Adjust so that linkage lines up with shaft pusher servo.  
+dz_linkage = -20; // [-22:0.1:-18]
 debug_kinematics = false; 
 az_horn_linkage_pivot = 25;
 r_horn_linkage = 16;
 linkage_length = 24;
 linkage_shorten_range = 4;
 // *******************************************************
-dz_linkage = -24 + z_pusher_servo_pedistal; // [-40: 0]
+
 // TODO:  Calculate y_pusher_assembly from plate dimensions
 y_pusher_assembly = -42;
 dy_pusher_servo = 2;
 
-a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
-
-/* [Filament Holder Design] */
-dy_filament_loader_clip = 12;
 
 
 /* [Build Plate Layout] */
@@ -231,9 +216,9 @@ dx_servo_base_bp = -50;
 x_fixed_clamp_body_bp = 0;
 y_fixed_clamp_body_bp = 0;
 
-x_horn_cam_bp = 40;
-y_horn_cam_bp = -20;
-dx_horn_cam_bp = -30;
+x_clamp_cam_bp = 40;
+y_clamp_cam_bp = -20;
+dx_clamp_cam_bp = -30;
 
 x_pusher_bp = 0;
 y_pusher_bp = 0;
@@ -275,6 +260,10 @@ dx_linkage = function(a_horn_pivot) dx_slide_plate/2 + dx_linkage_midpoint(a_hor
 dy_linkage = function(a_horn_pivot) dy_horn_pivot(a_horn_pivot)  - dy_origin + sin(linkage_angle(a_horn_pivot)) * linkage_length/2;
  y_moving_clamp = function(a_horn_pivot) dy_pivot(a_horn_pivot) + y_pusher_assembly;
 
+
+a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
+dy_moving_clamp =  dy_moving_clamp_offset  + dy_pivot(a_horn_pivot);
+
 if (debug_kinematics && mode != PRINTING) {
     translate([dx_origin, dy_origin, 0]) color("yellow") can(d=1, h=a_lot);
     a_horn_pivot = servo_angle_pusher + servo_offset_angle_pusher + az_horn_linkage_pivot;
@@ -282,11 +271,6 @@ if (debug_kinematics && mode != PRINTING) {
     translate([dx_pivot(a_horn_pivot), dy_pivot(a_horn_pivot), 0]) color("green") can(d=1, h=a_lot);
     translate([dx_linkage_midpoint(a_horn_pivot), dy_linkage_midpoint(a_horn_pivot), 0]) color("brown") can(d=1, h=a_lot);
 }
-
-///* Rail calculations */
-//x_rail = 1 + s_guide_dovetail + 1 + rail_wall;
-//z_rail = z_guide + s_guide_dovetail + 2 * rail_wall;
-
 
 
 function layout_from_mode(mode) = 
@@ -300,9 +284,9 @@ function show(variable, name) =
     (print_one_part && (mode == PRINTING)) ? name == part_to_print :
     variable;
     
-visualization_horn_linkage  =        
+visualization_pusher_driver_link  =        
     visualize_info(
-        "Horn Linkage", PART_1, show(horn_linkage, "horn_linkage") , layout, show_parts);   
+        "Pusher Driver Link", PART_1, show(pusher_driver_link, "pusher_driver_link") , layout, show_parts);   
      
 visualization_linkage  =        
     visualize_info(
@@ -313,9 +297,9 @@ visualization_fixed_clamp_body =
         "Fixed Clamp Body", PART_5, show(fixed_clamp_body, "fixed_clamp_body") , layout, show_parts); 
  
         
-visualization_horn_cam = 
+visualization_clamp_cam = 
     visualize_info(
-        "Horn Cam", PART_7, show(horn_cam, "horn_cam") , layout, show_parts); 
+        "Horn Cam", PART_7, show(clamp_cam, "clamp_cam") , layout, show_parts); 
         
 //visualization_limit_switch_holder =   
 //    visualize_info(
@@ -329,40 +313,28 @@ visualization_limit_cam  =
     visualize_info(
         "Limit Cam", PART_11, show(limit_cam, "limit_cam") , layout, show_parts);  
         
-visualization_filament_loader =       
+visualization_servo_retainer = 
     visualize_info(
-        "Filament Loader", PART_13, show(filament_loader, "filament_loader") , layout, show_parts);   
+        "Servo Retainer", PART_17, show(servo_retainer, "servo_retainer") , layout, show_parts);   
         
-visualization_filament_loader_clip =       
-    visualize_info(
-        "Filament Loader Clip", PART_14, show(filament_loader_clip, "filament_loader_clip") , layout, show_parts);         
-
-visualization_foundation = 
-    visualize_info(
-        "Foundation", PART_17, show(foundation, "foundation") , layout, show_parts);   
-
-
 visualization_slide_plate = 
      visualize_info(
-            "Slide Plate", PART_18, show(slide_plate, "slide_plate") , layout, show_parts);   
+        "Slide Plate", PART_18, show(slide_plate, "slide_plate") , layout, show_parts);   
             
 visualization_slider = 
      visualize_info(
-            "Slider", PART_20, show(slider, "slider") , layout, show_parts);               
+        "Slider", PART_20, show(slider, "slider") , layout, show_parts);               
         
 visualization_infos = [
-    visualization_filament_loader, 
-    visualization_filament_loader_clip, 
     visualization_fixed_clamp_body,
-    visualization_horn_cam,
-    visualization_horn_linkage,
+    visualization_clamp_cam,
+    visualization_pusher_driver_link,
     visualization_limit_cam,
-    //visualization_limit_switch_holder,
     visualization_linkage,
     visualization_moving_clamp_bracket,
+    visualization_servo_retainer,
     visualization_slide_plate,
     visualization_slider,
-    visualization_foundation,
 ];
 
 
@@ -371,25 +343,26 @@ visualization_infos = [
  module filament(as_clearance = false, clearance_is_tight = true) {
     
     if (as_clearance) {
-        translate(filament_translation) 
-            if (clearance_is_tight) {
-                rod(d=d_filament_with_tight_clearance, l=a_lot, center=SIDEWISE); 
-            } else {
-                rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
-            }  
+         
+        if (clearance_is_tight) {
+            rod(d=d_filament_with_tight_clearance, l=a_lot, center=SIDEWISE); 
+        } else {
+            rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE);      
+        }  
     } else if (mode != PRINTING) {
-        filament_length = y_slide + 90;
-        translate(filament_translation + [0, -40, 0]) 
-            color("red") 
-                rod(d=d_filament, l=filament_length, center=SIDEWISE+RIGHT);
+        filament_length = y_slide + 2 * 9g_servo_body_length + 80;
+        
+        color("red") 
+            rod(d=d_filament, l=filament_length, center=SIDEWISE);
     }
 }
 
 module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, show_barrel = true, show_arm=true) {    
     dz_arm = h_barrel_one_arm_horn + dz_engagement_one_arm_horn;
     module blank() {
+        
         if (show_barrel) {
-            translate([0, 0, dz_engagement_one_arm_horn]) can(d=7.5, h=h_barrel_one_arm_horn, center=ABOVE); 
+            translate([0, 0, dz_engagement_one_arm_horn]) can(d=d_barrel_one_arm_horn, h=h_barrel_one_arm_horn, center=ABOVE); 
         }
         if (show_arm) {
             translate([0, 0, dz_engagement_one_arm_horn+h_barrel_one_arm_horn]) {
@@ -423,26 +396,28 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, sho
 
 
 
-module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
-    h = z_servo_body_to_horn_barrel + h_barrel_one_arm_horn + z_screw_head_to_horn - z_clearance_horn_cam;
-    dz_horn = z_servo_body_to_horn_barrel - dz_engagement_one_arm_horn -z_clearance_horn_cam;
-    dz_assembly = -h - dz_engagement_one_arm_horn + h_barrel_one_arm_horn;    
-    z_housing_clearance = z_servo_body_to_horn_barrel - z_clearance_horn_cam;
+module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
+    h = z_servo_body_to_horn_barrel + h_barrel_one_arm_horn + z_screw_head_to_horn - z_clearance_clamp_cam;
+    dz_horn = z_servo_body_to_horn_barrel - dz_engagement_one_arm_horn -z_clearance_clamp_cam;
+    dz_assembly = dz_slide_plate + z_slide_plate/2 + z_clearance_clamp_cam + 1; // -h - dz_engagement_one_arm_horn + h_barrel_one_arm_horn +  ;    
+    z_housing_clearance = z_servo_body_to_horn_barrel - z_clearance_clamp_cam;
  
     module gear_housing_clearance() {
         can(d=12, h=z_housing_clearance, center=ABOVE);
         intersection() {
             translate([-4, 0, 0]) block([20, 20, z_housing_clearance], center=ABOVE+FRONT);
-            can(d=20, h=z_housing_clearance, center=ABOVE);
+            can(d=id_clamp_cam, h=z_housing_clearance, center=ABOVE);
         }
     }   
     module shape() {
         d_lock = 0.1;
-        render(convexity=10) difference() {
-            can(d=od_cam, taper=od_cam_top, h=h, center=ABOVE);
+        ax_clamp_slice = 20;
+        //render(convexity=10) 
+        difference() {
+            can(d=od_cam_bottom, taper=od_cam_top, h=h, center=ABOVE);
              // Provide the camming surface to force the filament down to lock it
             rotate([0, 0, az_clamp_cam_to_horn]) 
-                translate([dx_cam_slice_bottom, 0, 0]) 
+                translate([0, 0, 0])
                     rotate([0, ay_cam_slice_bottom, 0]) 
                         plane_clearance(BEHIND); 
             
@@ -466,11 +441,11 @@ module horn_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     z_printing = h;
     rotation = 
         mode == PRINTING ? [180, 0, 0] :
-        [0, 0, servo_angle + servo_offset_angle];
+        [0, 0, 90 + servo_angle + servo_offset_angle];
     translation = 
-        mode == PRINTING ? [x_horn_cam_bp + item*dx_horn_cam_bp, y_horn_cam_bp, z_printing] :
+        mode == PRINTING ? [x_clamp_cam_bp + item*dx_clamp_cam_bp, y_clamp_cam_bp, z_printing] :
         [0, 0, dz_assembly];
-    translate(translation) rotate(rotation) visualize(visualization_horn_cam) shape();   
+    translate(translation) rotate(rotation) visualize(visualization_clamp_cam) shape();   
 }
 
 
@@ -499,26 +474,29 @@ module moving_clamp_bracket(a_horn_pivot) {
     // base.y + dy_pivot,
     translation = 
         mode == PRINTING ? [x_pusher_bp , y_pusher_bp, z_printing] :
-        [dx_slide_plate,  base.y/2 + 4 + dy_pivot(a_horn_pivot), dz_linkage];
+        [dx_slide_plate,  base.y/2 + 4 + dy_pivot(a_horn_pivot), dz_slide_plate + dz_linkage];
     translate(translation) rotate(rotation) visualize(visualization_moving_clamp_bracket) shape();       
 }
 
-module horn_linkage(a_horn_pivot, as_blank = false) {
+module pusher_driver_link(a_horn_pivot, as_blank = false) {
     h = 4;
+    z_base = 2;
+    dz_horn = dz_engagement_one_arm_horn + h_barrel_one_arm_horn + z_base;
     pin_attachment = [2, 3, 8];
     barrel_attachment = [10, 3, 8];
     r_pin_attachment = r_horn_linkage - 4.5;
     r_barrel_attachment = r_horn_linkage + 4.;
     linkage = [15, 3, 8];
+    d_center = d_barrel_one_arm_horn + 4;
 
     module blank() {
         hull() {
-            can(d=od_cam, h=h, center=ABOVE);
+            can(d=d_center, h=h, center=ABOVE);
             translate([12, 0, 0]) can(d=7, h=h, center=ABOVE); 
         }
 
         hull() {
-            can(d=od_cam, h=2, center=ABOVE);
+            can(d=d_center, h=2, center=ABOVE);
             rotate([0, 0, az_horn_linkage_pivot])  translate([r_horn_linkage, 0, 0]) can(d=5, h=2, center=ABOVE);
         }
         rotate([0, 0, az_horn_linkage_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=ABOVE);     
@@ -528,7 +506,7 @@ module horn_linkage(a_horn_pivot, as_blank = false) {
     module shape() {
         render(convexity=10) difference() {
             blank();
-            translate([0, 0, 7])  rotate([180, 0, 0]) hull() one_arm_horn(as_clearance=true);
+            translate([0, 0, dz_horn])  rotate([180, 0, 0]) hull() one_arm_horn(as_clearance=true);
             can(d=2.2, h=a_lot);  // Central hole for screw!
         }
     }
@@ -543,13 +521,13 @@ module horn_linkage(a_horn_pivot, as_blank = false) {
             [0, 0, a_horn_pivot - az_horn_linkage_pivot];
         translation = 
             mode == PRINTING ? [x_pusher_bp + dx_origin, y_pusher_bp, z_printing] :
-            [dx_origin, 0, dz_linkage]; 
+            [dx_origin, 0, dz_slide_plate + dz_linkage]; 
         translate(translation) rotate(rotation) {
             if (show_vitamins && mode != PRINTING) {
-                visualize_vitamins(visualization_horn_linkage) 
-                    translate([0, 0, -7.5])  one_arm_horn();
+                visualize_vitamins(visualization_pusher_driver_link) 
+                    translate([0, 0, dz_horn])  rotate([180, 0, 0]) one_arm_horn();
             }
-            visualize(visualization_horn_linkage) shape();  
+            visualize(visualization_pusher_driver_link) shape();  
         }
     }
 } 
@@ -575,7 +553,7 @@ module limit_cam(a_horn_pivot) {
     module shape() {
         render(convexity=10) difference() {
             blank();
-            translate([0, 0, h_limit_cam - dz_engagement]) scale(horn_linkage_cutout_scaling)  horn_linkage(as_blank=true);
+            translate([0, 0, h_limit_cam - dz_engagement]) scale(horn_linkage_cutout_scaling)  pusher_driver_link(as_blank=true);
             can(d=2.2, h=a_lot);  // Central hole for screw!
             can(d=8, taper=5, h=h_limit_cam-dz_engagement-1, center=ABOVE);
             translate([0, 0, h_limit_cam-dz_engagement-1]) can(d=5, taper=2.2, h=1, center=ABOVE);
@@ -585,10 +563,10 @@ module limit_cam(a_horn_pivot) {
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [0,  0, 0] :
-        [0, 0, a_horn_pivot];
+        [0, 0, a_horn_pivot - az_horn_linkage_pivot];
     translation = 
         mode == PRINTING ? [x_limit_cam_bp, y_limit_cam_bp, z_printing] :
-        [dx_origin, 0, dz_linkage - h_limit_cam + dz_engagement]; 
+        [dx_origin, 0, dz_slide_plate  + dz_linkage - h_limit_cam + dz_engagement]; 
     translate(translation) rotate(rotation) {
         visualize(visualization_limit_cam) shape();  
     }
@@ -669,174 +647,174 @@ module linkage(a_horn_pivot) {
     translation = 
         mode == PRINTING ? 
             [x_pusher_bp + dx_linkage(a_horn_pivot), y_pusher_bp + dy_linkage(a_horn_pivot), z_printing] :
-        [dx_linkage(a_horn_pivot), dy_linkage(a_horn_pivot), dz_linkage];  
+        [dx_linkage(a_horn_pivot), dy_linkage(a_horn_pivot), dz_slide_plate + dz_linkage];  
     translate(translation) rotate(rotation) visualize(visualization_linkage)  shape();  
 }
 
 
-module filament_loader_clip(as_clearance=false) {
-    blank = [7, 12, 20];
-    base = [7, 14, 4];
-    connector =  flute_clamp_connector();
-    connector_extent = gtcc_extent(connector); 
-    y_loose =  connector_extent.y + 0.5;
-    y_tight = connector_extent.y - 1;
-    y_spring = connector_extent.y - 3;
-    x_loose = 3.5; 
-    z_slit = 4;
-    
-    z_printing = blank.z;
-    
-    module shape() {
-        render(convexity=10) difference() {
-            union() {
-                block(blank, center = ABOVE);
-                hull() {
-                    translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
-                    translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
-                    translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
-                }
-            }
-            // Spreader - slot is narrow then connector
-            translate([0, 0, 5.0]) block([x_loose, y_tight, 8], center=ABOVE);
-            // Wedging cut above clip
-            hull() {
-                translate([0, 0, 3]) rod(d=0.5, l=x_loose);
-                translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
-            }                  
-            // Clearance for arm
-            translate([0, 0, 10])  {
-                hull() {
-                    block([x_loose, y_loose, 11.5], center=ABOVE);
-                    translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
-                }
-                translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
-            }
-            // Clearance for arm insertion    
-            translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
-            // vertical slit through clamp
-            block([10, 0.5, blank.z-z_slit], center=ABOVE);
-            // Clamp for filament
-            translate([0, 0, 4]) {
-                rod(d=1.25, l=20);
-                block([20, 1.25, 1.25/2], center=ABOVE);
-            }
-            // Cut below clip
-            hull() {
-                translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
-                block([a_lot, 1.75, 0.1], center=BELOW);
-            }
-            // Cut near top to make back side flexible
-            //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
-        }          
-    }
-    if (as_clearance) {  
-        translate([filament_translation.x, dy_filament_loader_clip, filament_translation.z]) rotate([0, 0, -90])  {
-            hull() {
-                translate([0, -2, -4]) shape();
-                translate([-0, +2, -4]) shape();
-            }
-            // Slit for filament to come in, plus remove unprintable overhand
-            x = 10;
-            hull() {
-                rod(d=7, l=x, center= FRONT);
-                translate([0, 0, 10]) block([x, 22, 0.1], center=ABOVE+FRONT);
-            }
-        }
-    } else {
-        rotation = 
-            mode == PRINTING ? [180, 0, 0] :
-            [0, 0, -90];
-        translation = 
-            mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
-            [filament_translation.x, 105, filament_translation.z-4];
-        translate(translation) {
-            rotate(rotation) {
-                visualize(visualization_filament_loader_clip) {
-                    shape() ;
-                }
-            }    
-        }
-    }
-}
+//module filament_loader_clip(as_clearance=false) {
+//    blank = [7, 12, 20];
+//    base = [7, 14, 4];
+//    connector =  flute_clamp_connector();
+//    connector_extent = gtcc_extent(connector); 
+//    y_loose =  connector_extent.y + 0.5;
+//    y_tight = connector_extent.y - 1;
+//    y_spring = connector_extent.y - 3;
+//    x_loose = 3.5; 
+//    z_slit = 4;
+//    
+//    z_printing = blank.z;
+//    
+//    module shape() {
+//        render(convexity=10) difference() {
+//            union() {
+//                block(blank, center = ABOVE);
+//                hull() {
+//                    translate([base.x/2, 0, 0]) block([0.1, base.y, base.z], center = ABOVE);
+//                    translate([base.x/2, 0, 0]) block([0.1, blank.y, base.z+4], center = ABOVE);
+//                    translate([-base.x/2, 0, 0])  block([0.1, blank.y, base.z], center = ABOVE);
+//                }
+//            }
+//            // Spreader - slot is narrow then connector
+//            translate([0, 0, 5.0]) block([x_loose, y_tight, 8], center=ABOVE);
+//            // Wedging cut above clip
+//            hull() {
+//                translate([0, 0, 3]) rod(d=0.5, l=x_loose);
+//                translate([0, 0, 10]) block([x_loose, y_loose , 0.1], center=ABOVE);
+//            }                  
+//            // Clearance for arm
+//            translate([0, 0, 10])  {
+//                hull() {
+//                    block([x_loose, y_loose, 11.5], center=ABOVE);
+//                    translate([0, 1.5, 0]) block([0.1, y_loose, 11.5], center=ABOVE);
+//                }
+//                translate([0, 0, 0]) block([10, y_loose-1, 11.5], center=ABOVE+FRONT);
+//            }
+//            // Clearance for arm insertion    
+//            translate([-x_loose/2, 0, 10]) block([10, y_loose, 8.5], center=ABOVE+FRONT);
+//            // vertical slit through clamp
+//            block([10, 0.5, blank.z-z_slit], center=ABOVE);
+//            // Clamp for filament
+//            translate([0, 0, 4]) {
+//                rod(d=1.25, l=20);
+//                block([20, 1.25, 1.25/2], center=ABOVE);
+//            }
+//            // Cut below clip
+//            hull() {
+//                translate([0, 0, 0.75]) rod(d=0.5, l=a_lot);
+//                block([a_lot, 1.75, 0.1], center=BELOW);
+//            }
+//            // Cut near top to make back side flexible
+//            //translate([0, 0, blank.z - 2]) block([10, y_spring, 1]);
+//        }          
+//    }
+//    if (as_clearance) {  
+//        translate([filament_translation.x, dy_filament_loader_clip, filament_translation.z]) rotate([0, 0, -90])  {
+//            hull() {
+//                translate([0, -2, -4]) shape();
+//                translate([-0, +2, -4]) shape();
+//            }
+//            // Slit for filament to come in, plus remove unprintable overhand
+//            x = 10;
+//            hull() {
+//                rod(d=7, l=x, center= FRONT);
+//                translate([0, 0, 10]) block([x, 22, 0.1], center=ABOVE+FRONT);
+//            }
+//        }
+//    } else {
+//        rotation = 
+//            mode == PRINTING ? [180, 0, 0] :
+//            [0, 0, -90];
+//        translation = 
+//            mode == PRINTING ? [x_filament_loader_clip_bp, y_filament_loader_clip_bp, z_printing] :
+//            [filament_translation.x, 105, filament_translation.z-4];
+//        translate(translation) {
+//            rotate(rotation) {
+//                visualize(visualization_filament_loader_clip) {
+//                    shape() ;
+//                }
+//            }    
+//        }
+//    }
+//}
 
-module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_bow = false, show_tip = true) {
-    connector =  flute_clamp_connector();
-    connector_extent = gtcc_extent(connector);
-    dz_clip = -6;
-    dx_clip = 4;
-    clip = [4, a_lot, 4];
-    module tip_blank() {
-        block([10, connector_extent.y, 3], center=BELOW + BEHIND);
-        translate([-4, 0, 0]) hull() {
-            block([6, connector_extent.y, 3], center=BELOW + BEHIND);
-            translate([0, -1.5, -1.5])  block([6, connector_extent.y, 0.1], center=BELOW + BEHIND);
-        }
-        translate([-6, 0, 0]) block([4, connector_extent.y, 20], center=BELOW+BEHIND);
-    }
-
-    module blank() {
-        rotate([0, 90, 0]) {
-            rotate([-90, 0, 0]) {
-                if (show_bow) {
-                    translate([0, 0, -2 * connector_extent.z-4]) flute_collet(is_filament_entrance=false);
-                    translate([0, 0, -6]) block([4, connector_extent.y, 40], center=ABOVE);
-                    translate([0, 0, 30]) block([8, connector_extent.y, 4], center=ABOVE+BEHIND);
-                    translate([-8, 0, 30]) block([4, connector_extent.y, 76], center=ABOVE+BEHIND);
-                }
-                if (show_tip) {
-                    translate([-2, 0, 106.5]) tip_blank();
-                }
-            }
-        }        
-    }
-    
-    module shape() {
-        render(convexity=10) difference() {
-            blank();
-            rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE + RIGHT);        
-        }
-    }
-    
-    if (as_inlet_clip_clearance) {
-        translate([filament_translation.x, 0, filament_translation.z]) {
-            scale([1.1, 1.1, 1.1]) block([connector_extent.y, 100, 4]);
-        }
-    } else if (as_holder) {
-        z_printing = connector_extent.y/2;
-        rotation = 
-            mode == PRINTING ? [0,  -90, 0] :
-            [0, 0, 0];
-        translation = 
-            mode == PRINTING ? [x_filament_loader_bp, y_filament_loader_bp, z_printing] :
-            [filament_translation.x, 0, filament_translation.z];
-        translate(translation) rotate(rotation) {
-            visualize(visualization_filament_loader) shape();
-        } 
-    } else {
-    }    
-}
-
-
+//module filament_loader(as_holder = true, as_inlet_clip_clearance = false, show_bow = false, show_tip = true) {
+//    connector =  flute_clamp_connector();
+//    connector_extent = gtcc_extent(connector);
+//    dz_clip = -6;
+//    dx_clip = 4;
+//    clip = [4, a_lot, 4];
+//    module tip_blank() {
+//        block([10, connector_extent.y, 3], center=BELOW + BEHIND);
+//        translate([-4, 0, 0]) hull() {
+//            block([6, connector_extent.y, 3], center=BELOW + BEHIND);
+//            translate([0, -1.5, -1.5])  block([6, connector_extent.y, 0.1], center=BELOW + BEHIND);
+//        }
+//        translate([-6, 0, 0]) block([4, connector_extent.y, 20], center=BELOW+BEHIND);
+//    }
+//
+//    module blank() {
+//        rotate([0, 90, 0]) {
+//            rotate([-90, 0, 0]) {
+//                if (show_bow) {
+//                    translate([0, 0, -2 * connector_extent.z-4]) flute_collet(is_filament_entrance=false);
+//                    translate([0, 0, -6]) block([4, connector_extent.y, 40], center=ABOVE);
+//                    translate([0, 0, 30]) block([8, connector_extent.y, 4], center=ABOVE+BEHIND);
+//                    translate([-8, 0, 30]) block([4, connector_extent.y, 76], center=ABOVE+BEHIND);
+//                }
+//                if (show_tip) {
+//                    translate([-2, 0, 106.5]) tip_blank();
+//                }
+//            }
+//        }        
+//    }
+//    
+//    module shape() {
+//        render(convexity=10) difference() {
+//            blank();
+//            rod(d=d_filament_with_clearance, l=a_lot, center=SIDEWISE + RIGHT);        
+//        }
+//    }
+//    
+//    if (as_inlet_clip_clearance) {
+//        translate([filament_translation.x, 0, filament_translation.z]) {
+//            scale([1.1, 1.1, 1.1]) block([connector_extent.y, 100, 4]);
+//        }
+//    } else if (as_holder) {
+//        z_printing = connector_extent.y/2;
+//        rotation = 
+//            mode == PRINTING ? [0,  -90, 0] :
+//            [0, 0, 0];
+//        translation = 
+//            mode == PRINTING ? [x_filament_loader_bp, y_filament_loader_bp, z_printing] :
+//            [filament_translation.x, 0, filament_translation.z];
+//        translate(translation) rotate(rotation) {
+//            visualize(visualization_filament_loader) shape();
+//        } 
+//    } else {
+//    }    
+//}
 
 
-servo_retainer();
 
-module servo_retainer() {
+
+
+
+module servo_retainer(z_servo_flange = 2.5) {
     // A backup that holds the nuts on the back side of the servo mounting bracket
     x = 2 * x_slider_rim + 9g_servo_body_width;  
     y = 2 * y_slide_plate_rim + 9g_servo_body_length;
-    z =  2;    // Just needs to be a bit more than the thickness of a nut.  
+    z =  3;    // Just needs to be a bit more than the thickness of a nut. 
+    z_under_nut = 1; 
     // The core provides the body into which the servo will be inserted.
     core = [x, y, z];
-    servo_slot = 1.00 * [9g_servo_body_width, 9g_servo_body_length, a_lot];
-    servo_wire_slot = [4, 9g_servo_body_length/2  + 2, a_lot];
+    servo_slot = 1.05* [9g_servo_body_width, 9g_servo_body_length, a_lot];
     
     module servo_screws(as_clearance) {
         center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
             if (as_clearance) {
                 translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
-                translate([0, 0, 1.5]) rotate([180, 0, 0]) nutcatch_parallel(
+                translate([0, 0, z_under_nut]) rotate([180, 0, 0]) nutcatch_parallel(
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...)
                     clh    =  10,  // nut height clearance
                     clk    =  0.4);  // clearance aditional to nominal key width                
@@ -845,20 +823,25 @@ module servo_retainer() {
             }
         }
     }
-    
-    difference() {
-        block(core, center = ABOVE);
-        block(servo_slot);
-        block(servo_wire_slot, center=RIGHT);
-        servo_screws(as_clearance=true); 
-        
+    module shape() {
+        difference() {
+            block(core, center = ABOVE);
+            block(servo_slot);
+            servo_screws(as_clearance=true);       
+        }
     }
     
+    rotation = mode == PRINTING ? [0,  0, 0] : [0, 180, 0];
+    translation = mode == PRINTING ? [0,  0, 0] : [0, 0,  -z_slide_plate/2 - z_servo_flange + dz_slide_plate];
+    
+    translate(translation) rotate(rotation) {
+        visualize(visualization_servo_retainer) shape();
+    }   
 }
 
 
 
-module slider(a_horn_pivot) {
+module slider(dy_slider) {
     
     module blank() {
         x = 2 * x_slider_rim + 9g_servo_body_width - 2 * slider_clearance;  
@@ -919,21 +902,19 @@ module slider(a_horn_pivot) {
                 color(MIUZEIU_SERVO_BLUE) 
                     9g_motor_sprocket_at_origin();
                 one_arm_horn(servo_angle=servo_angle_moving_clamp, servo_offset_angle=servo_offset_angle_moving_clamp);
-                horn_cam(servo_angle=servo_angle_moving_clamp, servo_offset_angle = servo_offset_angle_moving_clamp);
+                
             }     
         }
-    }
-    
 
-        
-        
+    }
+         
     z_printing = z_slide_plate/2;
     rotation = 
         mode == PRINTING ? [180,  0, 0] : 
         [0, 0, 0];
     translation = 
         mode == PRINTING ? [x_slider_bp, y_slider_bp, z_printing] :
-        [dx_slide_plate, 18  + dy_pivot(a_horn_pivot), dz_slide_plate];
+        [dx_slide_plate, dy_slider, dz_slide_plate];
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
             visualize_vitamins(visualization_slider) vitamins();
@@ -1062,7 +1043,7 @@ module position_sensor(show_vitamins=false) {
         mode == PRINTING ? [180,  0, 0] : 
         [0, 0, 0];    
     translation = 
-        mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :  [dx_slide_plate, dy_slide_plate, 0];
+        mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :  [dx_slide_plate, dy_slide_plate, dz_slide_plate];
     translate(translation)  rotate(rotation) shape_and_vitamins();
 }
 
@@ -1079,23 +1060,32 @@ module fixed_clamp() {
         if (show_vitamins) {
             one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=servo_offset_angle_fixed_clamp);
         }
-        horn_cam(servo_angle=servo_angle_fixed_clamp);
+        clamp_cam(servo_angle=servo_angle_fixed_clamp);
+    }
+}
+
+module moving_clamp() {
+    translate([dx_slide_plate, dy_moving_clamp, 0]) {
+        servo_retainer();
+        translate([0, 6, 0]) clamp_cam(servo_angle=servo_angle_moving_clamp, servo_offset_angle = servo_offset_angle_moving_clamp);
     }
 }
 
 module pusher() {
-    
+    //dz_slide_plate
     translate([0, y_pusher_assembly, 0]) {
         translate([0, dy_pusher_servo, 0]) 
-            horn_linkage(a_horn_pivot=a_horn_pivot); 
+            pusher_driver_link(a_horn_pivot=a_horn_pivot); 
         translate([0, dy_pusher_servo, 0]) 
             linkage(a_horn_pivot=a_horn_pivot); 
         translate([0, dy_pusher_servo, 0]) 
             limit_cam(a_horn_pivot=a_horn_pivot);        
     }
-    moving_clamp_bracket(a_horn_pivot=a_horn_pivot);
+    translate([0, 0, 0]) moving_clamp_bracket(a_horn_pivot=a_horn_pivot);
      
 }
+
+
 
 
 module slide() {
@@ -1107,8 +1097,7 @@ module slide() {
     // so there will be no separate assembly - just inserting the servos
    
     slide_plate();
-
-    slider(a_horn_pivot);
+    slider(dy_moving_clamp);
     position_sensor(show_vitamins=show_vitamins);
 }
 
@@ -1119,8 +1108,9 @@ module visualize_assemblies() {
     slide();
     pusher();
     fixed_clamp();
-     filament_loader(as_holder = true, show_bow = true, show_tip = true);
-     filament_loader_clip();
+    moving_clamp();
+    // filament_loader(as_holder = true, show_bow = true, show_tip = true);
+     //filament_loader_clip();
      if (show_legend) {
         generate_legend_for_visualization(
             visualization_infos, legend_position, font6_legend_text_characteristics());
@@ -1133,22 +1123,18 @@ module print_assemblies() {
         slider();
         position_sensor();
     }
-    if (print_moving_clamp_horn_cam) {
-        horn_cam(item=0); 
+    if (print_moving_clamp_cam) {
+        clamp_cam(item=0); 
     }
-    if (print_fixed_clamp_horn_cam) {
-        horn_cam(item=1);   
+    if (print_fixed_clamp_cam) {
+        clamp_cam(item=1);   
     }
     if (print_pusher) {
         a_horn_pivot = 50;
-        horn_linkage(a_horn_pivot);
+        pusher_driver_link(a_horn_pivot);
         linkage(a_horn_pivot=a_horn_pivot);
         moving_clamp_bracket(a_horn_pivot=a_horn_pivot); 
         limit_cam(a_horn_pivot=a_horn_pivot);
-    }
-    if (print_filament_loader) {
-        filament_loader(as_holder = true, show_bow = true, show_tip = true);
-        filament_loader_clip();
     }
  }
  

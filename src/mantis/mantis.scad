@@ -113,18 +113,19 @@ limit_switch_is_depressed = true;
 
 
 /* [Clamp Cam Design] */
-d_bottom_for_clamp_cam = 20;
-d_top_for_clamp_cam = 20;
+d_bottom_for_clamp_cam = 16;
+d_top_for_clamp_cam = 16;
 // Adjust so just a bit of flat exists based on z_clearance_clamp_cam.
 slice_angle_for_clamp_cam = 2.5; // [0: 0.1: 10]
 dz_slice_for_clamp_cam = 1.2;  // [-10: 0.1: 10]
-az_slice_to_horn_for_clamp_cam =155; // [-180:180]
+az_slice_to_horn_for_clamp_cam =45; // [-180:180]
 delta_z_slice_segment = 0.5; // [0: 0.1: 3]
 // Adjust to clear housing
 z_clearance_clamp_cam = 0.7; 
 // Set to control stiffness of cam to horn attachment
 z_screw_head_to_horn = 2; //[1:0.5:2.5]
-
+// Adjust so that arm can slide into place
+dz_horn_arm_clearance = 0.2;
 
 
 /* [Moving Clamp Filament Guide Design] */
@@ -390,36 +391,61 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
         + z_screw_head_to_horn 
         - z_clamp_guide_base
         - z_clearance_clamp_cam;
-    dz_horn = z_servo_body_to_horn_barrel - dz_engagement_one_arm_horn - z_clearance_clamp_cam;
+    //dz_horn = z_servo_body_to_horn_barrel - dz_engagement_one_arm_horn - z_clearance_clamp_cam;
     dz_assembly = dz_slide_plate + z_slide_plate/2 + z_clamp_guide_base + z_clearance_clamp_cam; 
+    
+    
+    module cam_cutter() {
+         // Provide the camming surface to force the filament down to lock it
+        rotate([0, 0, az_slice_to_horn_for_clamp_cam]) {
+            for (i = [0:1:2]) {
+                rotate([0, 0, 90*i])
+                translate([0, 0, dz_slice_for_clamp_cam + i * delta_z_slice_segment])
+                    rotate([0, slice_angle_for_clamp_cam, 0]) 
+                        block([20, 20, 20], center = BELOW + RIGHT + FRONT); 
+            } 
+        }       
+    }
+    
+    module horn_cavity() {
+        az_horn_engagement = -35;
+        dz_horn = 
+            - dz_engagement_one_arm_horn 
+            + h_barrel_one_arm_horn 
+            - h_arm_one_arm_horn
+            - z_screw_head_to_horn;
+        // Final position
+        translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
+        translate([0, 0, dz_horn+dz_horn_arm_clearance])  one_arm_horn(as_clearance=true, show_barrel = false);
+        //slot to insert horn
+        translate([0, 0, dz_horn]) {
+            rotate([0, 0, az_horn_engagement])  { 
+               hull() {
+                    one_arm_horn(as_clearance=true, show_barrel = false);
+                    translate([0, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true, show_barrel = false);
+               }
+               translate([1, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true);
+               translate([-1, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true);
+            }
+        }
+        // Slot to rotate and lock 
+        hull() {
+            rotate([0, 0, az_horn_engagement]) {
+                translate([0, 0, dz_horn]) one_arm_horn(as_clearance=true, show_arm=false);              
+                translate([0, 0, -dz_horn]) one_arm_horn(as_clearance=true, show_arm=false);
+            } 
+        }       
+    }
  
     module shape() {
         d_lock = 0.1;
         ax_clamp_slice = 20;
-        //render(convexity=10) 
-        difference() {
+        render(convexity=10) difference() {
             can(d=d_bottom_for_clamp_cam, taper=d_top_for_clamp_cam, h=h, center=ABOVE);
-             // Provide the camming surface to force the filament down to lock it
-            rotate([0, 0, az_slice_to_horn_for_clamp_cam]) 
-                for (i = [0:1:2]) {
-                    rotate([0, 0, 90*i])
-                    translate([0, 0, dz_slice_for_clamp_cam + i * delta_z_slice_segment])
-                        rotate([0, slice_angle_for_clamp_cam, 0]) 
-                            block([20, 20, 20], center = BELOW + RIGHT + FRONT); 
-                }
-            
             // Screw used to attach horn
             can(d=2.5, h=a_lot); //Screw 
-            // Slot for horn
-            translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-            hull() {
-                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_barrel = false);
-                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_barrel = false);
-            }
-            hull() {
-                translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true, show_arm = false);
-                translate([0, 0, dz_horn-h])  one_arm_horn(as_clearance=true, show_arm = false);
-            }
+            horn_cavity();
+            cam_cutter();
         }
     }
     
@@ -433,6 +459,80 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     translate(translation) rotate(rotation) visualize(visualization_clamp_cam) shape();   
 }
 
+
+module moving_clamp_filament_guide() {
+    
+    x = 2 * x_slider_rim + 9g_servo_body_width;  
+    y = 2 * y_slide_plate_rim + 9g_servo_body_length;
+    // The core provides the body into which the servo will be inserted.
+    core = [x, y, z_clamp_guide_base];
+    servo_slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];   
+    z_guide = abs(dz_slide_plate) -z_slide_plate/2 + 4;
+    guide = [8, y, z_guide];
+    dx_guide_offset = -1.5;
+    
+    dy_cam_offset = 5.5;
+    dy_guide_offset = 0;
+   
+   module blank() {
+       block(core, center = ABOVE);
+       translate([-dx_slide_plate + dx_guide_offset, dy_guide_offset, 0]) block(guide, center = ABOVE);
+   } 
+    module servo_screws(as_clearance) {
+        h_screw_head = 10;
+        center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
+            if (as_clearance) {
+                translate([0, 0, h_screw_head + 2]) hole_through("M2", cld=0.6, $fn=12, h=h_screw_head);             
+            } else {
+                assert(false, "Not implemented yet");
+            }
+        }
+    }  
+  
+    module cam_clearance() {
+        d_cam_clearance = d_bottom_for_clamp_cam;
+        //dz_cam_clearance = abs(dz_slide_plate) -z_slide_plate/2 ;
+        dz_horn_clearance = z_guide - 2; 
+        d_horn_clearance = 34;
+        translate([0, dy_cam_offset, z_clamp_guide_base]) can(d=d_cam_clearance, h=10, center=ABOVE);
+        translate([0, dy_cam_offset, dz_horn_clearance]) can(d=d_horn_clearance, h=10, center=ABOVE);  
+    }  
+    
+    module filament_entrance() {
+        translate([0, dy_filament_entrance_offset, 0]) 
+            rod(d=d_filament_entrance, taper=d_filament, l=l_filament_entrance, center=SIDEWISE+LEFT);  
+    }
+    
+    module gear_housing_clearance() {
+        d_large_gear_clearance = 13;
+        d_small_gear_clearance = 8;
+
+        translate([0, dy_cam_offset, 0]) can(d=d_large_gear_clearance, h=a_lot);
+        translate([0, -2, 0]) can(d=d_small_gear_clearance, h=a_lot);
+    }
+    
+    module shape() {
+        difference() {
+            blank();
+            //block(servo_slot, center=BELOW);
+            gear_housing_clearance();
+            servo_screws(as_clearance = true);
+            cam_clearance(); 
+            translate([-dx_slide_plate, 0, -dz_slide_plate-z_slide_plate/2]) {
+                filament(as_clearance = true, clearance_is_tight = false);
+                filament_entrance();
+            }   
+        }
+    }
+    
+    rotation = mode == PRINTING ? [0,  0, 0] : [0, 0, 0];
+    translation = mode == PRINTING ? [0,  0, 0] : [0, 0,  z_slide_plate/2 + dz_slide_plate];
+    
+    translate(translation) rotate(rotation) {
+        visualize(visualization_moving_clamp_filament_guide) shape();
+    }  
+    
+}
 
 
 module moving_clamp_bracket(a_horn_pivot) {
@@ -824,79 +924,7 @@ module servo_retainer(z_servo_flange = 2.5) {
     }   
 }
 
-module moving_clamp_filament_guide() {
-    
-    x = 2 * x_slider_rim + 9g_servo_body_width;  
-    y = 2 * y_slide_plate_rim + 9g_servo_body_length;
-    // The core provides the body into which the servo will be inserted.
-    core = [x, y, z_clamp_guide_base];
-    servo_slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];   
-    z_guide = abs(dz_slide_plate) -z_slide_plate/2 + 4;
-    guide = [6, y, z_guide];
-    dx_guide_offset = -0;
-    
-    dy_cam_offset = 5.5;
-    dy_guide_offset = 0;
-   
-   module blank() {
-       block(core, center = ABOVE);
-       translate([-dx_slide_plate + dx_guide_offset, dy_guide_offset, 0]) block(guide, center = ABOVE);
-   } 
-    module servo_screws(as_clearance) {
-        h_screw_head = 10;
-        center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
-            if (as_clearance) {
-                translate([0, 0, h_screw_head + 2]) hole_through("M2", cld=0.6, $fn=12, h=h_screw_head);             
-            } else {
-                assert(false, "Not implemented yet");
-            }
-        }
-    }  
-  
-    module cam_clearance() {
-        d_cam_clearance = d_bottom_for_clamp_cam;
-        //dz_cam_clearance = abs(dz_slide_plate) -z_slide_plate/2 ;
-        dz_horn_clearance = z_guide - 1; 
-        d_horn_clearance = 32;
-        translate([0, dy_cam_offset, z_clamp_guide_base]) can(d=d_cam_clearance, h=10, center=ABOVE);
-        translate([0, dy_cam_offset, dz_horn_clearance]) can(d=d_horn_clearance, h=10, center=ABOVE);  
-    }  
-    
-    module filament_entrance() {
-        translate([0, dy_filament_entrance_offset, 0]) 
-            rod(d=d_filament_entrance, taper=d_filament, l=l_filament_entrance, center=SIDEWISE+LEFT);  
-    }
-    
-    module gear_housing_clearance() {
-        d_large_gear_clearance = 13;
-        d_small_gear_clearance = 8;
 
-        translate([0, dy_cam_offset, 0]) can(d=d_large_gear_clearance, h=a_lot);
-        translate([0, -2, 0]) can(d=d_small_gear_clearance, h=a_lot);
-    }
-    
-    module shape() {
-        difference() {
-            blank();
-            //block(servo_slot, center=BELOW);
-            gear_housing_clearance();
-            servo_screws(as_clearance = true);
-            cam_clearance(); 
-            translate([-dx_slide_plate, 0, -dz_slide_plate-z_slide_plate/2]) {
-                filament(as_clearance = true, clearance_is_tight = false);
-                filament_entrance();
-            }   
-        }
-    }
-    
-    rotation = mode == PRINTING ? [0,  0, 0] : [0, 0, 0];
-    translation = mode == PRINTING ? [0,  0, 0] : [0, 0,  z_slide_plate/2 + dz_slide_plate];
-    
-    translate(translation) rotate(rotation) {
-        visualize(visualization_moving_clamp_filament_guide) shape();
-    }  
-    
-}
 
 module slider(dy_slider) {
     
@@ -1117,7 +1145,7 @@ module fixed_clamp() {
         if (show_vitamins) {
             one_arm_horn(servo_angle=servo_angle_fixed_clamp, servo_offset_angle=servo_offset_angle_fixed_clamp);
         }
-        * clamp_cam(servo_angle=servo_angle_fixed_clamp);
+        clamp_cam(servo_angle=servo_angle_fixed_clamp);
     }
 }
 
@@ -1166,7 +1194,7 @@ module visualize_assemblies() {
     }
     slide();
     pusher();
-    fixed_clamp();
+    * fixed_clamp();
     moving_clamp();
     // filament_loader(as_holder = true, show_bow = true, show_tip = true);
      //filament_loader_clip();

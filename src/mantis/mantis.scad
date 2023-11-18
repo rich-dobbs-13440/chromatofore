@@ -116,16 +116,19 @@ limit_switch_is_depressed = true;
 d_bottom_for_clamp_cam = 16;
 d_top_for_clamp_cam = 16;
 // Adjust so just a bit of flat exists based on z_clearance_clamp_cam.
-slice_angle_for_clamp_cam = 2.5; // [0: 0.1: 10]
-dz_slice_for_clamp_cam = 1.2;  // [-10: 0.1: 10]
-az_slice_to_horn_for_clamp_cam =45; // [-180:180]
-delta_z_slice_segment = 0.5; // [0: 0.1: 3]
+slice_angle_for_clamp_cam = 0; // [0: 0.1: 10]
+// Sets how much vertial range that the cam surface varies by.  Adjust so there is roof above horn cavity
+dz_range = 2.0;
+// Moves the entire cam surface up or down
+dz_slice_for_clamp_cam = 0.2;  // [-10: 0.1: 10]
+// Adjust so horn is below thickest part of cam.
+az_slice_to_horn_for_clamp_cam = -80; // [-180:180]
 // Adjust to clear housing
 z_clearance_clamp_cam = 0.7; 
 // Set to control stiffness of cam to horn attachment
 z_screw_head_to_horn = 2; //[1:0.5:2.5]
 // Adjust so that arm can slide into place
-dz_horn_arm_clearance = 0.2;
+dz_horn_arm_clearance_for_clamp_cam = 0.4;
 
 
 /* [Moving Clamp Filament Guide Design] */
@@ -391,24 +394,37 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
         + z_screw_head_to_horn 
         - z_clamp_guide_base
         - z_clearance_clamp_cam;
-    //dz_horn = z_servo_body_to_horn_barrel - dz_engagement_one_arm_horn - z_clearance_clamp_cam;
     dz_assembly = dz_slide_plate + z_slide_plate/2 + z_clamp_guide_base + z_clearance_clamp_cam; 
     
     
     module cam_cutter() {
          // Provide the camming surface to force the filament down to lock it
+        segment_count = 10;
+        az_range =330;
+        
+        delta_az = az_range / segment_count;
+        delta_z_slice_segment = dz_range / segment_count;
         rotate([0, 0, az_slice_to_horn_for_clamp_cam]) {
-            for (i = [0:1:2]) {
-                rotate([0, 0, 90*i])
-                translate([0, 0, dz_slice_for_clamp_cam + i * delta_z_slice_segment])
-                    rotate([0, slice_angle_for_clamp_cam, 0]) 
-                        block([20, 20, 20], center = BELOW + RIGHT + FRONT); 
+            for (i = [0:1:segment_count-1]) {
+                rotate([0, 0, delta_az*i]) {
+                    translate([0, 0, dz_slice_for_clamp_cam + i * delta_z_slice_segment]) {
+                        hull() {
+                            rotate([0, slice_angle_for_clamp_cam, 0]) 
+                                block([0.1, 20, 20], center = BELOW + RIGHT + FRONT); 
+                            rotate([0, slice_angle_for_clamp_cam, delta_az/2]) 
+                                block([0.1, 20, 20], center = BELOW + RIGHT + FRONT); 
+                            rotate([0, slice_angle_for_clamp_cam,  + delta_az]) 
+                                block([0.1, 20, 20], center = BELOW + RIGHT + FRONT); 
+                        }
+                    }
+                }
             } 
         }       
     }
     
     module horn_cavity() {
         az_horn_engagement = -35;
+        ay_horn_insertion = -6;
         dz_horn = 
             - dz_engagement_one_arm_horn 
             + h_barrel_one_arm_horn 
@@ -416,16 +432,20 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
             - z_screw_head_to_horn;
         // Final position
         translate([0, 0, dz_horn])  one_arm_horn(as_clearance=true);
-        translate([0, 0, dz_horn+dz_horn_arm_clearance])  one_arm_horn(as_clearance=true, show_barrel = false);
-        //slot to insert horn
+        translate([0, 0, dz_horn + dz_horn_arm_clearance_for_clamp_cam])  
+            one_arm_horn(as_clearance=true, show_barrel = false);
+        
         translate([0, 0, dz_horn]) {
             rotate([0, 0, az_horn_engagement])  { 
+               //slot to insert arm, and then rotate it.
                hull() {
                     one_arm_horn(as_clearance=true, show_barrel = false);
-                    translate([0, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true, show_barrel = false);
+                    translate([0, 0, 0.5]) rotate([0, ay_horn_insertion, 0]) 
+                        one_arm_horn(as_clearance=true, show_barrel = false);
                }
-               translate([1, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true);
-               translate([-1, 0, 0.5]) rotate([0, -10, 0]) one_arm_horn(as_clearance=true);
+               // This feature allows the barrel of the horn to be inserted:
+               translate([1, 0, 0.5]) rotate([0, ay_horn_insertion, 0]) one_arm_horn(as_clearance=true);
+               translate([-1, 0, 0.5]) rotate([0, ay_horn_insertion, 0]) one_arm_horn(as_clearance=true);
             }
         }
         // Slot to rotate and lock 

@@ -200,29 +200,28 @@ l_strut_horn_cam = 6;
 
 /* [Build Plate Layout] */
 
-x_slide_plate_bp = -40;
+x_slide_plate_bp = 40;
 y_slide_plate_bp = 0;
 
 x_slider_bp = x_slide_plate_bp;
 y_slider_bp = 0;
 
-x_servo_base_bp = 0;
-y_servo_base_bp = 0;
-dx_servo_base_bp = -50;
-
-x_servo_filament_guide_bp = -70;
+x_servo_filament_guide_bp = 80;
 y_servo_filament_guide_bp = 40;
 dy_servo_filament_guide_bp = -40;
 
-x_clamp_cam_bp = -90;
+x_clamp_cam_bp = 100;
 y_clamp_cam_bp = 50;
 dy_clamp_cam_bp = -40;
 
-x_pusher_bp = 0;
-y_pusher_bp = 0;
+x_pusher_bp = 100;
+y_pusher_bp = -20;
 
-x_limit_cam_bp = 50;
+x_limit_cam_bp = 130;
 y_limit_cam_bp = 0;
+
+x_servo_mounting_nut_wrench_bp = 150;
+y_servo_mounting_nut_wrench_bp = 40;
 
 
 module end_of_customization() {}
@@ -852,7 +851,9 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
     }
     
     rotation = mode == PRINTING ? [0,  0, 0] : [0, 180, 0];
-    translation = mode == PRINTING ? [0,  0, 0] : [0, 0,  -z_slide_plate/2 - z_servo_flange + dz_slide_plate];
+    translation = mode == PRINTING ? 
+        [x_servo_mounting_nut_wrench_bp,  y_servo_mounting_nut_wrench_bp, 0] : 
+        [0, 0,  -z_slide_plate/2 - z_servo_flange + dz_slide_plate];
     
     translate(translation) rotate(rotation) {
         visualize(visualization_servo_mounting_nut_wrench) shape();

@@ -974,7 +974,7 @@ module slide_plate() {
      
     z_printing = z_slide_plate/2;
     rotation = 
-        mode == PRINTING ? [0,  0, 180] : 
+        mode == PRINTING ? [0, 180, 0] : 
         [0, 0, 0];
     translation = 
         mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :
@@ -1019,12 +1019,11 @@ module position_sensor(show_vitamins=false) {
     
     //dx_slide_plate + dx_pusher_servo_offset,
     z_printing = 0;
-    dx_printing = - 9.5; // Should be related to servo size etc.
     rotation = 
-        mode == PRINTING ? [180,  0, 0] : 
+        mode == PRINTING ? [0,  180, 0] : 
         [0, 0, 0];    
     translation = 
-        mode == PRINTING ? [x_slide_plate_bp + dx_printing, y_slide_plate_bp, z_printing] :  
+        mode == PRINTING ? [x_slide_plate_bp, y_slide_plate_bp, z_printing] :  
         [ dx_slide_plate, dy_slide_plate, dz_slide_plate + z_slide_plate/2];
     translate(translation)  rotate(rotation) shape_and_vitamins();
 }

@@ -70,10 +70,11 @@ print_moving_clamp_cam = true;
 print_fixed_clamp_cam = true;
 print_pusher = true;
 print_pusher_filament_guide = true;
+print_servo_mounting_nut_wrench = true;
 
 print_one_part = false;
 // Update options for part_to_print with each defined variable in the following Show section!
-part_to_print = "pusher_driver_link"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_retainer, slide_plate, slider]
+part_to_print = "servo_mounting_nut_wrench"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_mounting_nut_wrench, slide_plate, slider]
 
 
 
@@ -85,7 +86,7 @@ pusher_coupler_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_bracket = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 pusher_driver_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 servo_filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
-servo_retainer = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+servo_mounting_nut_wrench = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slide_plate = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slider  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
@@ -167,7 +168,6 @@ z_pusher_servo_wires_clearance = 9;
 dx_pusher_servo_offset = 4.7;
 
 dy_servo_offset_for_slide_plate = y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2;
-//dy_pusher_servo_slot = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
 
 
 /* [Slider Design] */
@@ -309,9 +309,9 @@ visualization_servo_filament_guide =
     visualize_info(
         "Servo Filament Guide", PART_11, show(servo_filament_guide, "servo_filament_guide") , layout, show_parts);       
         
-visualization_servo_retainer = 
+visualization_servo_mounting_nut_wrench = 
     visualize_info(
-        "Servo Retainer", PART_17, show(servo_retainer, "servo_retainer") , layout, show_parts);   
+        "Servo Mounting Nut Wrench", PART_17, show(servo_mounting_nut_wrench, "servo_mounting_nut_wrench") , layout, show_parts);   
         
 visualization_slide_plate = 
      visualize_info(
@@ -328,7 +328,7 @@ visualization_infos = [
     visualization_pusher_coupler_link,
     visualization_pusher_driver_link,    
     visualization_servo_filament_guide,
-    visualization_servo_retainer,
+    visualization_servo_mounting_nut_wrench,
     visualization_slide_plate,
     visualization_slider,
 ];
@@ -810,15 +810,18 @@ module pusher_coupler_link(a_horn_pivot) {
 }
 
 
-module servo_retainer(z_servo_flange = 2.5) {
-    // A backup that holds the nuts on the back side of the servo mounting bracket
-    x = 2 * x_slider_rim + 9g_servo_body_width;  
-    y = 2 * y_slide_plate_rim + 9g_servo_body_length;
-    z =  3;    // Just needs to be a bit more than the thickness of a nut. 
-    z_under_nut = 1; 
-    // The core provides the body into which the servo will be inserted.
-    core = [x, y, z];
-    servo_slot = 1.05* [9g_servo_body_width, 9g_servo_body_length, a_lot];
+module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
+    // A wrench that holds the nuts for assembling
+    
+    dx_arm_cutoff = 4;
+    wrench_head = [
+        2 * x_slider_rim + 9g_servo_body_width, 
+        2 * y_slide_plate_rim + 9g_servo_body_length + 2, 
+        3];
+    servo_slot = [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    wrench_opening = servo_slot;
+    handle = [40, 9g_servo_body_length, 2];
+    z_under_nut = 1;
     
     module servo_screws(as_clearance) {
         center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
@@ -826,18 +829,25 @@ module servo_retainer(z_servo_flange = 2.5) {
                 translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
                 translate([0, 0, z_under_nut]) rotate([180, 0, 0]) nutcatch_parallel(
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...)
-                    clh    =  10,  // nut height clearance
-                    clk    =  0.4);  // clearance aditional to nominal key width                
+                    //clk    =  0.4, // clearance aditional to nominal key width 
+                    clh    =  10  // nut height clearance
+                    );                 
             } else {
                 assert(false, "Not implemented yet");
             }
         }
     }
+    module blank() {
+        block(wrench_head, center = ABOVE);
+        block(handle, center = ABOVE+BEHIND);
+    }
     module shape() {
         difference() {
-            block(core, center = ABOVE);
+            blank();
             block(servo_slot);
-            servo_screws(as_clearance=true);       
+            servo_screws(as_clearance=true);
+            block(wrench_opening, center=FRONT);
+            translate([dx_arm_cutoff, 0, 0]) plane_clearance(FRONT);
         }
     }
     
@@ -845,7 +855,7 @@ module servo_retainer(z_servo_flange = 2.5) {
     translation = mode == PRINTING ? [0,  0, 0] : [0, 0,  -z_slide_plate/2 - z_servo_flange + dz_slide_plate];
     
     translate(translation) rotate(rotation) {
-        visualize(visualization_servo_retainer) shape();
+        visualize(visualization_servo_mounting_nut_wrench) shape();
     }   
 }
 
@@ -1063,7 +1073,6 @@ module fixed_clamp_assembly() {
 
 module moving_clamp_assembly() {
     translate([dx_slide_plate, dy_moving_clamp, 0]) {
-        servo_retainer();
         translate([0, 5.5, 0]) 
             clamp_cam(servo_angle=servo_angle_moving_clamp, servo_offset_angle = servo_offset_angle_moving_clamp);
         servo_filament_guide(moving_clamp=true);
@@ -1143,6 +1152,9 @@ module print_parts() {
         }
         moving_clamp_bracket(a_horn_pivot=a_horn_pivot);        
         limit_cam(a_horn_pivot=a_horn_pivot);   
+    }
+    if (print_servo_mounting_nut_wrench) {
+        servo_mounting_nut_wrench();
     }
  }
  

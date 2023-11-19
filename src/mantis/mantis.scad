@@ -166,6 +166,8 @@ z_pusher_servo_wires_clearance = 9;
 // Offset pusher servo to avoid filament
 dx_pusher_servo_offset = 4.7;
 
+dy_servo_offset_for_slide_plate = y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2;
+//dy_pusher_servo_slot = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
 
 
 /* [Slider Design] */
@@ -496,33 +498,49 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
 
 module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=false, item = 0) {
     
+    use_filament_entrance = moving_clamp || fixed_clamp;
+    
     x = 2 * x_slider_rim + 9g_servo_body_width;  
     y = 2 * y_slide_plate_rim + 9g_servo_body_length;
     // The core provides the body into which the servo will be inserted.
     core = [x, y, z_clamp_guide_base];
-    servo_slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];   
-    z_guide = abs(dz_slide_plate) - z_slide_plate/2 + 4;
-    guide = [8, y, z_guide];
-    dx_guide_offset = -1.5;
-    
+    servo_slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    z_to_filament = -dz_slide_plate - z_slide_plate/2;
+    z_above_filament_cl = use_filament_entrance ? 4 : 2;
+    z_guide =  z_to_filament + z_above_filament_cl;
+    x_guide = use_filament_entrance ? 6 : 4;
+    guide = [x_guide, y, z_guide];
+    cam_backer = [d_bottom_for_clamp_cam/2 + 2, d_bottom_for_clamp_cam, z_guide];
+
     dy_cam_offset = 5.5;
-    dy_guide_offset = 0;
-   
-   module blank() {
-        block(core, center = ABOVE);
-        translate([-dx_slide_plate + dx_guide_offset, dy_guide_offset, 0]) block(guide, center = ABOVE);
-        if (fixed_clamp) {
+    dx_core_offset = pusher_guide ? dx_pusher_servo_offset : 0;
+    
+    module collet_blank(is_exit=true) {
             connector =  flute_clamp_connector();
             connector_extent = gtcc_extent(connector);
             dz_collet = abs(dz_slide_plate) - z_slide_plate/2; //connector_extent.y/2;
-            dy_collet = 32;
+            dy_collet = is_exit ? 32: - 32;
+            ax = is_exit ? 90 : -90;
             translate ([-dx_slide_plate, dy_collet, dz_collet]) {// z_guide]) {
-                rotate([90, 0, 0]) flute_collet(is_filament_entrance=false);
+                rotate([ax, 0, 0]) flute_collet(is_filament_entrance=false);
             }
             // printing support - to be broken off.
             translate([-dx_slide_plate, dy_collet, 0]) {
                 block([connector_extent.x, 2, 2], center=ABOVE);
-            } 
+            }         
+    }
+   
+    module blank() {
+        
+        translate([dx_core_offset, 0, 0]) block(core, center = ABOVE);
+        translate([-dx_slide_plate, 0, 0]) block(guide, center = ABOVE);
+        if (moving_clamp || fixed_clamp)  {
+            translate([0, dy_cam_offset, 0]) block(cam_backer, center = ABOVE + BEHIND);    
+        }
+        if (fixed_clamp) {
+            collet_blank(is_exit=true);
+       } if (pusher_guide) {
+           collet_blank(is_exit=false);
        }
    } 
     module servo_screws(as_clearance) {
@@ -561,12 +579,20 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
     module shape() {
         difference() {
             blank();
-            gear_housing_cavity();
-            servo_screws(as_clearance = true);
-            cam_cavity(); 
+            if (moving_clamp || fixed_clamp) {
+                gear_housing_cavity();
+                cam_cavity();
+            } 
+            if (pusher_guide) {
+                pusher_servo_cavity();
+            }
+            translate([dx_core_offset, 0, 0]) servo_screws(as_clearance = true);
+            
             translate([-dx_slide_plate, 0, -dz_slide_plate-z_slide_plate/2]) {
                 filament(as_clearance = true, clearance_is_tight = false);
-                filament_entrance();
+                if (use_filament_entrance) {
+                    filament_entrance();
+                }
             }   
         }
     }
@@ -825,8 +851,19 @@ module servo_retainer(z_servo_flange = 2.5) {
 
 
 
+
+module pusher_servo_cavity() {
+    translate([dx_pusher_servo_offset, -                                                                                                                        dy_servo_offset_for_slide_plate, 0]) {
+        // The servo wired must past throught slot, so it must be longer
+        dy_serrvo_wire_clearance = 3.5;
+        block([9g_servo_body_width, 9g_servo_body_length + dy_serrvo_wire_clearance, a_lot]);
+        servo_mounting_screws(as_clearance=true); 
+    }
+}  
+
 module slider(dy_slider) {
     
+  
     module blank() {
         x = 2 * x_slider_rim + 9g_servo_body_width - 2 * slider_clearance;  
         y = 2 * y_slide_plate_rim + 9g_servo_body_length;
@@ -885,21 +922,13 @@ module slider(dy_slider) {
 
 module slide_plate() {
     dy_pusher_servo_inner_pedistal = -y_slide/2;
-    dy_pusher_servo_slot = -(y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
-    dy_pusher_servo = dy_pusher_servo_slot + 9g_servo_offset_origin_to_edge;
+    
+    dy_pusher_servo = -dy_servo_offset_for_slide_plate + 9g_servo_offset_origin_to_edge;
     
     dz_pusher_servo = -(z_pusher_servo_pedistal + 9g_servo_vertical_offset_origin_to_flange);
     
-    module pusher_cavity() {
-        translate([dx_pusher_servo_offset, dy_pusher_servo_slot, 0]) {
-            // The servo wired must past throught slot, so it must be longer
-            dy_serrvo_wire_clearance = 3.5;
-            block([9g_servo_body_width, 9g_servo_body_length + dy_serrvo_wire_clearance, a_lot]);
-            servo_mounting_screws(as_clearance=true); 
-        }
-    }
 
-    
+
     module fixed_clamp_cavity() {
         dy = (y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
         translate([0, dy, 0]) {
@@ -927,15 +956,15 @@ module slide_plate() {
         
         x_servo_blank = 9g_servo_body_width + 2 * x_slider_rim;
         y_servo_blank = 9g_servo_body_length + 2 * y_slide_plate_rim;
-        dy_servo = y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2;
-        dy_pusher_servo = -dy_servo;
+        
+        dy_pusher_servo = -dy_servo_offset_for_slide_plate;
         
         translate ([dx_pusher_servo_offset, dy_pusher_servo, 0]) {
             block([x_servo_blank, y_servo_blank, z_slide_plate]); 
             // TODO: Allow pedistals?
         }
         
-        dy_fixed_clamp_servo = dy_servo;
+        dy_fixed_clamp_servo = dy_servo_offset_for_slide_plate;
         translate ([0, dy_fixed_clamp_servo, 0]) {
             block([x_servo_blank, y_servo_blank, z_slide_plate]); 
             // TODO: Allow pedistals?
@@ -956,7 +985,7 @@ module slide_plate() {
     module shape() {
         render(convexity=10) difference() {
                 blank();
-                pusher_cavity();
+                pusher_servo_cavity();
                 fixed_clamp_cavity();
                 rail_cavity();      
           }
@@ -1022,7 +1051,7 @@ module position_sensor(show_vitamins=false) {
 // Assemblies
 
 module fixed_clamp_assembly() {
-    dy_fixed_clamp = y_slide; 
+    dy_fixed_clamp = dy_servo_offset_for_slide_plate; 
     translate([dx_slide_plate, dy_fixed_clamp, 0]) {
         servo_filament_guide(fixed_clamp = true);
         if (show_vitamins) {
@@ -1057,7 +1086,6 @@ module pusher_assembly() {
 
 
 
-
 module slide_assembly() {
     // The slide is a new assembly that integrates the rails, pusher body, fixed clamp
     // body and the moving clamp body.  By integrating these parts,
@@ -1069,6 +1097,8 @@ module slide_assembly() {
     slide_plate();
     slider(dy_moving_clamp);
     position_sensor(show_vitamins=show_vitamins);
+    
+    translate([dx_slide_plate, -dy_servo_offset_for_slide_plate, 0]) servo_filament_guide(pusher_guide=true);
 }
 
 module visualize_assemblies() {
@@ -1079,8 +1109,6 @@ module visualize_assemblies() {
     pusher_assembly();
     fixed_clamp_assembly();
     moving_clamp_assembly();
-    // filament_loader(as_holder = true, show_bow = true, show_tip = true);
-     //filament_loader_clip();
      if (show_legend) {
         generate_legend_for_visualization(
             visualization_infos, legend_position, font6_legend_text_characteristics());

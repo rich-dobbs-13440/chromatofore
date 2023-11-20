@@ -44,7 +44,7 @@ PRINTING = 4 + 0;
 9g_servo_offset_origin_to_edge = 6;
 // Adjust so that servo shows as resting on pedistal
 9g_servo_vertical_offset_origin_to_flange = 14.5;
-
+9g_servo_mounting_flange_thickness = 2.4;
 
 
 /* [One Arm Horn Characteristics] */
@@ -74,7 +74,7 @@ print_servo_mounting_nut_wrench = true;
 
 print_one_part = false;
 // Update options for part_to_print with each defined variable in the following Show section!
-part_to_print = "servo_mounting_nut_wrench"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_mounting_nut_wrench, slide_plate, slider]
+part_to_print = "servo_filament_guide"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_mounting_nut_wrench, slide_plate, slider]
 
 
 
@@ -133,11 +133,11 @@ z_screw_head_to_horn = 2; //[1:0.5:2.5]
 dz_horn_arm_clearance_for_clamp_cam = 0.4;
 
 
-/* [Moving Clamp Filament Guide Design] */
+/* [Servo Filament Guide Design] */
 d_filament_entrance = 4;
 l_filament_entrance = 8; // [0:12]
 dy_filament_entrance_offset = -9; //[-20:0]
-z_clamp_guide_base =  4; 
+z_filament_guide_base =  4; 
 
 
 
@@ -387,14 +387,24 @@ module one_arm_horn(as_clearance=false, servo_angle=0, servo_offset_angle=0, sho
     }
 }
 
-
-module servo_mounting_screws(as_clearance) {
-    // These are relative to the center of the servo
+// TODO: Move to ScadApotheka
+module servo_mounting_screws(as_clearance = false, dz_nut = -6, dz_screw_head= 6) {
+    
     center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
         if (as_clearance) {
             translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+            h_screw_head = 10;
+            translate([0, 0, h_screw_head + dz_screw_head]) 
+                hole_through("M2", cld=0.6, $fn=12, h=h_screw_head);  
+            translate([0, 0, dz_nut])
+                nutcatch_parallel(
+                    name   = "M2",  // name of screw family (i.e. M3, M4, ...)
+                    clk    =  0.3, // clearance aditional to nominal key width 
+                    clh    =  10  // nut height clearance
+                );                 
         } else {
-            assert(false, "Not implemented yet");
+            translate([0, 0, dz_screw_head])  color(STAINLESS_STEEL) screw("M2x12", $fn=12);
+            translate([0, 0, dz_nut])   color(BLACK_IRON) nut("M2", $fn=12);
         }
     }
 }
@@ -408,9 +418,9 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
     h = z_servo_body_to_horn_barrel 
         + h_barrel_one_arm_horn 
         + z_screw_head_to_horn 
-        - z_clamp_guide_base
+        - z_filament_guide_base
         - z_clearance_clamp_cam;
-    dz_assembly = dz_slide_plate + z_slide_plate/2 + z_clamp_guide_base + z_clearance_clamp_cam; 
+    dz_assembly = dz_slide_plate + z_slide_plate/2 + z_filament_guide_base + z_clearance_clamp_cam; 
     
     
     module cam_cutter() {
@@ -496,14 +506,17 @@ module clamp_cam(item=0, servo_angle=0, servo_offset_angle=0, clearance=0.5) {
 }
 
 
-module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=false, item = 0) {
+module servo_filament_guide(
+    moving_clamp = false, fixed_clamp = false, pusher_guide=false, item = 0) {
     
-    use_filament_entrance = moving_clamp || fixed_clamp;
+    use_cam = moving_clamp || fixed_clamp;
+    use_filament_entrance = use_cam;
+    ay_mounting_screws = use_cam ? 0 : 180;
     
     x = 2 * x_slider_rim + 9g_servo_body_width;  
     y = 2 * y_slide_plate_rim + 9g_servo_body_length;
     // The core provides the body into which the servo will be inserted.
-    core = [x, y, z_clamp_guide_base];
+    core = [x, y, z_filament_guide_base];
     servo_slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];
     z_to_filament = -dz_slide_plate - z_slide_plate/2;
     z_above_filament_cl = use_filament_entrance ? 4 : 2;
@@ -515,26 +528,46 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
     dy_cam_offset = 5.5;
     dx_core_offset = pusher_guide ? dx_pusher_servo_offset : 0;
     
+    dz_screw_head = 
+        moving_clamp ?  2 :
+        fixed_clamp ? 2 :
+        pusher_guide? 9g_servo_mounting_flange_thickness + z_slide_plate:
+        0;
+    dz_nut = 
+        moving_clamp ? -(9g_servo_mounting_flange_thickness + z_slide_plate):
+        fixed_clamp ?  -(9g_servo_mounting_flange_thickness + z_slide_plate) :
+        pusher_guide ? -2 :
+        0;
+    
     module collet_blank(is_exit=true) {
-            connector =  flute_clamp_connector();
-            connector_extent = gtcc_extent(connector);
-            dz_collet = abs(dz_slide_plate) - z_slide_plate/2; //connector_extent.y/2;
-            dy_collet = is_exit ? 32: - 32;
-            ax = is_exit ? 90 : -90;
-            translate ([-dx_slide_plate, dy_collet, dz_collet]) {// z_guide]) {
-                rotate([ax, 0, 0]) flute_collet(is_filament_entrance=false);
+        connector =  flute_clamp_connector();
+        connector_extent = gtcc_extent(connector);
+        dz_collet = z_to_filament; 
+        dy_collet = 32;
+        dy_mid_support =23;
+        az = is_exit ? 0 : 180;
+        translate ([-dx_slide_plate,0, 0]) {
+            rotate([0, 0, az]) {
+                translate ([0, dy_collet, dz_collet]) {// z_guide]) {
+                    rotate([90, 0, 0]) flute_collet(is_filament_entrance=false);
+                }
+                // Printing support:
+                translate ([0, dy_collet, 0]) {
+                    block([connector_extent.x, 2, 2], center=ABOVE);
+                    block([2, 2 * connector_extent.z, 0.6], center=ABOVE + LEFT);
+                }
+                translate ([0, dy_collet - connector_extent.z, 0]) {
+                    block([connector_extent.x, connector_extent.z + 3, 2], center=ABOVE+LEFT);
+                }
             }
-            // printing support - to be broken off.
-            translate([-dx_slide_plate, dy_collet, 0]) {
-                block([connector_extent.x, 2, 2], center=ABOVE);
-            }         
+        }
     }
    
     module blank() {
         
         translate([dx_core_offset, 0, 0]) block(core, center = ABOVE);
         translate([-dx_slide_plate, 0, 0]) block(guide, center = ABOVE);
-        if (moving_clamp || fixed_clamp)  {
+        if (use_cam)  {
             translate([0, dy_cam_offset, 0]) block(cam_backer, center = ABOVE + BEHIND);    
         }
         if (fixed_clamp) {
@@ -543,26 +576,17 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
            collet_blank(is_exit=false);
        }
    } 
-    module servo_screws(as_clearance) {
-        h_screw_head = 10;
-        center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
-            if (as_clearance) {
-                translate([0, 0, h_screw_head + 2]) hole_through("M2", cld=0.6, $fn=12, h=h_screw_head);             
-            } else {
-                assert(false, "Not implemented yet");
-            }
-        }
-    }  
+
   
     module cam_cavity() {
         d_cam_clearance = d_bottom_for_clamp_cam;
         dz_horn_clearance = z_guide - 2; 
         d_horn_clearance = 34;
-        translate([0, dy_cam_offset, z_clamp_guide_base]) can(d=d_cam_clearance, h=10, center=ABOVE);
+        translate([0, dy_cam_offset, z_filament_guide_base]) can(d=d_cam_clearance, h=10, center=ABOVE);
         translate([0, dy_cam_offset, dz_horn_clearance]) can(d=d_horn_clearance, h=10, center=ABOVE);  
     }  
     
-    module filament_entrance() {
+    module filament_entrance_cavity() {
         translate([0, dy_filament_entrance_offset, 0]) 
             rod(d=d_filament_entrance, taper=d_filament, l=l_filament_entrance, center=SIDEWISE+LEFT);  
     }
@@ -579,20 +603,24 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
     module shape() {
         difference() {
             blank();
-            if (moving_clamp || fixed_clamp) {
+            if (use_cam) {
                 gear_housing_cavity();
                 cam_cavity();
-                translate([dx_core_offset, 0, 0]) servo_screws(as_clearance = true);
+                translate([dx_core_offset, 0, 0]) 
+                    servo_mounting_screws(as_clearance = true, dz_nut = dz_nut, dz_screw_head= dz_screw_head);
             } 
             if (pusher_guide) {
-                translate([dx_pusher_servo_offset, 0, 0]) pusher_servo_cavity();
-            }
-            
-            
+                translate([dx_core_offset, 0, 0]) {
+                    pusher_servo_cavity();
+                    // Servo screws are inserted from bottom
+                    rotate([0, ay_mounting_screws, 0]) 
+                        servo_mounting_screws(as_clearance=true, dz_nut = dz_nut, dz_screw_head= dz_screw_head); 
+                }
+            }        
             translate([-dx_slide_plate, 0, -dz_slide_plate-z_slide_plate/2]) {
                 filament(as_clearance = true, clearance_is_tight = false);
                 if (use_filament_entrance) {
-                    filament_entrance();
+                    filament_entrance_cavity();
                 }
             }   
         }
@@ -605,6 +633,13 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
         [0, 0,  z_slide_plate/2 + dz_slide_plate];
     
     translate(translation) rotate(rotation) {
+        if (mode != PRINTING) {
+            visualize_vitamins(visualization_servo_filament_guide) {
+                translate([dx_core_offset, 0, 0]) 
+                    rotate([0, ay_mounting_screws, 0]) 
+                        servo_mounting_screws(dz_nut = dz_nut, dz_screw_head= dz_screw_head);             
+            }
+        }
         visualize(visualization_servo_filament_guide) shape();
     }  
     
@@ -822,21 +857,6 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
     wrench_opening = servo_slot;
     handle = [40, 9g_servo_body_length, 2];
     z_under_nut = 1;
-    
-    module servo_screws(as_clearance) {
-        center_reflect([0, 1, 0]) translate([0, 9g_servo_body_length/2 + y_slide_plate_rim/2, 0]) { 
-            if (as_clearance) {
-                translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
-                translate([0, 0, z_under_nut]) rotate([180, 0, 0]) nutcatch_parallel(
-                    name   = "M2",  // name of screw family (i.e. M3, M4, ...)
-                    clk    =  0.3, // clearance aditional to nominal key width 
-                    clh    =  10  // nut height clearance
-                    );                 
-            } else {
-                assert(false, "Not implemented yet");
-            }
-        }
-    }
     module blank() {
         block(wrench_head, center = ABOVE);
         block(handle, center = ABOVE+BEHIND);
@@ -845,7 +865,7 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
         difference() {
             blank();
             block(servo_slot);
-            servo_screws(as_clearance=true);
+            servo_mounting_screws(as_clearance=true);
             block(wrench_opening, center=FRONT);
             translate([dx_arm_cutoff, 0, 0]) plane_clearance(FRONT);
         }
@@ -868,7 +888,6 @@ module pusher_servo_cavity() {
     // The servo wired must past throught slot, so it must be longer
     dy_serrvo_wire_clearance = 3.5;
     block([9g_servo_body_width, 9g_servo_body_length + dy_serrvo_wire_clearance, a_lot]);
-    servo_mounting_screws(as_clearance=true); 
 }  
 
 module slider(dy_slider) {
@@ -995,7 +1014,10 @@ module slide_plate() {
     module shape() {
         render(convexity=10) difference() {
                 blank();
-                translate([dx_pusher_servo_offset, -dy_servo_offset_for_slide_plate, 0]) pusher_servo_cavity();
+                translate([dx_pusher_servo_offset, -dy_servo_offset_for_slide_plate, 0]) {
+                    pusher_servo_cavity();
+                    servo_mounting_screws(as_clearance=true); 
+                }
                 fixed_clamp_cavity();
                 rail_cavity();      
           }

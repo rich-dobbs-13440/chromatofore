@@ -197,6 +197,7 @@ angle_bearing_moving_clamp = 140; // [0:180]
 l_strut_moving_clamp = 6;
 angle_bearing_horn_cam = -160;
 l_strut_horn_cam = 6;
+pivot_size = 1.1; 
 
 /* [Build Plate Layout] */
 
@@ -507,7 +508,7 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
     z_to_filament = -dz_slide_plate - z_slide_plate/2;
     z_above_filament_cl = use_filament_entrance ? 4 : 2;
     z_guide =  z_to_filament + z_above_filament_cl;
-    x_guide = use_filament_entrance ? 6 : 4;
+    x_guide = use_filament_entrance ? 6 : 5;
     guide = [x_guide, y, z_guide];
     cam_backer = [d_bottom_for_clamp_cam/2 + 2, d_bottom_for_clamp_cam, z_guide];
 
@@ -581,11 +582,12 @@ module servo_filament_guide(moving_clamp = false, fixed_clamp = false, pusher_gu
             if (moving_clamp || fixed_clamp) {
                 gear_housing_cavity();
                 cam_cavity();
+                translate([dx_core_offset, 0, 0]) servo_screws(as_clearance = true);
             } 
             if (pusher_guide) {
-                pusher_servo_cavity();
+                translate([dx_pusher_servo_offset, 0, 0]) pusher_servo_cavity();
             }
-            translate([dx_core_offset, 0, 0]) servo_screws(as_clearance = true);
+            
             
             translate([-dx_slide_plate, 0, -dz_slide_plate-z_slide_plate/2]) {
                 filament(as_clearance = true, clearance_is_tight = false);
@@ -642,9 +644,9 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
     h = 4;
     z_base = 2;
     dz_horn = dz_engagement_one_arm_horn + h_barrel_one_arm_horn + z_base;
-    pin_attachment = [2, 3, 10];
+    pin_attachment = pivot_size * [2, 3, 10];
 
-    r_pin_attachment = r_horn_link - 4.5;
+    r_pin_attachment = r_horn_link - 4.5 * pivot_size;
     r_barrel_attachment = r_horn_link + 4.;
     d_center = d_barrel_one_arm_horn + 4;
 
@@ -734,12 +736,9 @@ module limit_cam(a_horn_pivot) {
 
 module pusher_coupler_link(a_horn_pivot) {
 
-    pivot_size = 1; 
-    angle_pin_moving_clamp = -coupler_link_angle(a_horn_pivot) + 90;
-    angle_pin_horn_cam = 90 + az_drive_link_pivot 
-                                        - coupler_link_angle(a_horn_pivot)
-                                        + servo_angle_pusher
-                                        + servo_offset_angle_pusher;
+    
+    angle_pin_moving_clamp =  + 90 - coupler_link_angle(a_horn_pivot);
+    angle_pin_horn_cam =   90 - coupler_link_angle(a_horn_pivot) + a_horn_pivot;
     air_gap = 0.45;
     attachment_instructions = [
         [ADD_SPRUES, AP_LCAP, [45, 135, 225, 315]],
@@ -763,11 +762,13 @@ module pusher_coupler_link(a_horn_pivot) {
                 attachment_instructions=attachment_instructions);
             rotate([0, 0, 90 + angle_bearing_moving_clamp]) {
                 hull() {
-                    translate([5, 0, 0]) can(d=3, h=8, center=ABOVE);
-                    translate([l_strut_moving_clamp, 0, 0]) can(d=3, h=8, center=ABOVE);
+                    translate([5, 0, 0]) can(d=3, h=pivot_size * 8, center=ABOVE);
+                    translate([l_strut_moving_clamp, 0, 0]) can(d=3, h=pivot_size * 8, center=ABOVE);
                 }
             }
-            
+            rotate([0, 0, 90 + angle_pin_moving_clamp]) {
+                translate([5, 0, 0]) can(d=3, h=pivot_size * 10, center=ABOVE);
+            } 
         }
 
         translate([-coupler_link_length/2, 0, 0]) {
@@ -814,7 +815,7 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
     
     dx_arm_cutoff = 4;
     wrench_head = [
-        2 * x_slider_rim + 9g_servo_body_width, 
+        8 + 9g_servo_body_width, 
         2 * y_slide_plate_rim + 9g_servo_body_length + 2, 
         3];
     servo_slot = [9g_servo_body_width, 9g_servo_body_length, a_lot];
@@ -828,7 +829,7 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
                 translate([0, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
                 translate([0, 0, z_under_nut]) rotate([180, 0, 0]) nutcatch_parallel(
                     name   = "M2",  // name of screw family (i.e. M3, M4, ...)
-                    //clk    =  0.4, // clearance aditional to nominal key width 
+                    clk    =  0.3, // clearance aditional to nominal key width 
                     clh    =  10  // nut height clearance
                     );                 
             } else {
@@ -863,13 +864,11 @@ module servo_mounting_nut_wrench(z_servo_flange = 2.5) {
 
 
 
-module pusher_servo_cavity() {
-    translate([dx_pusher_servo_offset, -                                                                                                                        dy_servo_offset_for_slide_plate, 0]) {
-        // The servo wired must past throught slot, so it must be longer
-        dy_serrvo_wire_clearance = 3.5;
-        block([9g_servo_body_width, 9g_servo_body_length + dy_serrvo_wire_clearance, a_lot]);
-        servo_mounting_screws(as_clearance=true); 
-    }
+module pusher_servo_cavity() {   
+    // The servo wired must past throught slot, so it must be longer
+    dy_serrvo_wire_clearance = 3.5;
+    block([9g_servo_body_width, 9g_servo_body_length + dy_serrvo_wire_clearance, a_lot]);
+    servo_mounting_screws(as_clearance=true); 
 }  
 
 module slider(dy_slider) {
@@ -996,7 +995,7 @@ module slide_plate() {
     module shape() {
         render(convexity=10) difference() {
                 blank();
-                pusher_servo_cavity();
+                translate([dx_pusher_servo_offset, -dy_servo_offset_for_slide_plate, 0]) pusher_servo_cavity();
                 fixed_clamp_cavity();
                 rail_cavity();      
           }

@@ -185,19 +185,22 @@ dy_moving_clamp_offset = 18;
 dz_linkage = -20; // [-22:0.1:-18]
 debug_kinematics = false; 
 az_drive_link_pivot = 25;
-r_horn_link = 16;
+r_horn_link = 18;
 coupler_link_length = 28;
 // TODO:  Calculate y_pusher_assembly from plate dimensions
 y_pusher_assembly = -42;
 dy_pusher_servo = 2;// 2;
-dx_slider_pivot_offset = 12.5; // [-6:0.1:15]
+dx_slider_pivot_offset = 15; // [-6:0.1:15]
+
+
 
 /* [Pusher Coupler Link Design] */
-angle_bearing_moving_clamp = 140; // [0:180]
-l_strut_moving_clamp = 6;
+angle_bearing_moving_clamp = 110; // [0:180]
+l_strut_moving_clamp = 0; // [0:0.1:5]
 angle_bearing_horn_cam = -160;
-l_strut_horn_cam = 6;
-pivot_size = 1.1; 
+l_strut_horn_cam = 0; // [0:0.1:5];
+h_pivot = 11; //[10:0.25:15]
+d_pivot_axle = 4; // [1:0.25:5]
 
 /* [Build Plate Layout] */
 
@@ -554,7 +557,7 @@ module servo_filament_guide(
                 // Printing support:
                 translate ([0, dy_collet, 0]) {
                     block([connector_extent.x, 2, 2], center=ABOVE);
-                    block([2, 2 * connector_extent.z, 0.6], center=ABOVE + LEFT);
+                    block([4, 2 * connector_extent.z, 0.4], center=ABOVE + LEFT);
                 }
                 translate ([0, dy_collet - connector_extent.z, 0]) {
                     block([connector_extent.x, connector_extent.z + 3, 2], center=ABOVE+LEFT);
@@ -655,7 +658,7 @@ module moving_clamp_bracket(a_horn_pivot) {
         z_moving_clamp_bracket
     ]; 
     servo_wire_clearance = [ 6, 20, 12]; 
-    slot = 1.05* [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];
     module shape() {    
         render(convexity=10) difference() {
             block(base, center=ABOVE);
@@ -679,10 +682,7 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
     h = 4;
     z_base = 2;
     dz_horn = dz_engagement_one_arm_horn + h_barrel_one_arm_horn + z_base;
-    pin_attachment = pivot_size * [2, 3, 10];
 
-    r_pin_attachment = r_horn_link - 4.5 * pivot_size;
-    r_barrel_attachment = r_horn_link + 4.;
     d_center = d_barrel_one_arm_horn + 4;
 
     module blank() {
@@ -694,8 +694,7 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
         hull() {
             can(d=d_center, h=2, center=ABOVE);
             rotate([0, 0, az_drive_link_pivot])  translate([r_horn_link, 0, 0]) can(d=5, h=2, center=ABOVE);
-        }
-        rotate([0, 0, az_drive_link_pivot])  translate([r_pin_attachment, 0, 0])  block(pin_attachment, center=ABOVE);     
+        }   
 
     }   
             
@@ -790,45 +789,50 @@ module pusher_coupler_link(a_horn_pivot) {
         }
         translate([coupler_link_length/2, 0, 0]) {
             audrey_horizontal_pivot(
-                pivot_size, 
-                air_gap, 
-                angle_bearing_moving_clamp, 
-                angle_pin_moving_clamp, 
-                attachment_instructions=attachment_instructions);
+                height = h_pivot, 
+                d_axle = d_pivot_axle,
+                air_gap = air_gap, 
+                angle_bearing = angle_bearing_moving_clamp, 
+                angle_pin = angle_pin_moving_clamp, 
+                attachment_instructions = attachment_instructions);
             rotate([0, 0, 90 + angle_bearing_moving_clamp]) {
                 hull() {
-                    translate([5, 0, 0]) can(d=3, h=pivot_size * 8, center=ABOVE);
-                    translate([l_strut_moving_clamp, 0, 0]) can(d=3, h=pivot_size * 8, center=ABOVE);
+                    translate([5 + d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([5 + d_pivot_axle + l_strut_moving_clamp, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot , center=ABOVE);
                 }
             }
             rotate([0, 0, 90 + angle_pin_moving_clamp]) {
-                translate([5, 0, 0]) can(d=3, h=pivot_size * 10, center=ABOVE);
+                translate([3+d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
             } 
         }
 
         translate([-coupler_link_length/2, 0, 0]) {
             audrey_horizontal_pivot(
-                pivot_size, 
-                air_gap, 
-                angle_bearing_horn_cam, 
-                angle_pin_horn_cam, 
-                attachment_instructions=attachment_instructions);
+                height = h_pivot,  
+                d_axle = d_pivot_axle,
+                air_gap = air_gap, 
+                angle_bearing = angle_bearing_horn_cam, 
+                angle_pin = angle_pin_horn_cam, 
+                attachment_instructions = attachment_instructions);
             rotate([0, 0, 90 + angle_bearing_horn_cam]) {
                 hull() {
-                    translate([5, 0, 0]) can(d=3, h=8, center=ABOVE);
-                    translate([l_strut_horn_cam, 0, 0]) can(d=3, h=8, center=ABOVE);
+                    translate([5 + d_pivot_axle, 0, 0]) can(d=3, h=0.8 * h_pivot, center=ABOVE);
+                    translate([5 +d_pivot_axle + l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                 }
-            }     
+            }
+            rotate([0, 0, 90 + angle_pin_horn_cam]) {
+                translate([3+d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
+            } 
         }
         
         hull() {
             translate([coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_bearing_moving_clamp])
-                    translate([l_strut_moving_clamp, 0, 0]) can(d=3, h=8, center=ABOVE);
+                    translate([5 +d_pivot_axle + l_strut_moving_clamp, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                     
             translate([-coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_bearing_horn_cam]) 
-                    translate([l_strut_horn_cam, 0, 0]) can(d=3, h=8, center=ABOVE);
+                    translate([5 +d_pivot_axle + l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                     
         }
     }

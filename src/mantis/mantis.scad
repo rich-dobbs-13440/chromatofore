@@ -58,27 +58,13 @@ z_servo_body_to_horn_barrel = 5.3; // [0: 0.1: 10]
 
 
 
-/* [Output Control] */
 
-mode = 3; // [3: "Assembly", 4: "Printing"]
+/* [Show Parts and Features] */
 show_vitamins = true;
 show_filament = true;
 show_parts = true; // But nothing here has parts yet.
-show_legend = true;
-print_slide = true;
-print_moving_clamp_cam = true;
-print_fixed_clamp_cam = true;
-print_pusher = true;
-print_pusher_filament_guide = true;
-print_servo_mounting_nut_wrench = true;
-
-print_one_part = false;
-// Update options for part_to_print with each defined variable in the following Show section!
-part_to_print = "servo_filament_guide"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_mounting_nut_wrench, slide_plate, slider]
 
 
-
-/* [Show] */ 
 // Order to match the legend:
 clamp_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_cam =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -90,29 +76,46 @@ servo_mounting_nut_wrench = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't pr
 slide_plate = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 slider  = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
+/* [Printing Control] */
 
+print_all_parts = false;
+print_one_part = false;
+
+// Update options for part_to_print with each defined variable in the following Show section!
+one_part_to_print = "servo_filament_guide"; // [clip, collet, clamp_cam, limit_cam, pusher_coupler_link, pusher_driver_link, servo_filament_guide, servo_mounting_nut_wrench, slide_plate, slider]
+
+mode = print_one_part ? 4: //Printing
+    print_all_parts ? 4: //Printing
+    3; // Assembly 
+
+print_slide = true;
+print_moving_clamp_cam = true;
+print_fixed_clamp_cam = true;
+print_pusher = true;
+print_pusher_filament_guide = true;
+print_servo_mounting_nut_wrench = true;
 
 /* [Legend] */
+show_legend = true;
 x_legend = 36; // [-200 : 200]
 y_legend = 50; // [-200 : 200]
 z_legend = -30; // [-200 : 200]
 legend_position = [x_legend, y_legend, z_legend];
 
-
+/* [Pusher Animation] */
+servo_angle_pusher  = 25; // [0:180]
+servo_offset_angle_pusher  = 245; // [0:360]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
 servo_offset_angle_moving_clamp = 90; // [0:360]
 servo_angle_fixed_clamp = 0; // [0:180]
 servo_offset_angle_fixed_clamp = 0; // [0:360]
-servo_angle_pusher  = 25; // [0:180]
-servo_offset_angle_pusher  = 245; // [0:360]
+
     
 roller_switch_depressed = true;
 roller_arm_length = 20; // [18:Short, 20:Long]
 limit_switch_is_depressed = true;
-
-
 
 /* [Clamp Cam Design] */
 d_bottom_for_clamp_cam = 16;
@@ -196,11 +199,12 @@ dx_slider_pivot_offset = 15; // [-6:0.1:15]
 
 /* [Pusher Coupler Link Design] */
 angle_bearing_moving_clamp = 110; // [0:180]
-l_strut_moving_clamp = 0; // [0:0.1:5]
+dl_strut_moving_clamp = 0; // [0:0.1:5]
 angle_bearing_horn_cam = -160;
-l_strut_horn_cam = 0; // [0:0.1:5];
+dl_strut_horn_cam = 0; // [0:0.1:5]
 h_pivot = 11; //[10:0.25:15]
 d_pivot_axle = 4; // [1:0.25:5]
+moving_clamp_rim = 3; 
 
 /* [Build Plate Layout] */
 
@@ -285,7 +289,7 @@ function layout_from_mode(mode) =
 layout = layout_from_mode(mode);
 
 function show(variable, name) = 
-    (print_one_part && (mode == PRINTING)) ? name == part_to_print :
+    (one_part_to_print && (mode == PRINTING)) ? name == one_part_to_print :
     variable;
 
 visualization_clamp_cam = 
@@ -651,7 +655,7 @@ module servo_filament_guide(
 
 module moving_clamp_bracket(a_horn_pivot) {
     z_moving_clamp_bracket = 10;
-    moving_clamp_rim = 3;        
+           
     base = [
         2 * moving_clamp_rim + 9g_servo_body_width,
         2 * moving_clamp_rim + 9g_servo_body_length,
@@ -770,11 +774,22 @@ module limit_cam(a_horn_pivot) {
 
 module pusher_coupler_link(a_horn_pivot) {
 
-    
     angle_pin_moving_clamp =  + 90 - coupler_link_angle(a_horn_pivot);
     angle_pin_horn_cam =   90 - coupler_link_angle(a_horn_pivot) + a_horn_pivot;
     air_gap = 0.45;
+    radius_of_bearing = ahpb_r_bearing(h_pivot, d_pivot_axle);
+    l_strut_moving_clamp = radius_of_bearing + d_pivot_axle + dl_strut_moving_clamp;
+    l_strut_horn_cam = radius_of_bearing + d_pivot_axle + dl_strut_horn_cam;
+
+    // Use the children to generate an attachment
+    clipping_diameter = 10;  // Only helps in plane of rotation, so no help here. 
+    child_idx_handle_for_bearing = 0;
+    child_idx_handle_for_tcap = 1;
+    child_idx_handle_for_lcap = 2;    
+    
     attachment_instructions = [
+        [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
+        [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
         [ADD_SPRUES, AP_LCAP, [45, 135, 225, 315]],
     ]; 
     
@@ -794,17 +809,28 @@ module pusher_coupler_link(a_horn_pivot) {
                 air_gap = air_gap, 
                 angle_bearing = angle_bearing_moving_clamp, 
                 angle_pin = angle_pin_moving_clamp, 
-                attachment_instructions = attachment_instructions);
+                attachment_instructions = attachment_instructions) {
+                    rotate([0, 0, 90]) 
+                        translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
+                            can(d=d_pivot_axle, h=0.8 * h_pivot , center=ABOVE);
+                    rotate([0, 0, 90]) 
+                        translate([radius_of_bearing + moving_clamp_rim, 0, h_pivot*2/3]) 
+                            can(d=moving_clamp_rim, h=h_pivot/3 , center=ABOVE);                    
+                };
             rotate([0, 0, 90 + angle_bearing_moving_clamp]) {
                 hull() {
-                    translate([5 + d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
-                    translate([5 + d_pivot_axle + l_strut_moving_clamp, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot , center=ABOVE);
+                    translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
+                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([l_strut_moving_clamp, 0, 0]) 
+                        can(d=d_pivot_axle, h=0.8 * h_pivot , center=ABOVE);
                 }
             }
-            rotate([0, 0, 90 + angle_pin_moving_clamp]) {
-                translate([3+d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
-            } 
+//            rotate([0, 0, 90 + angle_pin_moving_clamp]) {
+//                translate([3+d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
+//            } 
         }
+        
+        
 
         translate([-coupler_link_length/2, 0, 0]) {
             audrey_horizontal_pivot(
@@ -813,26 +839,37 @@ module pusher_coupler_link(a_horn_pivot) {
                 air_gap = air_gap, 
                 angle_bearing = angle_bearing_horn_cam, 
                 angle_pin = angle_pin_horn_cam, 
-                attachment_instructions = attachment_instructions);
+                attachment_instructions = attachment_instructions) {
+                    rotate([0, 0,  angle_bearing_horn_cam -110]) 
+                        translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
+                            can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    
+                    rotate([0, 0, 90]) 
+                        translate([radius_of_bearing + 3, 0, h_pivot*2/3]) 
+                            #can(d=3, h=h_pivot/3 , center=ABOVE);                        
+             }
             rotate([0, 0, 90 + angle_bearing_horn_cam]) {
+                
                 hull() {
-                    translate([5 + d_pivot_axle, 0, 0]) can(d=3, h=0.8 * h_pivot, center=ABOVE);
-                    translate([5 +d_pivot_axle + l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
+                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([l_strut_horn_cam, 0, 0]) 
+                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                 }
             }
             rotate([0, 0, 90 + angle_pin_horn_cam]) {
-                translate([3+d_pivot_axle, 0, 0]) can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
+                translate([radius_of_bearing + 3, 0, 0]) can(d=3, h=h_pivot, center=ABOVE);
             } 
         }
         
         hull() {
             translate([coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_bearing_moving_clamp])
-                    translate([5 +d_pivot_axle + l_strut_moving_clamp, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([l_strut_moving_clamp, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                     
             translate([-coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_bearing_horn_cam]) 
-                    translate([5 +d_pivot_axle + l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
                     
         }
     }

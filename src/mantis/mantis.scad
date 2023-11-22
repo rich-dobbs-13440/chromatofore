@@ -65,11 +65,11 @@ show_filament = true;
 show_parts = true; // But nothing here has parts yet.
 
 
-// Order to match the legend:
+// Order alphabetically!
 clamp_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 limit_cam =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-pusher_coupler_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 moving_clamp_bracket = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+pusher_coupler_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 pusher_driver_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 servo_filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 servo_mounting_nut_wrench = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -103,8 +103,9 @@ z_legend = -30; // [-200 : 200]
 legend_position = [x_legend, y_legend, z_legend];
 
 /* [Pusher Animation] */
-servo_angle_pusher  = 25; // [0:180]
-servo_offset_angle_pusher  = 245; // [0:360]
+servo_angle_pusher  = 0; // [0:180]
+
+servo_offset_angle_pusher  = 250; // [0:360]
 
 /* [Animation ] */
 servo_angle_moving_clamp = 0; // [0:180]
@@ -187,14 +188,19 @@ dy_moving_clamp_offset = 18;
 // Adjust so that linkage lines up with shaft pusher servo.  
 dz_linkage = -20; // [-22:0.1:-18]
 debug_kinematics = false; 
-// Adjust so the bearing attachment doesn't interfer with insertion of horn.
-az_drive_link_pivot = 32;
-r_horn_link = 18;
+r_drive_link = 18;
 coupler_link_length = 28;
 // TODO:  Calculate y_pusher_assembly from plate dimensions
 y_pusher_assembly = -42;
 dy_pusher_servo = 2;// 2;
-dx_slider_pivot_offset = 17; // [-6:0.1:20]
+dx_slider_pivot_offset = 20; // [-6:0.1:20]
+
+
+/* [Pusher Driver Link Design] */
+// Adjust for engagement with servo horn and attachment with pivot.
+r_pusher_driver_link = 18; // [10: 0.1: 20]
+// Adjust so the bearing attachment doesn't interfer with insertion of horn.  Also, not interferring with roller switch.
+az_drive_link_pivot = 40;
 
 
 
@@ -202,10 +208,27 @@ dx_slider_pivot_offset = 17; // [-6:0.1:20]
 angle_moving_clamp_fixed = 105; // [0:180]
 dl_strut_moving_clamp = 0; // [0:0.1:5]
 angle_horn_cam_fixed = -120; // [-180:180]
-dl_strut_horn_cam = 0; // [0:0.1:5]
+// Adjust so the attachment doesn't intefere with insertion of horn
+da_driver_horn_to_linkage  = 167; // [0: 360]
+dl_strut_driver = 0; // [0:0.1:5]
 h_pivot = 11; //[10:0.25:15]
-d_pivot_axle = 4; // [1:0.25:5]
+d_pivot_axle = 6; // [1:0.25:8]
 moving_clamp_rim = 3; 
+dy_moving_clamp_bracket_offset = 5;
+az_attachment_to_moving_clamp = 75; // [70:110]
+
+
+
+/* [Moving Clamp Bracket Design] */
+z_moving_clamp_bracket = 8;  // [0:10]
+
+
+
+/* [Limit Cam Design] */
+    az_limit_cam_back = 290; // [250: 300]
+    az_limit_cam_front = 200; // [0:360]
+
+
 
 /* [Build Plate Layout] */
 
@@ -243,8 +266,8 @@ dx_origin = dx_slide_plate + dx_pusher_servo_offset;
 dy_origin = -40;  // TODO Calculate from frame size?
 dx_slider_pivot = dx_slide_plate + dx_slider_pivot_offset;
 
-dx_horn_pivot = function(a_horn_pivot) dx_origin + cos(a_horn_pivot) * r_horn_link;
-dy_horn_pivot = function(a_horn_pivot) dy_origin + sin(a_horn_pivot) * r_horn_link; 
+dx_horn_pivot = function(a_horn_pivot) dx_origin + cos(a_horn_pivot) * r_drive_link;
+dy_horn_pivot = function(a_horn_pivot) dy_origin + sin(a_horn_pivot) * r_drive_link; 
 
 dx_coupler_link = function(a_horn_pivot) dx_slider_pivot - dx_horn_pivot(a_horn_pivot);
 coupler_link_angle = function(a_horn_pivot) acos(dx_coupler_link(a_horn_pivot) /coupler_link_length); 
@@ -658,7 +681,7 @@ module servo_filament_guide(
 
 
 module moving_clamp_bracket(a_horn_pivot) {
-    z_moving_clamp_bracket = 10;
+    
            
     base = [
         2 * moving_clamp_rim + 9g_servo_body_width,
@@ -667,9 +690,15 @@ module moving_clamp_bracket(a_horn_pivot) {
     ]; 
     servo_wire_clearance = [ 6, 20, 12]; 
     slot = 1.02* [9g_servo_body_width, 9g_servo_body_length, a_lot];
+    d_mouse_ear = 2* moving_clamp_rim * sqrt(2);
+    h_mouse_ear = 0.4;
+    module blank() {
+        block(base, center=ABOVE);
+        center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) translate([base.x/2, base.y/2, 0]) can(d=d_mouse_ear, h=h_mouse_ear, center=ABOVE);
+    }
     module shape() {    
         render(convexity=10) difference() {
-            block(base, center=ABOVE);
+            blank();
             block(slot);
             translate([0, 0, 2]) block(servo_wire_clearance, center=RIGHT+ABOVE);
         }
@@ -678,7 +707,7 @@ module moving_clamp_bracket(a_horn_pivot) {
     rotation = 
         mode == PRINTING ? [0, 0, 0] :
         [0, 0, 0];
-    dy = 9g_servo_body_length/2 + moving_clamp_rim/2 + dy_pivot(a_horn_pivot);
+    dy = 9g_servo_body_length/2 + moving_clamp_rim/2 + dy_pivot(a_horn_pivot) + dy_moving_clamp_bracket_offset;
     translation = 
         mode == PRINTING ? 
         [x_pusher_bp + dx_slide_plate, y_pusher_bp + dy, z_printing] :
@@ -696,20 +725,23 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
     d_horn_pivot_end = 5;
     // Clear the bearing, then the space for building up to attachment, then pad used to shape the link
     dr_horn_clearance = radius_of_bearing + 0.2*h_pivot + d_horn_pivot_end/2;
+    attach_pivot_to_horn = true;
 
     module blank() {
         // Create a blank for inserting the servo horn
         hull() {
             can(d=d_center, h=h, center=ABOVE);
-            translate([12, 0, 0]) can(d=7, h=h, center=ABOVE); 
+            translate([r_pusher_driver_link, 0, 0]) can(d=7, h=h, center=ABOVE); 
         }
         // Create a blank to which the pivot can be attached
-        hull() {
-            can(d=d_center, h=2, center=ABOVE);
-            rotate([0, 0, az_drive_link_pivot])  
-                translate([r_horn_link - dr_horn_clearance, 0, 0]) 
-                    can(d=d_horn_pivot_end, h=2, center=ABOVE);
-        }   
+        if (!attach_pivot_to_horn) {
+            hull() {
+                can(d=d_center, h=2, center=ABOVE);
+                #rotate([0, 0, az_drive_link_pivot])  
+                    translate([r_drive_link - dr_horn_clearance, 0, 0]) 
+                        can(d=d_horn_pivot_end, h=2, center=ABOVE);
+            }   
+        }
     }   
             
     module shape() {
@@ -748,13 +780,16 @@ module limit_cam(a_horn_pivot) {
     h_limit_cam = 7;
     h_bumper = 4;
     dz_engagement = 2;
-    az_limit_cam_back = 280;
-    az_limit_cam_front = 100;
+
     
     module blank() {
         can(d=d_limit_cam, h = h_limit_cam, center=ABOVE);
         hull() {
-            rotate([0, 0, az_limit_cam_back]) translate([15, 0, 0]) can(d=10, taper = 5, h = h_bumper, center = ABOVE);
+            can(d=10, taper = 5, h = h_bumper, center = ABOVE);
+             rotate([0, 0, az_limit_cam_back]) translate([15, 0, 0]) can(d=10, taper = 5, h = h_bumper, center = ABOVE);
+        }
+        hull() {
+            can(d=10, taper = 5, h = h_bumper, center = ABOVE);
             rotate([0, 0, az_limit_cam_front]) translate([15, 0, 0]) can(d=10, taper = 5, h = h_bumper, center = ABOVE);
         }
     }
@@ -785,37 +820,31 @@ module limit_cam(a_horn_pivot) {
 module pusher_coupler_link(a_horn_pivot) {
 
     angle_moving_clamp_to_linkage =  + 90 - coupler_link_angle(a_horn_pivot);
-    angle_horn_cam_to_linkage =   90 - coupler_link_angle(a_horn_pivot) + a_horn_pivot;
+    angle_horn_cam_to_linkage =   da_driver_horn_to_linkage - coupler_link_angle(a_horn_pivot) + a_horn_pivot;
     air_gap = 0.60;
     radius_of_bearing = ahpb_r_bearing(h_pivot, d_pivot_axle);
     l_strut_moving_clamp = radius_of_bearing + d_pivot_axle + dl_strut_moving_clamp;
-    l_strut_horn_cam = radius_of_bearing + d_pivot_axle + dl_strut_horn_cam;
+    l_strut_driver = radius_of_bearing + d_pivot_axle + dl_strut_driver;
 
     // Use the children to generate an attachment
     clipping_diameter = 10;  // Only helps in plane of rotation, so no help here. 
     child_idx_handle_for_bearing = 0;
     child_idx_handle_for_tcap = 1;
-    child_idx_handle_for_lcap = 2;    
+    child_idx_handle_for_lcap = 2; 
+    r_attachment = d_pivot_axle/2;
+    dx_attachment = radius_of_bearing + r_attachment + 0.2*h_pivot;
     
-    attachment_instructions_mc = [
-        [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
-        [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
-        [ADD_SPRUES, AP_LCAP, [0, 130, 216, 290]],  
-    ]; 
     
-    attachment_instructions_driver = [
-        [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
-        [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
-        [ADD_SPRUES, AP_LCAP, [0, 72, 144, 216 ]],  //45, 135, 225, 315
-    ]; 
-    // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
-    module shape() {
-        if (debug_kinematics) {
-            #render(convexity=10) difference() {
-                hull() center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 0]) can(d=5, h = 2, center=ABOVE);
-                center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
-            }
-        }
+    module moving_clamp_bracket_pivot() {
+        
+
+        attachment_instructions = [
+            [ADD_HULL_ATTACHMENT, AP_BEARING, 0, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_LCAP, child_idx_handle_for_lcap, clipping_diameter],
+            [ADD_SPRUES, AP_LCAP, [0, 130, 216, 290]],  
+        ];         
+        
         translate([coupler_link_length/2, 0, 0]) {
             audrey_horizontal_pivot(
                 height = h_pivot, 
@@ -823,24 +852,36 @@ module pusher_coupler_link(a_horn_pivot) {
                 air_gap = air_gap, 
                 angle_bearing = angle_moving_clamp_to_linkage, 
                 angle_pin = angle_moving_clamp_fixed , 
-                attachment_instructions = attachment_instructions_mc) {
+                attachment_instructions = attachment_instructions) {
+                    rotate([0, 0, az_attachment_to_moving_clamp]) 
+                        translate([dx_attachment, 0, 0]) 
+                            can(d=2*r_attachment, h=0.8*h_pivot , center=ABOVE);                       
                     rotate([0, 0, 90]) 
-                        translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
-                            can(d=moving_clamp_rim, h=h_pivot/3 , center=ABOVE);                       
+                        translate([dx_attachment, 0, (0.6)*h_pivot]) 
+                            can(d=2*r_attachment, h=0.4*h_pivot , center=ABOVE);
                     rotate([0, 0, 90]) 
-                        translate([radius_of_bearing + d_pivot_axle, 0, (0.6)*h_pivot]) 
-                            can(d=d_pivot_axle, h=0.2*h_pivot , center=ABOVE);
+                        translate([dx_attachment, 0, 0]) 
+                            can(d=2*r_attachment, h=0.2*h_pivot , center=ABOVE);                    
                  
                 };
             rotate([0, 0, 90 + angle_moving_clamp_fixed]) {
                 hull() {
-                    translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
-                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([dx_attachment, 0, 0]) 
+                        can(d=d_pivot_axle, h=h_pivot, center=ABOVE);
                     translate([l_strut_moving_clamp, 0, 0]) 
                         can(d=d_pivot_axle, h=0.8 * h_pivot , center=ABOVE);
                 }
             }
         }
+    }
+    
+    module driver_pivot() {
+        attachment_instructions_driver = [
+            [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_LCAP, child_idx_handle_for_lcap, clipping_diameter],
+            [ADD_SPRUES, AP_LCAP, [0, 72, 144, 216 ]],  
+        ]; 
         
         translate([-coupler_link_length/2, 0, 0]) {
             audrey_horizontal_pivot(
@@ -851,27 +892,28 @@ module pusher_coupler_link(a_horn_pivot) {
                 angle_pin = angle_horn_cam_fixed, 
                 attachment_instructions = attachment_instructions_driver) {
                     rotate([0, 0,  90]) 
-                        translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
-                            can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
-                    
+                        translate([dx_attachment, 0, 0]) 
+                            can(d=2*r_attachment, h=0.8 * h_pivot, center=ABOVE);
                     rotate([0, 0, 90]) 
-                        translate([radius_of_bearing + 3, 0, h_pivot*2/3]) 
-                            #can(d=4, h=h_pivot/3 , center=ABOVE);                        
+                        translate([dx_attachment, 0, h_pivot*2/3]) 
+                            can(d=2*r_attachment, h=h_pivot/3 , center=ABOVE);     
+                    rotate([0, 0, 90]) 
+                        translate([dx_attachment, 0, 0]) 
+                            can(d=2*r_attachment, h=h_pivot/4 , center=ABOVE);                      
              }
             rotate([0, 0, 90 + angle_horn_cam_fixed]) {
                 
                 hull() {
-                    translate([radius_of_bearing + d_pivot_axle, 0, 0]) 
-                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
-                    translate([l_strut_horn_cam, 0, 0]) 
-                        can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
+                    translate([dx_attachment, 0, 0]) 
+                        can(d=2*r_attachment, h=h_pivot, center=ABOVE);
+                    translate([l_strut_driver, 0, 0]) 
+                        can(d=2*r_attachment, h=0.8 * h_pivot, center=ABOVE);
                 }
             }
-            rotate([0, 0, 90 + angle_horn_cam_fixed]) {
-                translate([radius_of_bearing + 3, 0, 0]) can(d=4, h=h_pivot, center=ABOVE);
-            } 
-        }
-        
+        }        
+    }
+    
+    module connecting_bar() { 
         hull() {
             translate([coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_moving_clamp_fixed])
@@ -879,9 +921,23 @@ module pusher_coupler_link(a_horn_pivot) {
                     
             translate([-coupler_link_length/2, 0, 0]) 
                 rotate([0, 0, 90 + angle_horn_cam_fixed]) 
-                    translate([l_strut_horn_cam, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);
-                    
+                    translate([l_strut_driver, 0, 0]) can(d=d_pivot_axle, h=0.8 * h_pivot, center=ABOVE);    
+        }        
+    }
+    
+    
+    
+    // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
+    module shape() {
+        if (debug_kinematics) {
+            #render(convexity=10) difference() {
+                hull() center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 0]) can(d=5, h = 2, center=ABOVE);
+                center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
+            }
         }
+        moving_clamp_bracket_pivot();
+        driver_pivot();
+        connecting_bar();
     }
     z_printing = 0;
     rotation = 

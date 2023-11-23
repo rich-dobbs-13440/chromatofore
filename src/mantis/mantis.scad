@@ -243,13 +243,13 @@ y_servo_filament_guide_bp = 40;
 dy_servo_filament_guide_bp = -40;
 
 x_clamp_cam_bp = 100;
-y_clamp_cam_bp = 50;
+y_clamp_cam_bp = 60;
 dy_clamp_cam_bp = -40;
 
-x_pusher_bp = 100;
+x_pusher_bp = 110;
 y_pusher_bp = -20;
 
-x_limit_cam_bp = 130;
+x_limit_cam_bp = 150;
 y_limit_cam_bp = 0;
 
 x_servo_mounting_nut_wrench_bp = 150;

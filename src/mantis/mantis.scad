@@ -225,10 +225,20 @@ z_moving_clamp_bracket = 8;  // [0:10]
 
 
 /* [Limit Cam Design] */
-    az_limit_cam_back = 290; // [250: 300]
-    az_limit_cam_front = 200; // [0:360]
-
-
+// Sets where forward position of the moving clamp triggers limit switch
+az_limit_cam_front = 200; // [0:360]
+// Sets where backward position of the moving clamp triggers limit switch
+az_limit_cam_back = 290; // [250: 300]
+// Adjust so bumper flat is centered on roller
+d_limit_cam = 15;
+// Adjusts so that bumper catches the roller
+h_limit_cam = 8;
+// Adjust so bumper clears linkage near bracket
+h_limit_cam_bumper = 4;
+// Sets the flat spot for the limit switch on top of the bumper
+d_limit_cam_bumper = 10;
+// Adjust so bumper is on top of limit switch roller 
+dr_limit_cam_bumper = 15;
 
 /* [Build Plate Layout] */
 
@@ -774,24 +784,21 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
 } 
 
 module limit_cam(a_horn_pivot) {
-    horn_linkage_cutout_sf = 1.03; // Adjust to get fit without slop!
+    horn_linkage_cutout_sf = 1.05; // Adjust to get fit without slop!
     horn_linkage_cutout_scaling = [horn_linkage_cutout_sf, horn_linkage_cutout_sf, 1];
-    d_limit_cam = 18   ;
-    h_limit_cam = 7;
-    h_bumper = 4;
     dz_engagement = 2;
 
-    
+    module bumper() {
+        hull() {
+            can(d=d_limit_cam_bumper, taper = 5, h = h_limit_cam_bumper, center = ABOVE);
+             translate([dr_limit_cam_bumper, 0, 0]) 
+                can(d=d_limit_cam_bumper, taper = 5, h = h_limit_cam_bumper, center = ABOVE);
+        }        
+    }
     module blank() {
         can(d=d_limit_cam, h = h_limit_cam, center=ABOVE);
-        hull() {
-            can(d=10, taper = 5, h = h_bumper, center = ABOVE);
-             rotate([0, 0, az_limit_cam_back]) translate([15, 0, 0]) can(d=10, taper = 5, h = h_bumper, center = ABOVE);
-        }
-        hull() {
-            can(d=10, taper = 5, h = h_bumper, center = ABOVE);
-            rotate([0, 0, az_limit_cam_front]) translate([15, 0, 0]) can(d=10, taper = 5, h = h_bumper, center = ABOVE);
-        }
+        rotate([0, 0, az_limit_cam_front]) bumper();
+        rotate([0, 0, az_limit_cam_back]) bumper();
     }
         
     module shape() {
@@ -930,7 +937,7 @@ module pusher_coupler_link(a_horn_pivot) {
     // The linkage connects the pivot of the horn linkage to the pusher pivot on the moving clamp. 
     module shape() {
         if (debug_kinematics) {
-            #render(convexity=10) difference() {
+            render(convexity=10) difference() {
                 hull() center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 0]) can(d=5, h = 2, center=ABOVE);
                 center_reflect([1, 0, 0]) translate([coupler_link_length/2, 0, 25]) hole_through("M2", cld=0.6, $fn=12);
             }
@@ -939,8 +946,9 @@ module pusher_coupler_link(a_horn_pivot) {
         driver_pivot();
         connecting_bar();
     }
+    
     z_printing = 0;
-    rotation = 
+        rotation = 
         mode == PRINTING ? 
             [0,  0, coupler_link_angle(a_horn_pivot)] :
             [0, 0, coupler_link_angle(a_horn_pivot)];    

@@ -34,16 +34,24 @@ lever_slot = [extruder.x/2+10, 8, lever.z + 2];
 servo_horn_offset = [-20, 9, -7.5];
 
 /* [Servo Horn Characteristics ] */
+// Measure across horn at greatest point  - might vary for different brands of servo.
+od_horn = 36;
+// Adjust if necessary to get a good fit for actual horn  - might vary for different brands of servo.
+cl_d_horn_arm_tip = 1;
+// The following characteristic might vary for different brands of servo. 
 od_horn_barrel = 7.6;
 id_horn_barrel = 5.3;
 h_horn_barrel = 6.1;
 d_horn_arm_hub = 11.5;
 d_horn_arm_hub_fillet = 15;
 d_horn_arm_tip = 5.1;
-r_horn_arm = 15.7;
 h_horn_arm = 2;  
 dz_horn_arm = -5.5;
 
+r_horn_arm = (od_horn - d_horn_arm_tip)/2;
+
+// Provide a large clearance so that servo and horn can be inserted into extension.  Should not need to be tuned
+cl_h_horn_arm = 10;
 
 
 /* [Show] */
@@ -73,7 +81,6 @@ mode = print_one_part ? PRINTING:
 /* [Cap Design] */
 
 dz_cap_base = 2;
-
 dx_servo = -10.4; // [-12:0.1:-10]
 
 attachment = [10, 18, 4]; 
@@ -89,8 +96,8 @@ dz_servo_mount = 19;
 
 
 /* [Horn Extension Design] */
-h_horn_extension = 8;
-dz_horn_clearance = 9;
+h_horn_extension = 8; // [8: build, 4: test]
+dz_horn_clearance = 7; // [9:build, 7.5:test]
 dx_horn_extension_tip = 30; // [18 : 35]
 dy_horn_extension_tip = -13; // [-20:0]
 d_horn_extension_tip = 5;
@@ -159,11 +166,13 @@ module Extruder(as_clearance = false, lever_angle = 0) {
 module standard_servo_four_armed_horn(angle=0, as_clearance = false) {
 
     module horn_arm() {
-        cl_h_horn_arm = as_clearance ? 10: 0;
+        dh_horn_arm = as_clearance ? cl_h_horn_arm : 0;
+        dd_horn_arm_tip = as_clearance ? cl_d_horn_arm_tip : 0;
         translate([0, 0, dz_horn_arm]) {
             hull() {
-                can(d=d_horn_arm_hub, h=h_horn_arm + cl_h_horn_arm, center=ABOVE);
-                translate([r_horn_arm, 0, 0]) can(d=d_horn_arm_tip, h=h_horn_arm + cl_h_horn_arm, center=ABOVE);
+                can(d=d_horn_arm_hub, h=h_horn_arm + dh_horn_arm, center=ABOVE);
+                translate([r_horn_arm, 0, 0]) 
+                    can(d=d_horn_arm_tip + dd_horn_arm_tip, h=h_horn_arm + dh_horn_arm, center=ABOVE);
             }
             if (as_clearance) {
                 // fake fillet 
@@ -245,9 +254,11 @@ module Cap() {
     module front_pedistal() {
         translate([dx_front_pedistal, 0, dz_servo_mount]) 
             rounded_block(pedistal + [4, 0, 0], sidesonly = "XZ", center=FRONT+RIGHT+BELOW);
-        rounded_block([dx_front_pedistal + pedistal.x + 4, pedistal.y, 4], sidesonly = "XZ", center=RIGHT+FRONT);     
+        rounded_block(
+            [dx_front_pedistal + pedistal.x + 4, pedistal.y, 4], sidesonly = "XZ", center=RIGHT+FRONT);     
         translate([dx_front_pedistal + pedistal.x, 0, -2])  
-            rounded_block([4, pedistal.y, dz_servo_mount + 2], sidesonly = "XZ", center = FRONT+RIGHT+ABOVE);
+            rounded_block(
+                [4, pedistal.y, dz_servo_mount + 2], sidesonly = "XZ", center = FRONT+RIGHT+ABOVE);
     }
     
     
@@ -255,26 +266,32 @@ module Cap() {
         translate([dx_back_pedistal, 0, dz_servo_mount]) 
             rounded_block(pedistal + [8, 0, 0], sidesonly = "XZ", center = BEHIND + RIGHT + BELOW);
         translate([dx_back_pedistal - 12, 0, -2])  
-            rounded_block([4, pedistal.y, dz_servo_mount + 2], sidesonly = "XZ", center = BEHIND + RIGHT + ABOVE);        
+            rounded_block(
+                [4, pedistal.y, dz_servo_mount + 2], sidesonly = "XZ", center = BEHIND + RIGHT + ABOVE);        
         block([dx_back_pedistal, pedistal.y, 4], center = RIGHT + BEHIND);   
 
     }   
     
     module cap_base() {
         translate([4, 0, dz_cap_base]) 
-            rounded_block([extruder.x + 7.3, extruder.y + 2, 6.5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
+            rounded_block(
+                [extruder.x + 7.3, extruder.y + 2, 6.5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
     }
     
     module cap_clip() {
         translate([2, 0, 0]) 
-            rounded_block([extruder.x + 4, 4, extruder.z], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
+            rounded_block(
+                [extruder.x + 4, 4, extruder.z], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
         
         translate([0, 0, -extruder.z - 3]) {
-            translate([0, 0, -4]) rounded_block([4, 11, 14], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
-            translate([0, 7, 4]) rounded_block([4, 4, extruder.z], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
+            translate([0, 0, -4]) 
+                rounded_block([4, 11, 14], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
+            translate([0, 7, 4]) 
+                rounded_block([4, 4, extruder.z], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
             hull() {
                 rounded_block([4,24, 8], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
-                translate([0, 0, -4]) rounded_block([4, 28, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
+                translate([0, 0, -4]) 
+                    rounded_block([4, 28, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
             }
         }
     }

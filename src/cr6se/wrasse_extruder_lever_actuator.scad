@@ -81,16 +81,20 @@ module Extruder(as_clearance = false, lever_angle = 0) {
     
     if (as_clearance) {
         blank();
+        dx = 2;
+        translate([dx, -1, dz_lever]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT);
     } else {
         shape();
     }
 }
 
 module servo() {
-    color(MIUZEIU_SERVO_BLUE) {
-        //futabas3003(position=[-38,0,46],  rotation=[180, 0, 90]);
-        futabas3003(position=[10,20,46],  rotation=[0, 180, 90]);
-    }    
+    translate([0, 0, dz_servo_mount]) {
+        color(MIUZEIU_SERVO_BLUE) {
+            
+            futabas3003(position=[10,20,29],  rotation=[0, 180, 90]);
+        } 
+    }   
 }
 
 module servo_mounting_screws(as_clearance = false) {
@@ -123,7 +127,7 @@ module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
                 assert(false);
     rotation = sidesonly == "XZ" ? [90, 0, 0] : [0, 0, 0];
     translate(translation) rotate(rotation) {
-        roundedBox(extent_for_rounding,  radius=radius, sidesonly=sidesonly != false, $fn=12);
+        roundedCube(extent_for_rounding,  r=radius, sidesonly=sidesonly != false, center=true, $fn=12);
     }
     
 }
@@ -150,7 +154,7 @@ module Cap() {
     
     module cap_base() {
         translate([4, 0, 2]) 
-            rounded_block([extruder.x + 7.3, extruder.y + 2, 5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
+            rounded_block([extruder.x + 7.3, extruder.y + 2, 6.5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
     }
     
     module cap_clip() {
@@ -158,8 +162,12 @@ module Cap() {
             rounded_block([extruder.x + 4, 4, extruder.z], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
         
         translate([0, 0, -extruder.z - 3]) {
-            translate([0, 0, -4]) rounded_block([4, 11, 12], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
-            rounded_block([4, 28, 8], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
+            translate([0, 0, -4]) rounded_block([4, 11, 14], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
+            translate([0, 7, 4]) rounded_block([4, 4, extruder.z], sidesonly = "XZ", center = FRONT + RIGHT  + ABOVE);
+            hull() {
+                rounded_block([4,24, 8], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
+                translate([0, 0, -4]) rounded_block([4, 28, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
+            }
         }
     }
    

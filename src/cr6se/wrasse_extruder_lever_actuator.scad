@@ -99,11 +99,11 @@ dz_horn_clearance = 7; // [9:build, 7.5:test]
 dx_horn_extension_tip = 30; // [18 : 35]
 dy_horn_extension_tip = -11.5; // [-20:0]
 d_horn_extension_tip = 5;
-horn_extension_offset_angle  = 20;
+horn_extension_offset_angle  = 25; // [20:45]
 h_horn_extension_pusher = 35;
-ay_horn_extension_print_surface = 40; // [0:45]
-dz_horn_extension_print_surface = -4;
-
+ay_horn_extension_print_surface = 0; // [0:45]
+dz_horn_extension_print_surface = -13.5; // [-15:0.1:-10]
+ax_horn_extension_print_surface = -90; // [-90:90]
 
 /* [Build Plate Layout] */
 x_horn_extension_bp = 10;
@@ -156,7 +156,6 @@ module Extruder(as_clearance = false, lever_angle = 0) {
                     translate([extruder.x/2-2, 0, 0]) rotate([0, 0, -45]) block(lever_handle, center=FRONT);
                 }
             }
-            
         }
     }
     
@@ -349,6 +348,15 @@ module HornExtension() {
         }
         
     }
+    module unprintable_overhang_top() {
+        translate([0, d_horn_arm_hub_fillet/2, dz_cap_base + 2])  
+            rotate([-45, 0, 0]) block([15, 10, 10], center = ABOVE+LEFT);
+    }
+    
+    module unprintable_overhang_back() {
+        translate([-15, -d_horn_arm_hub_fillet/2-1, dz_cap_base + 2])  
+            rotate([-45, 0, 0]) block([15, 10, 10], center = ABOVE+LEFT);
+    }
     
     module shape() {
         difference() {
@@ -356,12 +364,15 @@ module HornExtension() {
             translate([0, 0, dz_horn_clearance]) {
                 standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
             }
-            rotate([0, ay_horn_extension_print_surface, 0]) translate([0, 0, dz_horn_extension_print_surface]) plane_clearance(BELOW);
+            unprintable_overhang_top();
+            unprintable_overhang_back();
+            rotate([ax_horn_extension_print_surface, ay_horn_extension_print_surface, 0]) 
+                translate([0, 0, dz_horn_extension_print_surface]) plane_clearance(BELOW);
         }
     }
     z_printing = -dz_horn_extension_print_surface;
     rotation = 
-        mode == PRINTING ? [0,  -ay_horn_extension_print_surface, 0] : 
+        mode == PRINTING ? [-ax_horn_extension_print_surface,  -ay_horn_extension_print_surface, 0] : 
         [0, 0, az_servo + az_servo_horn_offset];
     translation = 
         mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :

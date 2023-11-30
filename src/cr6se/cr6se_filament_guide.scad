@@ -1,11 +1,10 @@
-include <lib/logging.scad>
-include <lib/centerable.scad>
-use <lib/shapes.scad>
-use <lib/not_included_batteries.scad>
+include <ScadStoicheia/centerable.scad>
+include <ScadStoicheia/logging.scad>
+use <ScadStoicheia/not_included_batteries.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
-include <lib/material_colors.scad>
+include <ScadApotheka/material_colors.scad>
 
-a_lot = 100;
+a_lot = 100 + 0;
 
 
 

@@ -3,9 +3,8 @@ use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
 
 
-use <PolyGear/PolyGear.scad>
 use <ScadApotheka/9g_servo.scad>
-use <ScadApotheka/hs_311_standard_servo.scad>
+//use <ScadApotheka/hs_311_standard_servo.scad>
 use <ScadApotheka/roller_limit_switch.scad>
 use <ScadApotheka/no_solder_roller_limit_switch_holder.scad>
 use <ScadApotheka/quarter_turn_clamping_connector.scad>

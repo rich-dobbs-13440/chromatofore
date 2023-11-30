@@ -7,13 +7,9 @@ and screw with which to attach the Ender 3 V2 Filament Guide.
 */  
 
 
-// include <lib/logging.scad>
 include <ScadStoicheia/centerable.scad>
-//use <lib/shapes.scad>
-//use <lib/not_included_batteries.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <MCAD/servos.scad>
-include <MCAD/stepper.scad>
 use <NopSCADlib/vitamins/rod.scad>
 use <ScadApotheka/ptfe_tubing.scad>
 
@@ -47,7 +43,6 @@ y_servo = 4; // [-20: 20]
 z_servo = -24; // [-40: 0]
 servo_shaft_diameter = 5.78; //[5.78:"Radio Shaft Standard"]
 z_servo_plate = 2.5; //[0.5:"Position test", 1:"Trial", 2:"Solid", 2.5:"Flush"]
-
 
 
 

@@ -1,7 +1,4 @@
-include <lib/logging.scad>
-include <lib/centerable.scad>
-use <lib/shapes.scad>
-use <lib/not_included_batteries.scad>
+include <ScadStoicheia/centerable.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <MCAD/stepper.scad>
 use <NopSCADlib/vitamins/rod.scad>

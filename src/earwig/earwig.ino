@@ -21,7 +21,7 @@ G1 X10  : Move move servo to an angle of 10 degres
 //#include <earwig.h>
 
 
-float nan = sqrt(-1);
+float flt_nan = sqrt(-1);
 
 
 // Servo pins
@@ -272,11 +272,11 @@ void processInputBuffer() {
   char delimiter = ' ';
   token = strtok(inputBuffer, &delimiter);
   
-  float c = nan;
-  float e = nan;
-  float f = nan;
-  float g = nan;
-  float x = nan;
+  float c = flt_nan;
+  float e = flt_nan;
+  float f = flt_nan;
+  float g = flt_nan;
+  float x = flt_nan;
 
   //debugLog("e", e);
   while (token != NULL) {

@@ -66,42 +66,48 @@ az_servo = 0; // [0:180]
 az_servo_horn_offset = -180; // [-360:360]
 
 
+
 /* [Printing Control] */
 
 print_all_parts = false;
 print_one_part = false;
 
-// Update options for part_to_print with each defined variable in the following Show section!
-one_part_to_print = "cap"; // [cap]
+// Update options for part_to_print with each defined variable in the Show section!
+one_part_to_print = "horn_extension"; // [cap, horn_extension]
 
 mode = print_one_part ? PRINTING: 
     print_all_parts ? PRINTING:
     ASSEMBLE_SUBCOMPONENTS;
 
+
+
 /* [Cap Design] */
-
 dz_cap_base = 2;
-dx_servo = -10.4; // [-12:0.1:-10]
-
-attachment = [10, 18, 4]; 
-
-
+dx_servo = -10.4; // [-12:0.1:-10] 
 pedistal = [8, 18, 4];
 dx_back_pedistal = -30;
 dx_front_pedistal = 10;   
-
 dx_servo_screw_offset = 4.5;
 dy_screw_offset = 4.6;
 dz_servo_mount = 19;
+
 
 
 /* [Horn Extension Design] */
 h_horn_extension = 8; // [8: build, 4: test]
 dz_horn_clearance = 7; // [9:build, 7.5:test]
 dx_horn_extension_tip = 30; // [18 : 35]
-dy_horn_extension_tip = -13; // [-20:0]
+dy_horn_extension_tip = -11.5; // [-20:0]
 d_horn_extension_tip = 5;
 horn_extension_offset_angle  = 20;
+h_horn_extension_pusher = 35;
+ay_horn_extension_print_surface = 40; // [0:45]
+dz_horn_extension_print_surface = -4;
+
+
+/* [Build Plate Layout] */
+x_horn_extension_bp = 10;
+y_horn_extension_bp = 10;
 
 module end_of_customization() {}
 
@@ -335,6 +341,12 @@ module HornExtension() {
             translate([dx_horn_extension_tip, dy_horn_extension_tip, 0]) 
                 can(d = d_horn_extension_tip, h=h_horn_extension, center=ABOVE);
         }
+        translate([dx_horn_extension_tip, dy_horn_extension_tip, 0]) {
+            hull() {
+                can(d = d_horn_extension_tip, h=h_horn_extension_pusher, center=BELOW);
+                translate([-4, 1.5, 0]) can(d = 1, h=h_horn_extension_pusher, center=BELOW);
+            }
+        }
         
     }
     
@@ -344,14 +356,15 @@ module HornExtension() {
             translate([0, 0, dz_horn_clearance]) {
                 standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
             }
+            rotate([0, ay_horn_extension_print_surface, 0]) translate([0, 0, dz_horn_extension_print_surface]) plane_clearance(BELOW);
         }
     }
-    z_printing = 0;
+    z_printing = -dz_horn_extension_print_surface;
     rotation = 
-        mode == PRINTING ? [0,  0, 0] : 
+        mode == PRINTING ? [0,  -ay_horn_extension_print_surface, 0] : 
         [0, 0, az_servo + az_servo_horn_offset];
     translation = 
-        mode == PRINTING ? [x_horn_extenion_bp, y_horn_extenion_bp, z_printing] :
+        mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :
         [servo_horn_offset.x, servo_horn_offset.y, dz_cap_base];
     
     translate(translation) rotate(rotation) {

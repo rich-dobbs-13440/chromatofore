@@ -17,6 +17,8 @@ include <MCAD/servos.scad>
 use <MCAD/boxes.scad>
 
 a_lot = 100 + 0;
+ASSEMBLE_SUBCOMPONENTS = 3 + 0;
+PRINTING = 4 + 0;
 
 /* [Extruder Characteristics] */
 extruder = [42.8, 43.3, 24.7];
@@ -28,12 +30,49 @@ lever_handle = [15.2, 3.9, 13.1];
 dz_lever = -4.7 - lever_handle.z/2;
 lever_slot = [extruder.x/2+10, 8, lever.z + 2];
 
-/* [Output Control] */
+/* [Servo Characteristics ] */
+servo_horn_offset = [-20, 9, -7.5];
+
+/* [Servo Horn Characteristics ] */
+od_horn_barrel = 7.6;
+id_horn_barrel = 5.3;
+h_horn_barrel = 6.1;
+d_horn_arm_hub = 11.5;
+d_horn_arm_hub_fillet = 15;
+d_horn_arm_tip = 5.1;
+r_horn_arm = 15.7;
+h_horn_arm = 2;  
+dz_horn_arm = -5.5;
+
+
+
+/* [Show] */
+
 show_mocks = true;
 show_vitamins = true;
+cap = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+horn_extension = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 
-/* [Design] */
+/* [Animation] */
+az_servo = 0; // [0:180]
+az_servo_horn_offset = -180; // [-360:360]
 
+
+/* [Printing Control] */
+
+print_all_parts = false;
+print_one_part = false;
+
+// Update options for part_to_print with each defined variable in the following Show section!
+one_part_to_print = "cap"; // [cap]
+
+mode = print_one_part ? PRINTING: 
+    print_all_parts ? PRINTING:
+    ASSEMBLE_SUBCOMPONENTS;
+
+/* [Cap Design] */
+
+dz_cap_base = 2;
 
 dx_servo = -10.4; // [-12:0.1:-10]
 
@@ -47,6 +86,35 @@ dx_front_pedistal = 10;
 dx_servo_screw_offset = 4.5;
 dy_screw_offset = 4.6;
 dz_servo_mount = 19;
+
+
+/* [Horn Extension Design] */
+h_horn_extension = 8;
+dz_horn_clearance = 9;
+dx_horn_extension_tip = 30; // [18 : 35]
+dy_horn_extension_tip = -13; // [-20:0]
+d_horn_extension_tip = 5;
+horn_extension_offset_angle  = 20;
+
+module end_of_customization() {}
+
+function layout_from_mode(mode) = 
+    mode == ASSEMBLE_SUBCOMPONENTS ? "assemble" :
+    mode == PRINTING ? "printing" :
+    "unknown";
+
+layout = layout_from_mode(mode);
+show_parts = false;
+
+function show(variable, name) = 
+    (print_one_part && (mode == PRINTING)) ? name == one_part_to_print :
+    variable;
+
+visualization_cap = 
+    visualize_info("Cap", PART_1, show(cap, "cap") , layout, show_parts); 
+
+visualization_horn_extension = 
+    visualize_info("Horn Extension", PART_2, show(horn_extension, "horn_extension") , layout, show_parts); 
 
 module Extruder(as_clearance = false, lever_angle = 0) {
     module blank() {
@@ -88,12 +156,52 @@ module Extruder(as_clearance = false, lever_angle = 0) {
     }
 }
 
-module servo() {
+module standard_servo_four_armed_horn(angle=0, as_clearance = false) {
+
+    module horn_arm() {
+        cl_h_horn_arm = as_clearance ? 10: 0;
+        translate([0, 0, dz_horn_arm]) {
+            hull() {
+                can(d=d_horn_arm_hub, h=h_horn_arm + cl_h_horn_arm, center=ABOVE);
+                translate([r_horn_arm, 0, 0]) can(d=d_horn_arm_tip, h=h_horn_arm + cl_h_horn_arm, center=ABOVE);
+            }
+            if (as_clearance) {
+                // fake fillet 
+                can(d=d_horn_arm_hub_fillet,  h=h_horn_arm + cl_h_horn_arm, center=ABOVE);
+            }
+        }
+    } 
+    module shape() {
+        hollow = as_clearance ? 0.01 : id_horn_barrel;
+        rotate([0, 0, angle]) {
+            color(POLYETHELYNE) {
+                can(d=od_horn_barrel, hollow=hollow , h = h_horn_barrel, center = BELOW);
+                horn_arm();
+                rotate([0, 0, 90]) horn_arm();
+                rotate([0, 0, 180]) horn_arm();
+                rotate([0, 0, 270]) horn_arm();
+            }
+            if (as_clearance) {
+            } else {
+                // Add a flag at zero to clearly differentiate one horn
+                color("black") block([40, 0.1, h_horn_arm + 5], center=FRONT+BELOW);
+            }
+        }        
+    }
+    shape();
+}
+
+module servo(servo_angle=0, horn_offset_angle = 0) {
+    
+
     translate([0, 0, dz_servo_mount]) {
         color(MIUZEIU_SERVO_BLUE) {
-            
             futabas3003(position=[10,20,29],  rotation=[0, 180, 90]);
-        } 
+        }
+
+
+        translate(servo_horn_offset) 
+            standard_servo_four_armed_horn(angle = servo_angle + horn_offset_angle);
     }   
 }
 
@@ -153,7 +261,7 @@ module Cap() {
     }   
     
     module cap_base() {
-        translate([4, 0, 2]) 
+        translate([4, 0, dz_cap_base]) 
             rounded_block([extruder.x + 7.3, extruder.y + 2, 6.5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
     }
     
@@ -191,14 +299,54 @@ module Cap() {
             servo_mounting_screws(as_clearance=true);
         }
     }
-    if (show_mocks) {
+    if (show_mocks && mode != PRINTING) {
         Extruder();
-        servo();
     }
-    
-    shape();
+    if (show_vitamins && mode != PRINTING) {
+        servo(servo_angle=az_servo, horn_offset_angle = az_servo_horn_offset);
+    }
+    visualize(visualization_cap) {
+        shape();
+    }
     
 }
 
+module HornExtension() {
+    module blank() {
+        hull() {
+            can(d = 2*r_horn_arm, h=h_horn_extension, center=ABOVE);
+            translate([dx_horn_extension_tip, dy_horn_extension_tip, 0]) 
+                can(d = d_horn_extension_tip, h=h_horn_extension, center=ABOVE);
+        }
+        
+    }
+    
+    module shape() {
+        difference() {
+            blank();
+            translate([0, 0, dz_horn_clearance]) {
+                standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
+            }
+        }
+    }
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0,  0, 0] : 
+        [0, 0, az_servo + az_servo_horn_offset];
+    translation = 
+        mode == PRINTING ? [x_horn_extenion_bp, y_horn_extenion_bp, z_printing] :
+        [servo_horn_offset.x, servo_horn_offset.y, dz_cap_base];
+    
+    translate(translation) rotate(rotation) {
+        visualize(visualization_horn_extension) {
+            shape();
+        } 
+    }  
+    
+}
+
+
 Cap();
+
+HornExtension();
 

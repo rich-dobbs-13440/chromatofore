@@ -22,6 +22,8 @@ PRINTING = 4 + 0;
 
 /* [Extruder Characteristics] */
 extruder = [42.8, 43.3, 24.7];
+mounting_plate = [42.8, 48.8, 3];
+stepper_motor = [42, 42, 40];
 entrance_translation = [0, 15, 11];
 translation_attachment_screw = [-5, extruder.y-5, 0];
 translation_pivot_screw = [-23, 5, 0];
@@ -82,20 +84,21 @@ mode = print_one_part ? PRINTING:
 
 
 /* [Cap Design] */
+z_base_cap = 7.5;
 dz_cap_base = 2;
 dx_servo = -10.4; // [-12:0.1:-10] 
-pedistal = [8, 18, 4];
+pedistal = [8, 18, 6];
 dx_back_pedistal = -30;
 dx_front_pedistal = 10;   
 dx_servo_screw_offset = 4.5;
 dy_screw_offset = 4.6;
-dz_servo_mount = 19;
+dz_servo_mount = 18;
 
 
 
 /* [Horn Extension Design] */
-h_horn_extension = 8; // [8: build, 4: test]
-dz_horn_clearance = 7; // [9:build, 7.5:test]
+h_horn_extension = 6;  
+dz_horn_clearance = 8;  
 dx_horn_extension_tip = 30; // [18 : 35]
 dy_horn_extension_tip = -11.5; // [-20:0]
 d_horn_extension_tip = 5;
@@ -105,9 +108,17 @@ ay_horn_extension_print_surface = 0; // [0:45]
 dz_horn_extension_print_surface = -13.5; // [-15:0.1:-10]
 ax_horn_extension_print_surface = -90; // [-90:90]
 
+
+
 /* [Build Plate Layout] */
-x_horn_extension_bp = 10;
-y_horn_extension_bp = 10;
+
+x_cap_bp = 20;
+y_cap_bp = 20;
+
+x_horn_extension_bp = 20;
+y_horn_extension_bp = 0;
+
+
 
 module end_of_customization() {}
 
@@ -129,14 +140,42 @@ visualization_cap =
 visualization_horn_extension = 
     visualize_info("Horn Extension", PART_2, show(horn_extension, "horn_extension") , layout, show_parts); 
 
+module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
+    extent_for_rounding =  sidesonly == "XZ" ? [extent.x, extent.z, extent.y] : extent;
+    translation = 
+        center == BEHIND + RIGHT + BELOW ? [-extent.x/2, extent.y/2, -extent.z/2] :
+        center == BEHIND + RIGHT + ABOVE ? [-extent.x/2, extent.y/2, extent.z/2] :
+        center == FRONT + RIGHT+ BELOW ? [extent.x/2, extent.y/2, -extent.z/2] :
+        center == FRONT +RIGHT ?  [extent.x/2, extent.y/2, 0] :
+        center == FRONT +RIGHT + ABOVE ? [extent.x/2, extent.y/2, extent.z/2] :
+        center == FRONT + RIGHT + BELOW ? [extent.x/2, extent.y/2, -extent.z/2] :
+                assert(false);
+    rotation = sidesonly == "XZ" ? [90, 0, 0] : [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        roundedCube(extent_for_rounding,  r=radius, sidesonly=sidesonly != false, center=true, $fn=12);
+    }
+}
+
 module Extruder(as_clearance = false, lever_angle = 0) {
     module blank() {
-        translate([-extruder.x/2, extruder.y/2, -extruder.z/2]) 
+        translate([-extruder.x/2, extruder.y/2, 0]) 
         render() intersection() {
-            block(extruder);
+            block(extruder + [0, 0, mounting_plate.z + stepper_motor.z], center=BELOW);
             // Cut off corners:
-            rotate([0, 0, 45]) block([54.5, 54.5, extruder.z + 1]);
+            rotate([0, 0, 45]) block([54.5, 54.5, a_lot]);
         }
+    }
+    
+    module mounting_plate() {
+        // Show mounting plate
+        dy_front_mounting_plate = 12;
+        translate([0, 0, -extruder.z]) {
+            color(BLACK_IRON) {
+                block(mounting_plate, center=BEHIND+RIGHT+BELOW);
+                translate([0, dy_front_mounting_plate, 0]) 
+                    block(mounting_plate + [0, -dy_front_mounting_plate, 0], center=FRONT+RIGHT+BELOW);
+            }
+        }        
     }
     
     module shape() {
@@ -156,11 +195,13 @@ module Extruder(as_clearance = false, lever_angle = 0) {
                     translate([extruder.x/2-2, 0, 0]) rotate([0, 0, -45]) block(lever_handle, center=FRONT);
                 }
             }
+            mounting_plate();
         }
     }
     
     if (as_clearance) {
         blank();
+        mounting_plate() ;
         dx = 2;
         translate([dx, -1, dz_lever]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT);
     } else {
@@ -206,8 +247,6 @@ module standard_servo_four_armed_horn(angle=0, as_clearance = false) {
 }
 
 module servo(servo_angle=0, horn_offset_angle = 0) {
-    
-
     translate([0, 0, dz_servo_mount]) {
         color(MIUZEIU_SERVO_BLUE) {
             futabas3003(position=[10,20,29],  rotation=[0, 180, 90]);
@@ -221,13 +260,19 @@ module servo(servo_angle=0, horn_offset_angle = 0) {
 
 module servo_mounting_screws(as_clearance = false) {
     dx = (dx_front_pedistal - dx_back_pedistal + 2 * dx_servo_screw_offset) / 2;
-    
     registration = [55, 1.6, 3];
     
     if (as_clearance) {
         translate([-10, 9.5, dz_servo_mount]) {
-            center_reflect([0, 1, 0]) center_reflect([1, 0, 0]) 
+            center_reflect([0, 1, 0]) center_reflect([1, 0, 0]) {
                 translate([dx, dy_screw_offset, 40]) hole_through("M3", $fn=12);
+                translate([dx, dy_screw_offset, -2]) rotate([0, 0, 90]) nutcatch_sidecut(
+                    name   = "M3",  // name of screw family (i.e. M3, M4, ...) 
+                    l      = 50.0,  // length of slot
+                    clk    =  0.0,  // key width clearance
+                    clh    =  0.0,  // height clearance
+                    clsl   =  0.1);  // slot width clearance
+            }
             // Divot for servo registration, at least on RadioShack servos. 
             hull() {
                 translate([0, 0, -1.6])  block(registration, center=ABOVE);
@@ -237,22 +282,7 @@ module servo_mounting_screws(as_clearance = false) {
     }
 }
 
-module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
-    extent_for_rounding =  sidesonly == "XZ" ? [extent.x, extent.z, extent.y] : extent;
-    translation = 
-        center == BEHIND + RIGHT + BELOW ? [-extent.x/2, extent.y/2, -extent.z/2] :
-        center == BEHIND + RIGHT + ABOVE ? [-extent.x/2, extent.y/2, extent.z/2] :
-        center == FRONT + RIGHT+ BELOW ? [extent.x/2, extent.y/2, -extent.z/2] :
-        center == FRONT +RIGHT ?  [extent.x/2, extent.y/2, 0] :
-        center == FRONT +RIGHT + ABOVE ? [extent.x/2, extent.y/2, extent.z/2] :
-        center == FRONT + RIGHT + BELOW ? [extent.x/2, extent.y/2, -extent.z/2] :
-                assert(false);
-    rotation = sidesonly == "XZ" ? [90, 0, 0] : [0, 0, 0];
-    translate(translation) rotate(rotation) {
-        roundedCube(extent_for_rounding,  r=radius, sidesonly=sidesonly != false, center=true, $fn=12);
-    }
-    
-}
+
 
 module Cap() {
     
@@ -280,13 +310,13 @@ module Cap() {
     module cap_base() {
         translate([4, 0, dz_cap_base]) 
             rounded_block(
-                [extruder.x + 7.3, extruder.y + 2, 6.5], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
+                [extruder.x + 7.3, extruder.y + 2, z_base_cap], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
     }
     
     module cap_clip() {
         translate([2, 0, 0]) 
             rounded_block(
-                [extruder.x + 4, 4, extruder.z], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
+                [extruder.x + 6, 4, extruder.z + 8], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
         
         translate([0, 0, -extruder.z - 3]) {
             translate([0, 0, -4]) 
@@ -321,14 +351,23 @@ module Cap() {
             servo_mounting_screws(as_clearance=true);
         }
     }
-    if (show_mocks && mode != PRINTING) {
-        Extruder();
-    }
-    if (show_vitamins && mode != PRINTING) {
-        servo(servo_angle=az_servo, horn_offset_angle = az_servo_horn_offset);
-    }
-    visualize(visualization_cap) {
-        shape();
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [90,  0, 0] : 
+        [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_cap_bp, y_cap_bp, z_printing] :
+        [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        if (show_mocks && mode != PRINTING) {
+            Extruder();
+        }
+        if (show_vitamins && mode != PRINTING) {
+            servo(servo_angle=az_servo, horn_offset_angle = az_servo_horn_offset);
+        }
+        visualize(visualization_cap) {
+            shape();
+        }
     }
     
 }

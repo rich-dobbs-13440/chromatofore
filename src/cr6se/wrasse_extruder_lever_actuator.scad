@@ -69,7 +69,7 @@ test_of_pivot_with_detent = 0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't pr
 az_servo =115; // [0:120]
 az_servo_horn_offset = -90; // [-360:360]
 lever_angle = 0; // [-130:0]
-ay_puller = 215; // [0:engaged, 30: mid, 60:disengaged, 215: assembly]
+enage_puller = true;
 
 
 /* [Printing Control] */
@@ -115,10 +115,14 @@ ax_horn_extension_print_surface = -90; // [-90:90]
 
 
 /* [Puller Design] */
-dx_puller_pivot = -2;
-dy_puller_pivot = -16; // [-20: 0.1: -7]
-dz_puller_pivot = 0.0; // [-5:0.1:10]
-h_puller_pivot = 4;
+// Offset of the puller from location of pusher
+dx_puller = -12; // -2;
+// Offset of the puller from location of pusher
+dy_puller = -1; //  [-20: 0.1: -7]
+// Offset from the top of the cap
+dz_puller = 9; // [-5:0.1:10]
+
+h_puller = 25; 
 h_puller_detent = 1;
 
 cl_d_axle = 0.5;
@@ -425,16 +429,17 @@ module HornExtension() {
                 can(d = d_horn_extension_tip, h=h_horn_extension, center=ABOVE);
             
         }
-        // Support under horn disk
-        translate([-10, -2, 0]) 
+        // Support under horn disk 
+        translate([-10, -10, 0]) 
             rounded_block(
-                [34, abs(dz_horn_extension_print_surface), h_horn_extension], 
+                [50, 8, h_horn_extension], 
                 sidesonly = "XZ", 
                 center=FRONT + LEFT + ABOVE);
         // Reinforce the corner
-        corner = [14, h_puller_pivot + 2, 14];
+        corner = [14, 4, 13];
         translate([dx_horn_extension_tip + 5, dz_horn_extension_print_surface, -5.5])  
-            rounded_block(corner, sidesonly = "XZ", center=BEHIND+RIGHT+ABOVE);           
+            rounded_block(corner, sidesonly = "XZ", center=BEHIND+RIGHT+ABOVE);  
+        // The pusher surface
         translate([dx_horn_extension_tip, dy_horn_extension_tip, 0]) {
             hull() {
                 can(d = d_horn_extension_tip, h=h_horn_extension_pusher, center=BELOW);
@@ -461,9 +466,6 @@ module HornExtension() {
             translate([0, 0, dz_horn_clearance]) {
                 standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
             }
-            translate([dx_horn_extension_tip + dx_puller_pivot, dy_puller_pivot, dz_puller_pivot]) 
-                rotate([-90, 0, 0]) 
-                    InsertablePivotWithDetent(h=h_puller_pivot, h_detent = h_puller_detent, as_clearance = true);
             unprintable_overhang_top();
             unprintable_overhang_back();
             rotate([ax_horn_extension_print_surface, ay_horn_extension_print_surface, 0]) 
@@ -489,51 +491,43 @@ module HornExtension() {
 
 module Puller() {  
     d_puller = 5;
-    y_base = 3;
-
+    flag = [5, 2, 4];
+    z_handle = 20;
     module blank() {
-        rotate([-90, 0, 0]) rotate([0, 0, 135]) InsertablePivotWithDetent(h=h_puller_pivot, h_detent = h_puller_detent); 
-        // Base 
-        translate([-1, 0, 0]) 
-            rounded_block([10, y_base, 8], sidesonly = "XZ", center = LEFT);
-        // Latch bar   
-        translate([h_puller_pivot,  0, 0]) 
-            rounded_block([28, y_base, 8], sidesonly = "XZ", center = BEHIND + LEFT + ABOVE);
-        // The pusher itself
-        translate([-4, -y_base, -15]) can(d=d_puller, h=5, center = BEHIND + RIGHT + ABOVE);
-        // Connect pusher to latch bar
-        translate([-4, 0, 4]) rounded_block([5, y_base, 20], sidesonly = "XZ", center = BEHIND + LEFT + BELOW); 
-        // Add handle
-        rotate([0, 30, 0]) {
-            // Lever
-            rounded_block([8, y_base, 34], sidesonly = "XZ", center = BEHIND + LEFT + ABOVE);
-            // Thumb pad
-            translate([0, 0, 22]) rounded_block([4, 10, 12], sidesonly = "XZ", center = BEHIND + RIGHT + ABOVE);
+        can(d = d_puller, h=h_puller, center=BELOW);
+        // Retain the puller in the horn extension
+        translate([0, 0, -h_puller]) {
+            hull() {
+                block(flag, center = BEHIND);
+                block([0.1, 0.1, 1.5 * flag.z], center = ABOVE);
+            }
+            // rounded tip in help insertion in front of release lever handle
+            sphere(d = d_puller, $fn=24);
         }
+        // Handle - provides something to pull up on to manually operate release lever,
+        // as well as preventing rotation fo the retention flag for removable (as long as servo is installed)
 
+        block([10, 3, z_handle], center = ABOVE+RIGHT);
+        block([2, 20, z_handle], center = ABOVE+LEFT);
+        // Base plate for better printing
+        translate([0, 0, z_handle]) block([10, 20, 2], center = BELOW + LEFT);
     }
-    module latch() {
-        translate([-20, 0, 4]) block([8, 3, 3]);
-    }
-    module shape() {
-        ay = mode == PRINTING ? 0 : ay_puller;          
-        translate([dx_horn_extension_tip + dx_puller_pivot, dy_puller_pivot, dz_puller_pivot]) {
-            rotate([0, ay, 0]) {  
-                render() difference() {
-                    blank();
-                    latch();
-                }
+    module shape() {   
+        translate([dx_horn_extension_tip + dx_puller, dy_horn_extension_tip + dy_puller, dz_puller]) {
+            render() difference() {
+                blank();
             }
         }
     } 
+    dz_lift = enage_puller ? 0 : h_puller - flag.z - 9;
     dy_explode = -0;
-    z_printing = y_base;
+    z_printing = z_handle +  dz_puller;
     rotation = 
-        mode == PRINTING ? [90,  0, 0] : 
+        mode == PRINTING ? [180,  0, 0] : 
         [0, 0, az_servo + az_servo_horn_offset - horn_extension_offset_angle];
     translation = 
         mode == PRINTING ? [x_puller_bp, y_puller_bp, z_printing] :
-        [servo_horn_offset.x, servo_horn_offset.y + dy_explode, dz_cap_base];    
+        [servo_horn_offset.x, servo_horn_offset.y + dy_explode, dz_cap_base + dz_lift];    
     
     translate(translation) rotate(rotation) {
         visualize(visualization_puller) {
@@ -550,115 +544,5 @@ HornExtension();
 
 Cap();
 
-
-
-
-module InsertablePivotWithDetent(h=6, h_detent=0.2, as_clearance = false) {
-    h_axle = 1;
-    h_cone = h;
-    d_axle = h;
-    d_cone = 2 * h;
-     
-    y_key_hole = 0.6*h_cone;
-    d_base = d_cone;
-    h_base = 2;
-    r_detent = y_key_hole/2;
-    dx_detent = 0.35 * d_cone;
-    dz_detent = -0.6 * r_detent;
-    
-    d_axle_actual = d_axle + (as_clearance ? cl_d_axle : 0);
-    d_cone_actual = d_cone + (as_clearance ? cl_d_cone : 0);
-    h_cone_actual = h_cone + (as_clearance ? cl_h_cone : 0);
-    y_key_hole_actual = y_key_hole + (as_clearance ? cl_y_key_hole : 0);
-    r_detent_sphere = 0.5 * (r_detent^2 + h_detent^2)/h_detent;
-    r_detent_sphere_actual = r_detent_sphere + (as_clearance ? cl_r_detent_sphere : 0);
-    
-    module blank() {
-        can(d = d_axle_actual, h = h_axle, center = ABOVE);
-        translate([0, 0, h_axle]) 
-            can(d = d_axle_actual, taper = d_cone_actual, h = h_cone_actual, center = ABOVE);
-    }
-    module key_slot() {
-        block([d_cone_actual/2, y_key_hole_actual, h_axle + h_cone_actual], center = ABOVE + FRONT);
-    }
-    
-    module detent_ball() {
-        difference() {
-            translate([dx_detent, 0, h_detent - r_detent_sphere]) sphere(r=r_detent_sphere_actual, $fn=24);
-            plane_clearance(BELOW);
-        }
-    }
-    
-    module detent_balls() {
-        rotate([0, 0, 0]) detent_ball();
-        rotate([0, 0, 90]) detent_ball();
-        rotate([0, 0, 180]) detent_ball();
-        rotate([0, 0, 270]) detent_ball();         
-    }
-    module key_hole() {
-        can(d = d_axle_actual, h = h_axle+h_cone, center = ABOVE);
-        rotate([0, 0, 45]) key_slot();
-        rotate([0, 0, -45]) key_slot();
-        rotate([0, 0, -135]) key_slot();
-        rotate([0, 0, 135]) detent_ball();
-    }
-    module shape() {
-        render() {
-            intersection() {
-                blank();
-                key_hole();
-            }
-            can(d = d_base, h = h_base, center = BELOW);
-            difference() {
-                detent_balls();
-                plane_clearance(BELOW);
-            }
-        }
-     
-    }
-    if (as_clearance) {
-        blank();
-        key_hole();
-        can(d = d_base, h = h_base, center = BELOW);
-    } else {
-        shape();
-        
-    }
-}
-
-
-visualize_vitamins(visualization_pivot_with_detent) {
-    h_base = 2;
-    h_pivot = 4;
-    h_detent = 0.25;
-    visualize(visualization_pivot_with_detent) {
-        translate([0, 0, h_base]) {
-            InsertablePivotWithDetent(h=h_pivot, h_detent=h_detent);
-            block([10, 4, h_base], center=BELOW + FRONT);
-        }
-    }
-
-    translate([20, 0, 0]) {
-        test_piece = [3*h_pivot, h_pivot + 2, 3*h_pivot];
-        render() difference() {
-            block(test_piece, center = ABOVE + LEFT);
-            translate([0, 0, test_piece.z/2]) rotate([90, 0, 0]) InsertablePivotWithDetent(h=h_pivot, h_detent=h_detent, as_clearance = true);
-        }
-    }
-    
-    if (mode != PRINTING) {
-        translate([-20, 0, 0]) {
-
-            color("blue") render() difference() {
-                block([3*h_pivot, 3*h_pivot, h_pivot+2], center=ABOVE);
-                InsertablePivotWithDetent(h=h_pivot, h_detent=h_detent, as_clearance = true);
-                rotate([0, 0, az_cross_section]) plane_clearance(FRONT);
-            }
-            visualize(visualization_pivot_with_detent)  {
-                rotate([0, 0, az_pivot_insertion]) InsertablePivotWithDetent(h=h_pivot, h_detent=h_detent, as_clearance = false);
-            }
-        }
-    }
-}
 
 

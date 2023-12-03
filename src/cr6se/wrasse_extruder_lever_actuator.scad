@@ -74,7 +74,7 @@ az_servo = 104; // [0:120]
 // Adjust so when ax_servo == 0, that the puller pin is at beyond the lever fully release
 az_servo_horn_offset = -100; // [-360:360]
 // Add the start of the range so the lever matches fully open
-lever_angle = 0; // [-130:0]
+lever_angle = 0; // [-135:0]
 enage_puller = true;
 
 
@@ -620,22 +620,21 @@ module ZiptieServoMount() {
                 standard_servo_four_armed_horn(angle = servo_angle + horn_offset_angle);
         }   
     }
-    
+    plate = [ 
+        extruder.x + 2*side_padding,
+        y_attachment_plate_ztsm, 
+        extruder_fixed.z + mounting_plate.z + z_ziptie_allowance_ztsm
+    ];
+    attachment_plate_translation = [
+        side_padding,
+        dy_attachment_plate_ztsm, 
+        -extruder.z + extruder_fixed.z // Move down to align with bottom of slot for release lever
+    ];
     module attachment_plate() {
         // Attaches to the side of the servo motor and bottom of extruder, on the 
         // side where the release lever is locate.
-        plate = [ 
-            extruder.x + 2*side_padding,
-            y_attachment_plate_ztsm, 
-            extruder_fixed.z + mounting_plate.z + z_ziptie_allowance_ztsm
-        ];
-        translation = [
-            side_padding,
-            dy_attachment_plate_ztsm, 
-            -extruder.z + extruder_fixed.z // Move down to align with bottom of slot for release lever
-        ];
-        translate(translation) 
-            rounded_block(plate, sidesonly = false, center = BEHIND + BELOW + LEFT);
+        translate(attachment_plate_translation) 
+            rounded_block(plate, sidesonly = false, radius=2.5, center = BEHIND + BELOW + LEFT);
     }
     
     module zip_tie_slots() {
@@ -645,47 +644,52 @@ module ZiptieServoMount() {
                     translate([extruder_fixed.x/2 + 2, 0, mounting_plate.z/2]) 
                         block([2, a_lot, 4], center = FRONT + ABOVE);
     }
+
     pad = [10, 18, 7.5];
-    connector = [8, 8, 8];
-    landing = [8, 8, 15];
-    
-    module segment(dx1, dz1, e_1, dx2, dz2, e_2) {
-        dy1 = (e_1.y - pad.y)/2;
-        dy2 = (e_2.y - pad.y)/2;
+    module segment(dx1, dz1, e1, dx2, dz2, e2) {
+        dy1 = (e1.y - pad.y)/2;
+        dy2 = (e2.y - pad.y)/2;
+        min1 = min(e1.x, e1.y, e1.z);
+        min2 = min(e2.x, e2.y, e2.z);
+        r1 = min1 < 6 ? 2 : 2.5;
+        r2 = min1 < 6 ? 2 : 2.5;
         hull() {
-            translate([dx1, dy1, dz1]) rounded_block(e_1, center=BELOW);
-            translate([dx2, dy2, dz2]) rounded_block(e_2, center=BELOW);
+            translate([dx1, dy1, dz1]) rounded_block(e1, center = BELOW, radius = r1);
+            translate([dx2, dy2, dz2]) rounded_block(e2, center = BELOW, radius = r2);
         }            
+    }
+    
+
+    
+    module pedistal(x_offset) {
+        z_nut_block = 7.5;
+        s = 8;
+        intermediate = [s, 14, z_nut_block];
+        connector = [s, s, s];
+        landing = [8, 8, plate.z];        
+        //dz_end = -(attachment_plate_translation.z + dz_servo);
+        dz_end =  -dz_servo - extruder.z + extruder_fixed.z; //plate.z;
+        //dz_end = -36;
+        translate([dx_servo_screws/2, 0, 0]) {
+            segment(0, 0, pad, 5, 0, intermediate);
+            segment(5, 0, intermediate, x_offset, 0, intermediate);
+            segment(x_offset, 0, intermediate, x_offset, -6, connector);
+            segment(x_offset, -6, connector, x_offset, dz_end, connector);
+            segment(x_offset, dz_end, connector, x_offset-10, dz_end, landing);
+            segment(x_offset-10, dz_end, landing, x_offset-40, dz_end, landing);
+        }
     }
     module connected_servo_pedistals() {
         translate([dx_servo, dy_servo, dz_servo] + [-10, 10, 0]) {
-            translate([dx_servo_screws/2, 0, 0]) {
-                segment(0, 0, pad, 5, 0, pad);
-                segment(5, 0, pad, 5, -10, connector);
-                segment(5, -10, connector, 5, -36, connector);
-                segment(5, -36, connector, -10, -37, landing);
-            }
-            mirror([1, 0, 0]) { 
-                 translate([dx_servo_screws/2, 0, 0]) {
-                    segment(0, 0, pad, 10, 0, pad);
-                    segment(10, 0, pad, 10, -10, connector);
-                    segment(10,  -10, connector, 10, -36, connector);
-                    segment(10, -36, connector,6.5,  -37, landing);
-                }  
-            }
+            pedistal(5);
+            mirror([1, 0, 0]) pedistal(20); 
         }
     }
 
     module blank() {
         //translate([0, dy_cap, 0]) {
         attachment_plate();
-        connected_servo_pedistals();
-//            cap_base();
-//            cap_clip();          
-//            back_pedistal();
-//            front_pedistal();
-            
-
+        connected_servo_pedistals();   
     }
     
     module shape() {

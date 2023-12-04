@@ -40,7 +40,9 @@ servo_horn_offset = [-20, 9, -7.5];
 dx_servo_screws = 48.5;
 dy_servo_screw_offset = 5;
 
+
 /* [Servo Horn Characteristics ] */
+
 // Measure across horn at greatest point  - might vary for different brands of servo.
 od_horn = 36;
 // Adjust if necessary to get a good fit for actual horn  - might vary for different brands of servo.
@@ -60,19 +62,20 @@ cl_h_horn_arm = 10;
 
 
 /* [Show] */
+
 show_mocks = true;
 show_vitamins = true;
-cap = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 horn_extension = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 puller = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 servo_mount = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 
 
 /* [Animation] */
+
 // At zero, the lever is fully released
 az_servo = 104; // [0:120]
 // Adjust so when ax_servo == 0, that the puller pin is at beyond the lever fully release
-az_servo_horn_offset = -100; // [-360:360]
+az_servo_horn_offset = -125; // [-360:360]
 // Add the start of the range so the lever matches fully open
 lever_angle = 0; // [-135:0]
 enage_puller = true;
@@ -91,31 +94,26 @@ mode = print_one_part ? PRINTING:
     ASSEMBLE_SUBCOMPONENTS;
 
 
-
 /* [Servo Mount Design] */
+
 dx_servo_ztsm = -4;
 dy_servo_ztsm = -6;
 dz_servo_ztsm = 18;
-
-
-
-
-/* [Cap Design] */
-z_base_cap = 7.5;
-dy_cap = -1;
-dz_cap_base = 2;
-pedistal = [8, 18, 6];
-dx_back_pedistal = -30;
-dx_front_pedistal = 10;   
-
-
-dz_cap_servo_mount = 18;
-
+// Adjust for servo location
+y_attachment_plate_ztsm = 12;
+// Must be enough for zip tie slot
+x_attachment_plate_padding_ztsm = 6;
+z_ziptie_allowance_ztsm = 7;
+// Adjust to engage with mounting plate, and sides of extruder to register in all three axes. 
+dy_attachment_plate_ztsm = 7;
 
 
 /* [Horn Extension Design] */
-h_horn_extension = 8;  
-dz_horn_clearance = 8;  
+
+h_horn_extension = 7;  
+// TODO: Change this to a tolerance combined with a calculation
+// 
+dz_horn_clearance = 10;  
 d_pusher_pin = 6;
 h_pusher_pin = 12;
 dx_pusher_pin = 25; // [18 : 35]
@@ -127,34 +125,21 @@ horn_extension_offset_angle  = -5; // [0:360]
 ay_horn_extension_print_surface = 0; // [0:45]
 dz_horn_extension_print_surface = -16; // [-20:0.1:-10]
 ax_horn_extension_print_surface = -90; // [-90:90]
-
+dz_top_of_extruder_to_horn_extension = 0.25;
 
 
 /* [Puller Design] */
+
 // Offset of the puller from location of servo - adjust to clear releast lever handle
 dx_puller_pin = 19; // 
 // Offset of the puller from location of servo - adjust clear extruder
 dy_puller_pin = -15.5; //  [-20: 0.1: -7]
-
-r_puller_pin_displacement = sqrt((dx_puller_pin)^2 + (dy_puller_pin)^2);
 // Offset from the top of the cap
 dz_puller = 9; // [-5:0.1:10]
 d_puller_pin = 6;
 h_puller_pin = 25; 
-
-z_puller_pin_handle = 20;
-
-cl_d_axle = 0.5;
-cl_h_cone = 0.5;
-cl_d_cone = 2; //0.5;
-cl_y_key_hole = 0.5;
-cl_r_detent = 0.25;
-cl_dz_detent = 0.5;
-cl_r_detent_sphere = 0.25;
-
-az_cross_section = 0; // [0:360]
-az_pivot_insertion = 0; // [0:360]
-
+z_puller_pin_handle = 2;
+r_puller_pin_displacement = sqrt((dx_puller_pin)^2 + (dy_puller_pin)^2);
 
 /* [Build Plate Layout] */
 
@@ -186,11 +171,8 @@ function show(variable, name) =
     (print_one_part && (mode == PRINTING)) ? name == one_part_to_print :
     variable;
 
-visualization_cap = 
-    visualize_info("Cap", PART_1, show(cap, "cap") , layout, show_parts);
-
 visualization_servo_mount = 
-    visualize_info("Servo Mount", PART_4, show(servo_mount, "servo_mount") , layout, show_parts); 
+    visualize_info("Servo Mount", PART_1, show(servo_mount, "servo_mount") , layout, show_parts); 
 
 visualization_horn_extension = 
     visualize_info("Horn Extension", PART_2, show(horn_extension, "horn_extension") , layout, show_parts); 
@@ -363,115 +345,9 @@ module servo_mounting_screws(as_clearance = false, dz= 0) {
     }
 }
 
-module Cap() {
-    
-    y_cap_left = -dy_cap;
-    
-    module servo(servo_angle=0, horn_offset_angle = 0) {
-        translate([0, 0, dz_cap_servo_mount]) {
-            color(MIUZEIU_SERVO_BLUE) {
-                futabas3003(position=[10,20,29],  rotation=[0, 180, 90]);
-            }
-            translate(servo_horn_offset) 
-                standard_servo_four_armed_horn(angle = servo_angle + horn_offset_angle);
-        }   
-    }
-    
-    module front_pedistal() {
-        translate([dx_front_pedistal, 0, dz_cap_servo_mount]) 
-            rounded_block(pedistal + [4, y_cap_left, 0], sidesonly = "XZ", center=FRONT+RIGHT+BELOW);
-        rounded_block(
-            [dx_front_pedistal + pedistal.x + 4, pedistal.y, 4], sidesonly = "XZ", center=RIGHT+FRONT);     
-        translate([dx_front_pedistal + pedistal.x, 0, -2])  
-            rounded_block(
-                [4, pedistal.y, dz_cap_servo_mount + 2], sidesonly = "XZ", center = FRONT+RIGHT+ABOVE);
-    }
-    
-    
-    module back_pedistal() {
-        x_extra_back_pedistal = 16;
-        translate([dx_back_pedistal, 0, dz_cap_servo_mount]) 
-            rounded_block(pedistal + [x_extra_back_pedistal, y_cap_left, 0], sidesonly = "XZ", center = BEHIND + RIGHT + BELOW);
-//        rounded_block(
-//            [dx_front_pedistal + pedistal.x + x_extra_back_pedistal, pedistal.y, 4], sidesonly = "XZ", center=RIGHT+FRONT);  
-        translate([dx_back_pedistal - x_extra_back_pedistal - 4, 0, -2])  
-            rounded_block(
-                [4, pedistal.y, dz_cap_servo_mount + 2], sidesonly = "XZ", center = BEHIND + RIGHT + ABOVE);          
-        translate([dx_back_pedistal - x_extra_back_pedistal - 8, 0, -2]) 
-            rounded_block([10, pedistal.y, 4], sidesonly = "XZ", center = FRONT + RIGHT + ABOVE);
-    }   
-    
-    module cap_base() {
-        translate([4, 0, dz_cap_base]) 
-            rounded_block(
-                [extruder.x + 7.3, extruder.y + 2 + y_cap_left, z_base_cap], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
-    }
-    
-    module cap_clip() {
-        // front of extruder
-        translate([14, 0, 1]) 
-            rounded_block(
-                [extruder.x + 25, y_cap_left + 4, extruder.z + 10], sidesonly = "XZ", center = BEHIND + BELOW + RIGHT);
-        
-        translate([0, 0, -extruder.z - 3]) { 
-            hull() {
-                rounded_block([8, y_cap_left+ 18, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
-                translate([0, 28 + dy_cap, -4]) 
-                    rounded_block([8, 5, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
-            }
-            // Corner reinforcement
-            hull() {
-                rounded_block([8, y_cap_left+ 12, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
-                translate([0, 0, 7]) 
-                    rounded_block([8, 5, 4], sidesonly = "XZ", center = FRONT + RIGHT + BELOW);
-            }
-        }
-    }
-   
-    module blank() {
-        translate([0, dy_cap, 0]) {
-            cap_base();
-            cap_clip();          
-            back_pedistal();
-            front_pedistal();
-            
-        }
-    }
-    
-    module shape() {
-        render(convexity=10) difference() {
-            blank();
-            translate([0.7, -0.1, 0]) scale([1.03, 1, 1.01]) 
-                Extruder(as_clearance = true);
-            servo_mounting_screws(as_clearance = true, dz = dz_cap_servo_mount);
-            HornExtension(as_clearance = true);
-        }
-    }
-    
-    z_printing = 0;
-    rotation = 
-        mode == PRINTING ? [90,  0, 0] : 
-        [0, 0, 0];
-    translation = 
-        mode == PRINTING ? [x_cap_bp, y_cap_bp, z_printing] :
-        [0, 0, 0];
-    translate(translation) rotate(rotation) {
-        if (show_vitamins && mode != PRINTING) {
-            visualize_vitamins(visualization_cap) 
-                servo(servo_angle=az_servo, horn_offset_angle = az_servo_horn_offset + horn_extension_offset_angle);
-        }
-        visualize(visualization_cap) {
-            shape();
-        }
-    }
-}
 
-
-
-
-
-
-module HornExtension(as_clearance = false) {
+module HornExtension(servo_translation = [0, 0, 0]) {
+    horn_translation = [servo_translation.x, servo_translation.y, dz_top_of_extruder_to_horn_extension];
     module blank() {
         // Coordinates are relative to center
         hull() {
@@ -506,34 +382,19 @@ module HornExtension(as_clearance = false) {
             }
         }
     }
-    servo_offset = [servo_horn_offset.x, servo_horn_offset.y, dz_cap_base];
-    if (as_clearance) {
-        r_min = min(r_pusher_pin_displacement - d_pusher_pin/2 - 2, r_puller_pin_displacement - d_puller_pin/2 - 1);
-        r_max = max(r_pusher_pin_displacement + d_pusher_pin/2 + 2, r_puller_pin_displacement + d_puller_pin/2 +2);
-        translate(servo_offset) {
-            difference() {
-                union() {
-                    can(d=2*r_max, hollow=2*r_min, h= max(h_pusher_pin, h_puller_pin - h_horn_extension) + 2, center=BELOW);
-                    can(d=2*r_max, hollow=2*r_min, h= z_puller_pin_handle + 2, center=ABOVE);
-                }
-                translate([0, -2, 0]) plane_clearance(RIGHT);
-            }
-        }
-    } else {
-        z_printing = 12; //print_base_translation.z;
-        rotation = 
-            mode == PRINTING ? [-90, 0, 0]: //az_horn_extension_print_surface]: 
-            [0, 0, az_servo + az_servo_horn_offset];
-        translation = 
-            mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :
-            servo_offset;
-        
-        translate(translation) rotate(rotation) {
-            visualize(visualization_horn_extension) {
-                shape();
-            } 
-        }  
-    }
+    z_printing = 12; //print_base_translation.z;
+    rotation = 
+        mode == PRINTING ? [-90, 0, 0]: //az_horn_extension_print_surface]: 
+        [0, 0, az_servo + az_servo_horn_offset];
+    translation = 
+        mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :
+        [servo_horn_offset.x, servo_horn_offset.y, 0] + horn_translation;;
+    
+    translate(translation) rotate(rotation) {
+        visualize(visualization_horn_extension) {
+            shape();
+        } 
+    }  
     
 }
 
@@ -551,9 +412,10 @@ module Puller(as_clearance = false) {
          // Retention flag, so the puller stops when lifting up. Can only be remove if the handle is rotated to special position. 
         translate([0, d_puller_pin/2, -h_puller_pin]) block(flag, center = BEHIND + LEFT);
         // Handle - provides something to pull up on to manually operate release lever,
-        rounded_block([16, d_puller_pin/2, z_puller_pin_handle], sidesonly = "XZ", center = FRONT + RIGHT + ABOVE);
-        translate([0, 0, z_puller_pin_handle]) 
-            rounded_block([16, 6, 4], sidesonly = "XZ", center = FRONT + LEFT + BELOW);
+        block([30, d_puller_pin/2, z_puller_pin_handle], center = FRONT + RIGHT + ABOVE);
+        block([30, 10, z_puller_pin_handle], center = FRONT + LEFT + ABOVE);
+//        translate([0, 0, z_puller_pin_handle]) 
+//            #block([30, 6, 2], center = FRONT + LEFT + BELOW);
         can(d = d_puller_pin, h=z_puller_pin_handle, center=ABOVE);
 
     }
@@ -573,7 +435,7 @@ module Puller(as_clearance = false) {
         }
 
     } else {
-        dz_lift = enage_puller ? 0 : h_puller_pin - flag.z - 9;
+        dz_lift = enage_puller ? -2 : h_puller_pin - flag.z - 9;
         dy_explode = -0;
         z_printing = dy_trim;
         rotation = 
@@ -581,7 +443,7 @@ module Puller(as_clearance = false) {
             [0, 0, az_servo + az_servo_horn_offset];
         translation = 
             mode == PRINTING ? [x_puller_bp, y_puller_bp, z_printing] :
-            [servo_horn_offset.x, servo_horn_offset.y + dy_explode, dz_cap_base + dz_lift];    
+            [servo_horn_offset.x, servo_horn_offset.y + dy_explode, dz_top_of_extruder_to_horn_extension + dz_lift];    
         
         translate(translation) rotate(rotation) {
             visualize(visualization_puller) {
@@ -595,13 +457,7 @@ module Puller(as_clearance = false) {
 
 
 module ZiptieServoMount() {
-    // Adjust for servo location
-    y_attachment_plate_ztsm = 12;
-    // Must be enoug for zip tie slot
-    x_attachment_plate_padding_ztsm = 6;
-    z_ziptie_allowance_ztsm = 7;
-    // Adjust to engage with mounting plate, and sides of extruder to register in all three axes. 
-    dy_attachment_plate_ztsm = 7;
+
     
     side_padding = x_attachment_plate_padding_ztsm;
     
@@ -659,17 +515,13 @@ module ZiptieServoMount() {
         }            
     }
     
-
-    
     module pedistal(x_offset) {
         z_nut_block = 7.5;
         s = 8;
         intermediate = [s, 14, z_nut_block];
         connector = [s, s, s];
         landing = [8, 8, plate.z];        
-        //dz_end = -(attachment_plate_translation.z + dz_servo);
-        dz_end =  -dz_servo - extruder.z + extruder_fixed.z; //plate.z;
-        //dz_end = -36;
+        dz_end =  -dz_servo - extruder.z + extruder_fixed.z; 
         translate([dx_servo_screws/2, 0, 0]) {
             segment(0, 0, pad, 5, 0, intermediate);
             segment(5, 0, intermediate, x_offset, 0, intermediate);
@@ -698,8 +550,6 @@ module ZiptieServoMount() {
             Extruder(as_clearance = true);
             MountingPlate(as_clearance = true);
             StepperMotor(as_clearance = true);
-            zip_tie_slots();
-            //HornExtension(as_clearance = true);
             translate([dx_servo, dy_servo, dz_servo]) servo_mounting_screws(as_clearance = true);
         }
     }
@@ -713,8 +563,12 @@ module ZiptieServoMount() {
         [0, 0, 0];
     translate(translation) rotate(rotation) {
         if (show_vitamins && mode != PRINTING) {
-            visualize_vitamins(visualization_servo_mount)
-                servo(servo_angle=az_servo, horn_offset_angle = az_servo_horn_offset + horn_extension_offset_angle);
+            visualize_vitamins(visualization_servo_mount) {
+                servo(
+                    servo_angle=az_servo, 
+                    horn_offset_angle = az_servo_horn_offset + horn_extension_offset_angle);
+                HornExtension(servo_translation = [dx_servo, dy_servo, dz_servo]);
+            }
         }
         visualize(visualization_servo_mount) {
             shape();
@@ -725,11 +579,11 @@ module ZiptieServoMount() {
 
 Puller();
 
-HornExtension();
-
-Cap();
-
 ZiptieServoMount();
+
+if (mode == PRINTING) {
+    HornExtension();
+}
 
 
 

@@ -71,14 +71,14 @@ servo_mount = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 
 /* [Animation] */
-
-// At zero, the lever is fully released
-az_servo = 104; // [0:120]
-// Adjust so when ax_servo == 0, that the puller pin is at beyond the lever fully release
-az_servo_horn_offset = -125; // [-360:360]
+// At zero, the lever is fully released - adjust range after offset is configured
+az_servo = 0; // [0:150]
+// Adjust so when az_servo == 0, that the puller pin is at beyond the lever fully release
+az_servo_horn_offset = -130; // [-360:360]
 // Add the start of the range so the lever matches fully open
 lever_angle = 0; // [-135:0]
 enage_puller = true;
+az_puller_handle_to_horn_extension = 0; // [-180:180]
 
 
 /* [Printing Control] */
@@ -108,6 +108,8 @@ z_ziptie_allowance_ztsm = 7;
 dy_attachment_plate_ztsm = 7;
 
 
+
+
 /* [Horn Extension Design] */
 
 h_horn_extension = 7;  
@@ -116,10 +118,13 @@ h_horn_extension = 7;
 dz_horn_clearance = 10;  
 d_pusher_pin = 6;
 h_pusher_pin = 12;
-dx_pusher_pin = 25; // [18 : 35]
+dx_pusher_pin = 28; // [18 : 35]
 dy_pusher_pin = -4.5; // [-20:0]
+dz_puller_pin = 4;
 r_pusher_pin_displacement = sqrt((dx_pusher_pin)^2 + (dy_pusher_pin)^2);
 d_padding_puller_pin = 4;
+az_puller_insertion_slot = -45;
+az_puller_handle_depression = -50;
 // Controls the orientation of the slots in the servo horn relative to the blank - adjust for printability
 horn_extension_offset_angle  = -5; // [0:360]
 ay_horn_extension_print_surface = 0; // [0:45]
@@ -128,18 +133,20 @@ ax_horn_extension_print_surface = -90; // [-90:90]
 dz_top_of_extruder_to_horn_extension = 0.25;
 
 
+
+
 /* [Puller Design] */
 
 // Offset of the puller from location of servo - adjust to clear releast lever handle
-dx_puller_pin = 19; // 
+dx_puller_pin = 18; // 
 // Offset of the puller from location of servo - adjust clear extruder
-dy_puller_pin = -15.5; //  [-20: 0.1: -7]
+dy_puller_pin = -13.5; //  [-20: 0.1: -7]
 // Offset from the top of the cap
 dz_puller = 9; // [-5:0.1:10]
 d_puller_pin = 6;
-h_puller_pin = 25; 
+h_puller_pin = 18; 
 z_puller_pin_handle = 2;
-r_puller_pin_displacement = sqrt((dx_puller_pin)^2 + (dy_puller_pin)^2);
+az_flag_to_flat = 135;
 
 /* [Build Plate Layout] */
 
@@ -179,6 +186,20 @@ visualization_horn_extension =
 
 visualization_puller = 
     visualize_info("Puller", PART_3, show(puller, "puller") , layout, show_parts); 
+    
+    
+/* [Kinematics] */
+servo_translation_ztsm = [dx_servo_ztsm, dy_servo_ztsm, dz_servo_ztsm];
+
+// The horn translation gets us to underneath servo axis of rotation;
+horn_translation = [
+    dx_servo_ztsm + servo_horn_offset.x, 
+    dy_servo_ztsm + servo_horn_offset.y, 
+    dz_top_of_extruder_to_horn_extension];
+
+
+
+
 
 
 // TODO: Move rounded_block into shape
@@ -346,8 +367,7 @@ module servo_mounting_screws(as_clearance = false, dz= 0) {
 }
 
 
-module HornExtension(servo_translation = [0, 0, 0]) {
-    horn_translation = [servo_translation.x, servo_translation.y, dz_top_of_extruder_to_horn_extension];
+module HornExtension() {
     module blank() {
         // Coordinates are relative to center
         hull() {
@@ -368,7 +388,7 @@ module HornExtension(servo_translation = [0, 0, 0]) {
     print_base_translation = [dx_pusher_pin+0.55*d_pusher_pin,  dy_pusher_pin, 0];
     module shape() {
         rotation = 
-            mode == PRINTING && !as_clearance ? [0, 0, -az_horn_extension_print_surface]: //az_horn_extension_print_surface]: 
+            mode == PRINTING  ? [0, 0, -az_horn_extension_print_surface]: //az_horn_extension_print_surface]: 
             [0, 0, 0];
         rotate(rotation)  {
             render() difference() {
@@ -376,9 +396,13 @@ module HornExtension(servo_translation = [0, 0, 0]) {
                 translate([0, 0, dz_horn_clearance]) {
                     standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
                 }
-                translate([dx_puller_pin, dy_puller_pin, 0]) Puller(as_clearance=true);
-                translate(print_base_translation) rotate([0, 0, az_horn_extension_print_surface]) plane_clearance(RIGHT);
-                
+                translate([dx_puller_pin, dy_puller_pin, dz_puller_pin-dz_top_of_extruder_to_horn_extension]) {
+                    // Rotate for orientation of insertion slot
+                    rotate([0, 0, az_puller_insertion_slot]) Puller(as_clearance=true);                
+                    // Rotate for orientation of handle depression
+                    rotate([0, 0, az_puller_handle_depression]) translate([-5, 4, 0]) block([8, 20, 10], center=FRONT + LEFT + ABOVE );
+                }
+                translate(print_base_translation) rotate([0, 0, az_horn_extension_print_surface]) plane_clearance(RIGHT);   
             }
         }
     }
@@ -388,7 +412,7 @@ module HornExtension(servo_translation = [0, 0, 0]) {
         [0, 0, az_servo + az_servo_horn_offset];
     translation = 
         mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :
-        [servo_horn_offset.x, servo_horn_offset.y, 0] + horn_translation;;
+        horn_translation;
     
     translate(translation) rotate(rotation) {
         visualize(visualization_horn_extension) {
@@ -399,23 +423,23 @@ module HornExtension(servo_translation = [0, 0, 0]) {
 }
 
 
-module Puller(as_clearance = false) {  
+module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_puller_pin_handle ) {  
 
     flag = [5, 2, 4];
-    
     dz_cut = 0.5;
+    x_handle = 20;
     dy_trim = d_puller_pin/2 - dz_cut;
     module blank() {
         can(d = d_puller_pin, h=h_puller_pin, center=BELOW); 
         // rounded tip in help insertion in front of release lever handle
         translate([0, 0, -h_puller_pin]) sphere(d = d_puller_pin, $fn=24);
-         // Retention flag, so the puller stops when lifting up. Can only be remove if the handle is rotated to special position. 
-        translate([0, d_puller_pin/2, -h_puller_pin]) block(flag, center = BEHIND + LEFT);
+         // Retention flag, so the puller stops when lifting up. Can only be remove if the handle is rotated to special position.
+         rotate([0, 0, az_flag_to_flat]) 
+            translate([0, d_puller_pin/2, -h_puller_pin]) block(flag, center = BEHIND + LEFT);
         // Handle - provides something to pull up on to manually operate release lever,
-        block([30, d_puller_pin/2, z_puller_pin_handle], center = FRONT + RIGHT + ABOVE);
-        block([30, 10, z_puller_pin_handle], center = FRONT + LEFT + ABOVE);
-//        translate([0, 0, z_puller_pin_handle]) 
-//            #block([30, 6, 2], center = FRONT + LEFT + BELOW);
+        
+        block([x_handle, d_puller_pin/2, z_puller_pin_handle], center = FRONT + RIGHT + ABOVE);
+        block([x_handle, 5, z_puller_pin_handle], center = FRONT + LEFT + ABOVE);
         can(d = d_puller_pin, h=z_puller_pin_handle, center=ABOVE);
 
     }
@@ -432,24 +456,30 @@ module Puller(as_clearance = false) {
         rotate([0, 0, -90]) {
             can(d = d_puller_pin, h=a_lot);
             translate([0, d_puller_pin/2, 0]) block([flag.x, flag.y, a_lot], center = BEHIND + LEFT);
+            can(d = d_handle_recess, h =h_handle_recess, center = ABOVE);
+            
         }
-
     } else {
         dz_lift = enage_puller ? -2 : h_puller_pin - flag.z - 9;
-        dy_explode = -0;
         z_printing = dy_trim;
         rotation = 
             mode == PRINTING ? [-90,  0, 0] : 
             [0, 0, az_servo + az_servo_horn_offset];
         translation = 
             mode == PRINTING ? [x_puller_bp, y_puller_bp, z_printing] :
-            [servo_horn_offset.x, servo_horn_offset.y + dy_explode, dz_top_of_extruder_to_horn_extension + dz_lift];    
-        
+            horn_translation;
+            //[servo_horn_offset.x, servo_horn_offset.y, dz_top_of_extruder_to_horn_extension + dz_lift];    
         translate(translation) rotate(rotation) {
-            visualize(visualization_puller) {
-                translate([dx_puller_pin, dy_puller_pin, dz_puller]) 
-                    shape();
-            } 
+            if (mode == PRINTING) {
+                shape();
+            } else {
+                visualize(visualization_puller) {
+                    // These deltas are relative to servo axis, at top of extruder 
+                    translate([dx_puller_pin, dy_puller_pin, dz_puller_pin])
+                        rotate([0, 0, az_puller_handle_to_horn_extension]) 
+                            shape();
+                } 
+            }
         }      
     }
     
@@ -567,7 +597,7 @@ module ZiptieServoMount() {
                 servo(
                     servo_angle=az_servo, 
                     horn_offset_angle = az_servo_horn_offset + horn_extension_offset_angle);
-                HornExtension(servo_translation = [dx_servo, dy_servo, dz_servo]);
+                HornExtension();
             }
         }
         visualize(visualization_servo_mount) {
@@ -581,9 +611,8 @@ Puller();
 
 ZiptieServoMount();
 
-if (mode == PRINTING) {
-    HornExtension();
-}
+HornExtension();
+
 
 
 

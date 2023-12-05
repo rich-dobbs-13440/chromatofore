@@ -159,15 +159,36 @@ h_horn_extension = 7;
 dz_horn_clearance = 10;  
 d_pusher_pin = 6;
 h_pusher_pin = 18;
-dx_pusher_pin = 24; // [18 : 35]
-dy_pusher_pin = -0.5; // [-20:0]
-dz_puller_pin = 4;
-// Offset of the puller from location of servo - adjust to clear releast lever handle
-dx_puller_pin = 16; // 
-// Offset of the puller from location of servo - adjust clear extruder
-dy_puller_pin = -11.5; //  [-20: 0.1: -7]
+//dx_pusher_pin = 24; // [18 : 35]
+//dy_pusher_pin = -0.5; // [-20:0]
+//r_pusher_pin = sqrt(dx_pusher_pin^2 + dy_pusher_pin^2);
+//echo("r_pusher_pin", r_pusher_pin); // Currently 24.
+//echo("atan2(dy_pusher_pin, dx_pusher_pin)", atan2(dy_pusher_pin, dx_pusher_pin));
+//echo("atan2(1, 1)", atan2(1, 1));
+
+// Distance from servo shaft to center of pin. 
+r_pusher_pin = 27.5; // [24: 0.1, 28.0]
+az_pusher_pin = 0; // [-5:0.5:5]
+
+
+
+
+//dz_puller_pin = 4;
+//// Offset of the puller from location of servo - adjust to clear releast lever handle
+//dx_puller_pin = 16; // 
+//// Offset of the puller from location of servo - adjust clear extruder
+//dy_puller_pin = -11.5; //  [-20: 0.1: -7]
+
+//r_puller_pin = sqrt(dx_puller_pin^2 + dy_puller_pin^2);
+//echo("r_puller_pin", r_puller_pin); // Currently 2? 19.7;
+//echo("atan2(dy_puller_pin, dx_puller_pin)", atan2(dy_puller_pin, dx_puller_pin));  //-35
+
+
+
+
+
 // Offset from the top of the cap
-dz_puller = 9; // [-5:0.1:10]
+dz_puller_pin = 4; // [-5:0.1:10]
 d_padding_puller_pin = 6;
 az_puller_insertion_slot = -25;
 az_puller_handle_depression = -50;
@@ -184,12 +205,14 @@ az_horn_extension_print_surface = -35; // [-40: 0]
 
 
 /* [Puller Design] */
+r_puller_pin = 20; // [24: 0.1, 28.0]
+az_puller_pin = -40; // [-55:0.5:0]
+
 d_puller_pin = 6;
 h_puller_pin = 18; 
 z_puller_pin_handle = 2;
 az_flag_to_flat = 135;
-
-
+    
 /* [Build Plate Layout] */
 
 x_servo_mount_bp = 20;
@@ -242,8 +265,10 @@ horn_translation = [
     dy_servo_ztsm + servo_horn_offset.y, 
     dz_top_of_extruder_to_horn_extension];
 
-
-
+dx_puller_pin = r_puller_pin * cos(az_puller_pin);
+dy_puller_pin = r_puller_pin * sin(az_puller_pin); 
+dx_pusher_pin = r_pusher_pin * cos(az_pusher_pin);
+dy_pusher_pin = r_pusher_pin * sin(az_pusher_pin);
 
 
 
@@ -441,6 +466,8 @@ module servo_mounting_screws(as_clearance = false, dz= 0) {
 
 module HornExtension() {
     
+
+    
     print_base_translation = [
         dx_pusher_pin + cos(az_print_surface_pivot)*d_pusher_pin/2,  
         dy_pusher_pin + sin(az_print_surface_pivot)*d_pusher_pin/2, 
@@ -483,7 +510,8 @@ module HornExtension() {
                     // Rotate for orientation of insertion slot
                     rotate([0, 0, az_puller_insertion_slot]) Puller(as_clearance=true);                
                     // Rotate for orientation of handle depression
-                    rotate([0, 0, az_puller_handle_depression]) translate([-5, 4, 0]) block([8, 20, 10], center=FRONT + LEFT + ABOVE );
+                    rotate([0, 0, az_puller_handle_depression]) 
+                        translate([-5, 4, 0]) block([8, 20, 10], center=FRONT + LEFT + ABOVE );
                 }
                 translate(print_base_translation) rotate([0, 0, az_horn_extension_print_surface]) plane_clearance(RIGHT);   
             }
@@ -507,11 +535,14 @@ module HornExtension() {
 
 
 module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_puller_pin_handle ) {  
-
-    flag = [5, 2, 4];
+    
+    flag = [5, 2, 2];
     dz_cut = 0.5;
     x_handle = 20;
     dy_trim = d_puller_pin/2 - dz_cut;
+    
+   
+    
     module blank() {
         can(d = d_puller_pin, h=h_puller_pin, center=BELOW); 
         // rounded tip in help insertion in front of release lever handle
@@ -543,7 +574,7 @@ module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_pu
             
         }
     } else {
-        dz_lift = enage_puller ? -2 : h_puller_pin - flag.z - 9;
+        dz_lift = enage_puller ? -2 : h_puller_pin - flag.z - 3;
         z_printing = dy_trim;
         rotation = 
             mode == PRINTING ? [-90,  0, 0] : 
@@ -558,7 +589,7 @@ module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_pu
                     shape();
                 } else {
                     // These deltas are relative to servo axis, at top of extruder 
-                    translate([dx_puller_pin, dy_puller_pin, dz_puller_pin])
+                    translate([dx_puller_pin, dy_puller_pin, dz_puller_pin + dz_lift])
                         rotate([0, 0, az_puller_handle_to_horn_extension]) 
                             shape();
                 } 
@@ -664,7 +695,6 @@ module ZiptieServoMount() {
             translate([dx_servo, dy_servo, dz_servo]) servo_mounting_screws(as_clearance = true);
         }
     }
-    
     z_printing = 0;
     rotation = 
         mode == PRINTING ? [90,  0, 0] : 
@@ -717,7 +747,7 @@ module LeverGlove(test_fit = false) {
         [0, 0, 135];
     translation = 
         mode == PRINTING ? [x_lever_glove_bp, y_lever_glove_bp, z_printing] :
-        [0, 0, 20];
+        [0, 0, 0];
     translate(translation) rotate(rotation) {
         visualize(visualization_lever_glove) {
             shape();

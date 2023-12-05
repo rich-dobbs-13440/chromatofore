@@ -73,7 +73,7 @@ entrance_translation = [0, 15, 11];
 translation_attachment_screw = [-5, extruder.y-5, 0];
 translation_pivot_screw = [-23, 5, 0];
 lever = [extruder.x/2 -2, 5, 6];
-lever_handle = [15.4, 4, 12];
+lever_handle = [15.4, 4, 12.86];
 dz_lever = -extruder.z + extruder_fixed.z + lever_handle.z/2;
 lever_slot = [extruder.x/2+10, 8, 12];
 
@@ -183,26 +183,26 @@ az_print_surface_pivot = 65;
 az_horn_extension_print_surface = -35; // [-40: 0]
 
 
-
 /* [Puller Design] */
 d_puller_pin = 6;
 h_puller_pin = 18; 
 z_puller_pin_handle = 2;
 az_flag_to_flat = 135;
 
+
 /* [Build Plate Layout] */
 
 x_servo_mount_bp = 20;
 y_servo_mount_bp = 20;
 
-x_horn_extension_bp = -20;
-y_horn_extension_bp = 0;
+x_horn_extension_bp = 00;
+y_horn_extension_bp = 20;
 
-x_puller_bp = 30;
+x_puller_bp = -5;
 y_puller_bp = 10;
 
-x_lever_glove_bp = 40;
-y_lever_glove_bp = 30;
+x_lever_glove_bp = 20;
+y_lever_glove_bp = -10;
 
 
 module end_of_customization() {}
@@ -352,7 +352,7 @@ module Extruder(as_clearance = false, lever_angle = 0) {
         blank();
         mounting_plate() ;
         dx = 6;
-        #translate([dx, -1, -extruder.z + extruder_fixed.z]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT+ABOVE);        
+        translate([dx, -1, -extruder.z + extruder_fixed.z]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT+ABOVE);        
     }
     
     if (as_clearance) {
@@ -686,30 +686,38 @@ module ZiptieServoMount() {
     }
 }
 
-module LeverGlove(){
+module LeverGlove(test_fit = false) {
     // The lever glove provides a smooth surface for the pins to push against.  
     // The basic handle is textured for easy grip, but this causes additional friction
     // when attempting to rotate the servo to release or engage the lever. 
     clearances = [0.2, 0.2, 0.2];
-    walls = [1, 1, 1];
+    walls = [2, 1.4, 3];
+    extra = [2, 0, 0];
+    blank = lever_handle + extra + clearances + walls;
+    back_side_cutout = [20, 20, lever_handle.z + clearances.z];
     module blank() {
-        block(lever_handle + clearances + walls);
+        block(blank);
     } 
     
     module shape() {
         render(convexity=10) difference() {
             blank();
-            translate([walls.x + 1.1*clearances.x, 0, 0]) block(lever_handle + clearances);
+            translate([walls.x + 1.1*clearances.x, 0, 0]) block(lever_handle + extra + clearances );
+            translate([8, 0, 0]) rotate([0, 0, -45]) block(back_side_cutout, center = FRONT+LEFT);
+            if (test_fit) {
+                //translate([blank.x/2 - 3, 0, 0]) plane_clearance(BEHIND);
+                plane_clearance(ABOVE);
+            }
         }
     }
     
-    z_printing = 0;
+    z_printing = blank.y/2;
     rotation = 
-        mode == PRINTING ? [0, 0, 0] : 
-        [0, 0, 0];
+        mode == PRINTING ? [-90, 0, 0] : 
+        [0, 0, 135];
     translation = 
         mode == PRINTING ? [x_lever_glove_bp, y_lever_glove_bp, z_printing] :
-        [0, 0, 0];
+        [0, 0, 20];
     translate(translation) rotate(rotation) {
         visualize(visualization_lever_glove) {
             shape();

@@ -1,4 +1,15 @@
-/* Orientation:  
+/* 
+
+
+Purpose:
+
+  The Wrasse Extruder Lever Actuator allows automated control of the extruder 
+  release lever for the Creality CR 6 SE with the stock extruder.  It is necessary to 
+  disengage the extruder as part of filament loading and unloading.  It is desirable
+  to automate this lever because it is ackward to get to when the printer is in a 
+  cabinet, and as part of an automated filament exchanger. 
+
+Orientation:  
 
     Origin is placed at a corner of the extruder closest to both engagement lever and filament entrance, 
     at the top away from support place.
@@ -6,7 +17,41 @@
     Filament entrance is positive y.  
     
     Lever is negative x.  
+    
+    
+Assembly Note: 
 
+With standard servos you can safely rotate them by hand if you 
+move them gently.  Too strong movements may permanently
+damage them by stripping the gears.  
+    
+Assembly:
+    
+    1. Install M3 nuts into the nut catches, and test install the M3x8 screws. 
+        You may need pliers to get the bottom 
+        Leave the screws in place, but do not yet install the servo motor.
+    3. Inserted the puller pin should beinto the horn extension.  
+    4. Install the servo horn into the horn extension.  
+    5. With the servo in the zero position, attach the horn and horn extension
+        onto servo shaft aligning the registration marks on horn extension with
+        the servo body, using the screw provided with the servo.
+    6. Attach the standard servo motor to the servo mount using M3x8 screws. 
+    7. Partially disengage the extruder, so that the release lever is in a mid postion. 
+    8. Rotate the servo motor so the pusher pin is beyond the lever.  
+    9. Ensure that the puller is raised completely, and then attach the servo mount 
+        to the extruder using two 12" zip ties, pulling the zip ties tight with a pliers.  
+    10. Install the lever glove on the release lever handle. 
+    11. Release the lever, so that it is resting against the pusher pin.  Then lower
+          the puller pin, so that the glove handle is between the two pins. 
+    
+    TODO:  
+    1. Hole through horn extension for attaching horn to shaft. 
+    2. Split horn extension, and attach two haves with M3 screws. 
+    3. Add arm to horn extension to prevent stress on shaft when pushing 
+        arm.  
+    4. Registration marks to align horn extension with servo during assembly.
+    5. Work on nut catches on print surface.
+    6. No rounding for servo attachment block. 
 */
 
 
@@ -28,9 +73,9 @@ entrance_translation = [0, 15, 11];
 translation_attachment_screw = [-5, extruder.y-5, 0];
 translation_pivot_screw = [-23, 5, 0];
 lever = [extruder.x/2 -2, 5, 6];
-lever_handle = [15.2, 3.9, 13.1];
+lever_handle = [15.4, 4, 12];
 dz_lever = -extruder.z + extruder_fixed.z + lever_handle.z/2;
-lever_slot = [extruder.x/2+10, 8, lever.z + 2];
+lever_slot = [extruder.x/2+10, 8, 12];
 
 /* [Stepper Characteristics] */
 stepper_motor = [42, 42, 40];
@@ -68,7 +113,7 @@ show_vitamins = true;
 horn_extension = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 puller = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 servo_mount = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
-
+glove = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
 
 /* [Animation] */
 // At zero, the lever is fully released - adjust range after offset is configured
@@ -87,7 +132,7 @@ print_all_parts = false;
 print_one_part = false;
 
 // Update options for part_to_print with each defined variable in the Show section!
-one_part_to_print = "servo_mount"; // [servo_mount, horn_extension, puller]
+one_part_to_print = "servo_mount"; // [servo_mount, horn_extension, puller, glove]
 
 mode = print_one_part ? PRINTING: 
     print_all_parts ? PRINTING:
@@ -113,7 +158,7 @@ dy_attachment_plate_ztsm = 7;
 h_horn_extension = 7;  
 dz_horn_clearance = 10;  
 d_pusher_pin = 6;
-h_pusher_pin = 12;
+h_pusher_pin = 18;
 dx_pusher_pin = 24; // [18 : 35]
 dy_pusher_pin = -0.5; // [-20:0]
 dz_puller_pin = 4;
@@ -140,8 +185,6 @@ az_horn_extension_print_surface = -35; // [-40: 0]
 
 
 /* [Puller Design] */
-
-
 d_puller_pin = 6;
 h_puller_pin = 18; 
 z_puller_pin_handle = 2;
@@ -157,6 +200,9 @@ y_horn_extension_bp = 0;
 
 x_puller_bp = 30;
 y_puller_bp = 10;
+
+x_lever_glove_bp = 40;
+y_lever_glove_bp = 30;
 
 
 module end_of_customization() {}
@@ -182,6 +228,9 @@ visualization_horn_extension =
 
 visualization_puller = 
     visualize_info("Puller", PART_3, show(puller, "puller") , layout, show_parts); 
+    
+visualization_lever_glove = 
+    visualize_info("Glove", PART_4, show(glove, "glove") , layout, show_parts); 
     
     
 /* [Kinematics] */
@@ -241,42 +290,69 @@ module Extruder(as_clearance = false, lever_angle = 0) {
         // Show mounting plate
         dy_front_mounting_plate = 12;
         cl_z_mouting_plate = 1;
+        z_extra = as_clearance ? cl_z_mouting_plate : 0;
         dz = -extruder.z + (as_clearance ? + cl_z_mouting_plate/2 : 0);
         translate([0, 0, dz]) {
             color(BLACK_IRON) {
-                block(mounting_plate + [0, 0, cl_z_mouting_plate], center=BEHIND+RIGHT+BELOW);
+                block(mounting_plate + [0, 0, z_extra], center=BEHIND+RIGHT+BELOW);
                 translate([0, dy_front_mounting_plate, 0]) 
                     block(mounting_plate + [0, -dy_front_mounting_plate, 0], center=FRONT+RIGHT+BELOW);
             }
         }        
     }
     
-    module shape() {
-        translate([0, 0, 0]) {
-            color(BLACK_PLASTIC_1) { 
-                difference() {
-                    blank() ;
-                    translate(entrance_translation + [0, 0, 0]) rod(d=5, l=a_lot);
-                    translate(translation_attachment_screw + [0, 0, 10]) hole_through("M3", $fn=12);
-                    translate(translation_pivot_screw + [0, 0, 10]) hole_through("M3", $fn=12);
-                    translate([0, -1, dz_lever]) block(lever_slot, center = BEHIND+RIGHT);
-                }
-            }
+    module release_lever() {
             translate(translation_pivot_screw + [0, 0, dz_lever]) rotate ([0, 0, lever_angle]) {
                 color(BLACK_PLASTIC_2) {
-                    block(lever, center = FRONT);
+                    block(lever, center = FRONT + RIGHT);
                     translate([extruder.x/2-2, 0, 0]) rotate([0, 0, -45]) block(lever_handle, center=FRONT);
                 }
+            }        
+    }
+    
+    module stepper() {
+        color(STAINLESS_STEEL) 
+            difference() {
+                blank() ; 
+               translate([0, 0, -extruder.z  - mounting_plate.z]) plane_clearance(ABOVE); 
+            }      
+    }
+    
+    module housing(lower=true, color_code) {
+        dz_split = -extruder.z + extruder_fixed.z;
+        dz_above = lower ? dz_split : 10;
+        dz_below = lower ? -extruder.z : dz_split;
+        color(color_code) {
+            render(convexity=10) difference() {
+                blank() ;
+                translate(entrance_translation + [0, 0, -extruder.z]) rod(d=5, l=a_lot);
+                translate(translation_attachment_screw + [0, 0, 10]) hole_through("M3", $fn=12);
+                translate(translation_pivot_screw + [0, 0, 10]) hole_through("M3", $fn=12);
+                translate([0, -1, -extruder.z + extruder_fixed.z]) 
+                    block(lever_slot, center = BEHIND+RIGHT+ABOVE);
+                if (lower) {
+                    translate([0, 0, dz_above]) plane_clearance(ABOVE);
+                    translate([0, 0, dz_below]) plane_clearance(BELOW);
+                } else {
+                    translate([0, 0, dz_split]) plane_clearance(BELOW);
+                }
             }
-            mounting_plate();
-        }
+        }    
+    }
+    
+    module shape() {
+        stepper();
+        mounting_plate();
+        release_lever();
+        housing(lower = false, color_code=BLACK_PLASTIC_1);
+        housing(lower = true, color_code="blue");
     }
     
     module cavity() {
         blank();
         mounting_plate() ;
         dx = 6;
-        translate([dx, -1, dz_lever]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT);        
+        #translate([dx, -1, -extruder.z + extruder_fixed.z]) block(lever_slot + [dx, 0, 6], center = BEHIND+RIGHT+ABOVE);        
     }
     
     if (as_clearance) {
@@ -610,12 +686,44 @@ module ZiptieServoMount() {
     }
 }
 
+module LeverGlove(){
+    // The lever glove provides a smooth surface for the pins to push against.  
+    // The basic handle is textured for easy grip, but this causes additional friction
+    // when attempting to rotate the servo to release or engage the lever. 
+    clearances = [0.2, 0.2, 0.2];
+    walls = [1, 1, 1];
+    module blank() {
+        block(lever_handle + clearances + walls);
+    } 
+    
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            translate([walls.x + 1.1*clearances.x, 0, 0]) block(lever_handle + clearances);
+        }
+    }
+    
+    z_printing = 0;
+    rotation = 
+        mode == PRINTING ? [0, 0, 0] : 
+        [0, 0, 0];
+    translation = 
+        mode == PRINTING ? [x_lever_glove_bp, y_lever_glove_bp, z_printing] :
+        [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        visualize(visualization_lever_glove) {
+            shape();
+        }
+    }
+}
 
 Puller();
 
 ZiptieServoMount();
 
 HornExtension();
+
+LeverGlove();
 
 
 

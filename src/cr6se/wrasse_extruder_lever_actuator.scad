@@ -45,13 +45,10 @@ Assembly:
           the puller pin, so that the glove handle is between the two pins. 
     
     TODO:  
-    1. Hole through horn extension for attaching horn to shaft. 
-    2. Split horn extension, and attach two haves with M3 screws. 
-    3. Add arm to horn extension to prevent stress on shaft when pushing 
-        arm.  
-    4. Registration marks to align horn extension with servo during assembly.
-    5. Work on nut catches on print surface.
-    6. No rounding for servo attachment block. 
+    1. Split horn extension, and attach two haves with M3 screws. 
+    2. Registration marks to align horn extension with servo during assembly.
+    3. Work on nut catches on print surface.
+    4. No rounding for servo attachment block. 
 */
 
 
@@ -84,6 +81,10 @@ stepper_motor = [42, 42, 40];
 servo_horn_offset = [-20, 9, -7.5];
 dx_servo_screws = 48.5;
 dy_servo_screw_offset = 5;
+
+/* [Zip Tie Characteristics] */
+x_zip_tie_slot = 1.5;
+z_zip_tie_slot = 5.4;
 
 
 /* [Servo Horn Characteristics ] */
@@ -134,7 +135,6 @@ dy_servo_screw_offset = 5;
 
     print_all_parts = false;
     print_one_part = false;
-
     // Update options for part_to_print with each defined variable in the Show section!
     one_part_to_print = "servo_mount"; // [glove, horn_extension, puller, servo_mount]
 
@@ -159,44 +159,45 @@ dy_servo_screw_offset = 5;
 
 /* [Horn Extension Design] */
 
-    h_horn_extension = 7;  
+    h_horn_extension = 9;  
     dz_horn_clearance = 10;  
     d_pusher_pin = 6;
     h_pusher_pin = 18;
-
-
 // Distance from servo shaft to center of pin. 
     r_pusher_pin = 27.5; // [24: 0.1, 28.0]
     az_pusher_pin = 0; // [-5:0.5:5]
     d_padding_puller_pin = 6;
     az_puller_insertion_slot = -25;
     az_puller_handle_depression = -50;
-    h_flag_cavity = 2;   
+    h_retention_nib_cavity = 2;   
 // Controls the orientation of the slots in the servo horn relative to the blank - adjust for printability
     horn_extension_offset_angle  = -5; // [0:360]
-    ay_horn_extension_print_surface = 0; // [0:45]
-    dz_horn_extension_print_surface = -16; // [-20:0.1:-10]
-    ax_horn_extension_print_surface = -90; // [-90:90]
-    dz_top_of_extruder_to_horn_extension = 0.25;
+    dz_top_of_extruder_to_horn_extension = 0.0;
+    d_horn_screw_access = 6;
 // Adjust for location of print surface pivot which controls how much of pusher pin is sliced off.
     az_print_surface_pivot = 65;
 // Align with intersection of horn with horn extension 
-    az_horn_extension_print_surface = -35; // [-40: 0]
+    az_horn_extension_print_surface = -25; // [-40: 0]
+// Adjust to control steepness of print support for the horn can 
+    ratio_support_base = 0.30;    
 
 
 /* [Puller Design] */
     r_puller_pin = 20; // [24: 0.1, 28.0]
     az_puller_pin = -40; // [-55:0.5:0]
 // Offset from the top of the cap
-    dz_puller_pin = 5; // [-5:0.1:10]
+    dz_puller_pin = 7; // [-5:0.1:10]
     d_puller_pin = 6;
-    h_puller_pin = 20; 
+    h_puller_pin = 22; 
     z_puller_pin_handle = 2;
-    az_flag_to_flat = 135;
+    retention_nib = [d_puller_pin/2, 2, 2];
+    az_retention_nib_to_flat = 135;
     dx_trim_puller_handle_tip = 18;
 
 
 /* [Lever Glove Design] */
+// Adjust for a tight, non slip grip
+   cl_glove = 0.0;
 // Adjust so that glove clears extruder corner, so can be fully inserted on to handle
     dx_front_cutoff_lg = 3;
     dx_backside_cutoff_lg = 3;   
@@ -249,7 +250,6 @@ module end_of_customization() {}
     
 /* [Kinematics] */
     servo_translation_ztsm = [dx_servo_ztsm, dy_servo_ztsm, dz_servo_ztsm];
-
     // The horn translation gets us to underneath servo axis of rotation;
     horn_translation = [
         dx_servo_ztsm + servo_horn_offset.x, 
@@ -260,6 +260,9 @@ module end_of_customization() {}
     dy_puller_pin = r_puller_pin * sin(az_puller_pin); 
     dx_pusher_pin = r_pusher_pin * cos(az_pusher_pin);
     dy_pusher_pin = r_pusher_pin * sin(az_pusher_pin);
+    
+    dz_puller_pin_lift = enage_puller ? 0 : 
+        (h_puller_pin - dz_puller_pin) + (h_retention_nib_cavity-retention_nib.z); 
 
 
 /* [Utilities] */
@@ -418,6 +421,7 @@ module standard_servo_four_armed_horn(angle=0, as_clearance = false) {
     module shape() {
         hollow = as_clearance ? 0.01 : id_horn_barrel;
         rotate([0, 0, angle]) {
+           
             color(POLYETHELYNE) {
                 can(d=od_horn_barrel, hollow=hollow , h = h_horn_barrel, center = BELOW);
                 horn_arm();
@@ -425,11 +429,9 @@ module standard_servo_four_armed_horn(angle=0, as_clearance = false) {
                 rotate([0, 0, 180]) horn_arm();
                 rotate([0, 0, 270]) horn_arm();
             }
-            if (as_clearance) {
-            } else {
-                // Add a flag at zero to clearly differentiate one horn
-                color("black") block([40, 0.1, h_horn_arm + 5], center=FRONT+BELOW);
-            }
+            
+            // Add a flag at zero to clearly differentiate one horn
+            color("yellow") block([40, 0.01, h_horn_arm + 5], center=FRONT+BELOW);           
         }        
     }
     shape();
@@ -471,7 +473,7 @@ module Glove(test_fit = false) {
     // The basic handle is textured for easy grip, but this causes additional friction
     // when attempting to rotate the servo to release or engage the lever. 
     
-    clearances = [0.2, 0.2, 0.2];
+    clearances = [cl_glove, cl_glove, cl_glove];
     walls = [2, 1.4, 3];
     dx_extra_for_sliding = 8;
     dx_handle_cavity = 0;
@@ -501,7 +503,7 @@ module Glove(test_fit = false) {
     dy = -0.8;
     z_printing = blank.y/2;
     rotation = 
-        mode == PRINTING ? [-90, 0, 0] : 
+        mode == PRINTING ? [90, 0, 0] : 
         [0, 0, 135];
     translation = 
         mode == PRINTING ? [x_lever_glove_bp, y_lever_glove_bp, z_printing] :
@@ -523,28 +525,38 @@ module HornExtension() {
     
     module blank() {
         // Coordinates are relative to center
+        s = 0.7*d_puller_pin;
         hull() {
             can(d = od_horn, h=h_horn_extension, center=ABOVE);
             translate([dx_pusher_pin, dy_pusher_pin, 0]) 
                 can(d = d_pusher_pin, h=h_horn_extension, center=ABOVE);
             translate([dx_puller_pin, dy_puller_pin, 0]) 
                 can(d = d_puller_pin+d_padding_puller_pin, h=h_horn_extension, center=ABOVE);
+            translate(print_base_translation) {
+                rotate([0, 0, az_horn_extension_print_surface]) {
+                    block([s, s, h_horn_extension], center = ABOVE); 
+                        translate([-r_pusher_pin - ratio_support_base*od_horn, 0, 0]) 
+                            block([s, s, h_horn_extension], center = ABOVE);
+                }
+            }
+            
         }
         // The pusher pin
-        translate([dx_pusher_pin, dy_pusher_pin, 0]) {
-                can(d = d_pusher_pin, h=h_pusher_pin, center=BELOW);
-        }
-        translate(print_base_translation) 
-            rotate([0, 0, az_horn_extension_print_surface]) {
-                s = 0.7*d_puller_pin;
-                block([s, s, h_horn_extension], center = ABOVE); 
-                block([s, s, h_pusher_pin], center = BELOW);
+        hull() {
+            translate([dx_pusher_pin, dy_pusher_pin, 0]) {
+                    can(d = d_pusher_pin, h=h_pusher_pin, center=BELOW);
             }
+            translate(print_base_translation) {
+                rotate([0, 0, az_horn_extension_print_surface]) {
+                    block([s, s, h_pusher_pin], center = BELOW);
+                }
+            }
+        }
     }
    
     module shape() {
         rotation = 
-            mode == PRINTING  ? [0, 0, -az_horn_extension_print_surface]: //az_horn_extension_print_surface]: 
+            mode == PRINTING  ? [0, 0, -az_horn_extension_print_surface]:
             [0, 0, 0];
         rotate(rotation)  {
             render() difference() {
@@ -552,6 +564,7 @@ module HornExtension() {
                 translate([0, 0, dz_horn_clearance]) {
                     standard_servo_four_armed_horn(as_clearance = true, angle=horn_extension_offset_angle);
                 }
+                can(d=d_horn_screw_access, h= a_lot);
                 translate([dx_puller_pin, dy_puller_pin, dz_puller_pin-dz_top_of_extruder_to_horn_extension]) {
                     // Rotate for orientation of insertion slot
                     rotate([0, 0, az_puller_insertion_slot]) Puller(as_clearance=true);                
@@ -561,10 +574,11 @@ module HornExtension() {
                 }
                 // Create a cutout for the flag, so that the puller pin can be retracted enough so 
                 // glove fits under bottom of in pin. 
-              
-                translate([dx_puller_pin, dy_puller_pin, 0]) can(d = 14, h=h_flag_cavity, center=ABOVE);
+                translate([dx_puller_pin, dy_puller_pin, 0]) can(d = 12, h=h_retention_nib_cavity, center=ABOVE);
                 
-                translate(print_base_translation) rotate([0, 0, az_horn_extension_print_surface]) plane_clearance(RIGHT);   
+                translate(print_base_translation) 
+                    rotate([0, 0, az_horn_extension_print_surface]) 
+                        plane_clearance(RIGHT);   
             }
         }
     }
@@ -576,10 +590,10 @@ module HornExtension() {
         mode == PRINTING ? [x_horn_extension_bp, y_horn_extension_bp, z_printing] :
         horn_translation;
     
-    translate(translation) rotate(rotation) {
+    translate(translation) rotate(rotation) {        
         visualize(visualization_horn_extension) {
             shape();
-        } 
+        }        
     }  
     
 }
@@ -587,7 +601,7 @@ module HornExtension() {
 
 module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_puller_pin_handle ) {  
     
-    flag = [d_puller_pin/2, 2, 2];
+
     dz_cut = 0.5;
     x_handle = 20;
     dy_trim = d_puller_pin/2 - dz_cut;
@@ -597,8 +611,8 @@ module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_pu
         // rounded tip in help insertion in front of release lever handle
         translate([0, 0, -h_puller_pin]) sphere(d = d_puller_pin, $fn=24);
          // Retention flag, so the puller stops when lifting up. Can only be remove if the handle is rotated to special position.
-         rotate([0, 0, az_flag_to_flat]) 
-            translate([0, d_puller_pin/2, -h_puller_pin]) block(flag, center = BEHIND + LEFT);
+         rotate([0, 0, az_retention_nib_to_flat]) 
+            translate([0, d_puller_pin/2, -h_puller_pin]) block(retention_nib, center = BEHIND + LEFT);
         // Handle - provides something to pull up on to manually operate release lever,
         
         block([x_handle, d_puller_pin/2, z_puller_pin_handle], center = FRONT + RIGHT + ABOVE);
@@ -620,12 +634,11 @@ module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_pu
     if (as_clearance) {     
         rotate([0, 0, -90]) {
             can(d = d_puller_pin, h=a_lot);
-            translate([0, d_puller_pin/2, 0]) block([flag.x, flag.y, a_lot], center = BEHIND + LEFT);
+            translate([0, d_puller_pin/2, 0]) block([retention_nib.x, retention_nib.y, a_lot], center = BEHIND + LEFT);
             can(d = d_handle_recess, h =h_handle_recess, center = ABOVE);
             
         }
     } else {
-        dz_lift = enage_puller ? 0 : h_puller_pin - flag.z - h_flag_cavity;
         z_printing = dy_trim;
         rotation = 
             mode == PRINTING ? [-90,  0, 0] : 
@@ -640,7 +653,7 @@ module Puller(as_clearance = false, d_handle_recess =  0, h_handle_recess = z_pu
                     shape();
                 } else {
                     // These deltas are relative to servo axis, at top of extruder 
-                    translate([dx_puller_pin, dy_puller_pin, dz_puller_pin + dz_lift])
+                    translate([dx_puller_pin, dy_puller_pin, dz_puller_pin + dz_puller_pin_lift])
                         rotate([0, 0, az_puller_handle_to_horn_extension]) 
                             shape();
                 } 
@@ -688,7 +701,7 @@ module ZiptieServoMount() {
             center_reflect([1, 0, 0]) 
                 center_reflect([0, 0, 1]) 
                     translate([extruder_fixed.x/2 + 2, 2, mounting_plate.z/2]) 
-                        rotate([0, 0, -45]) block([2, a_lot, 4.5], center = FRONT + ABOVE);
+                        rotate([0, 0, -20]) block([x_zip_tie_slot, a_lot, z_zip_tie_slot], center = FRONT + ABOVE);
     }
 
     pad = [12, 18, 7.5];

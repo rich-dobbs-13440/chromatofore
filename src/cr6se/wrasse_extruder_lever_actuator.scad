@@ -47,7 +47,6 @@ Assembly:
     TODO:  
     1. Split horn extension, and attach two haves with M3 screws. 
     2. Registration marks to align horn extension with servo during assembly.
-    3. Work on nut catches on print surface.
     4. No rounding for servo attachment block. 
 */
 
@@ -124,7 +123,7 @@ z_zip_tie_slot = 5.4;
 // At zero, the lever is fully released - adjust range after offset is configured
     az_servo = 0; // [0:140]
 // Adjust so when az_servo == 0, that the puller pin is at beyond the lever fully release
-    az_servo_horn_offset = -133; // [-360:360]
+    az_servo_horn_offset = -140; // [-360:360]
 // Add the start of the range so the lever matches fully open
     lever_angle = 0; // [-135:0]
     enage_puller = true;
@@ -183,7 +182,7 @@ z_zip_tie_slot = 5.4;
 
 
 /* [Puller Design] */
-    r_puller_pin = 20; // [24: 0.1, 28.0]
+    r_puller_pin = 26; // [24: 0.1, 28.0]
     az_puller_pin = -40; // [-55:0.5:0]
 // Offset from the top of the cap
     dz_puller_pin = 7; // [-5:0.1:10]
@@ -267,7 +266,14 @@ module end_of_customization() {}
 
 /* [Utilities] */
 
-
+module pairwise_hull() {
+    for (i = [1: $children-1]) {
+        hull() {
+            children(i);
+            children(i-1);
+        }
+    }
+}
 
 // TODO: Move rounded_block into shape
 module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
@@ -275,6 +281,7 @@ module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
     translation = 
         center == CENTER ? [0, 0, 0] :
         center == BELOW ? [0, 0,  -extent.z/2] :
+        
         center == BEHIND + RIGHT + BELOW ? [-extent.x/2, extent.y/2, -extent.z/2] :
         center == BEHIND + RIGHT + ABOVE ? [-extent.x/2, extent.y/2, extent.z/2] :
         center == BEHIND + LEFT ?  [-extent.x/2, -extent.y/2, 0] :
@@ -287,7 +294,9 @@ module rounded_block(extent, radius = 2, sidesonly = false, center = CENTER) {
         center == FRONT + LEFT + ABOVE ? [extent.x/2, -extent.y/2, extent.z/2] :
         center == FRONT + LEFT + BELOW ? [extent.x/2, -extent.y/2, -extent.z/2] :
         center == LEFT ? [0, -extent.y/2, 0] :
-                assert(false);
+        center == LEFT + BELOW ? [0, -extent.y/2,  -extent.z/2] :
+        center == RIGHT + BELOW ? [0, extent.y/2,  -extent.z/2] :
+        assert(false);
     rotation = sidesonly == "XZ" ? [90, 0, 0] : 
         sidesonly == false ? [0, 0, 0] :
         assert(false);
@@ -305,7 +314,7 @@ module Extruder(as_clearance = false, lever_angle = 0) {
         translate([-extruder.x/2, extruder.y/2, 0]) 
         render() intersection() {
             block(extruder + [0, 0, mounting_plate.z + stepper_motor.z], center=BELOW);
-            // Cut off corners:
+            // Cut off corners:4
             rotate([0, 0, 45]) block([54.5, 54.5, a_lot]);
         }
     }
@@ -369,7 +378,7 @@ module Extruder(as_clearance = false, lever_angle = 0) {
         mounting_plate();
         release_lever();
         housing(lower = false, color_code=BLACK_PLASTIC_1);
-        housing(lower = true, color_code="blue");
+        housing(lower = true, color_code=BLACK_PLASTIC_2);
     }
     
     module cavity() {
@@ -703,8 +712,40 @@ module ZiptieServoMount() {
                     translate([extruder_fixed.x/2 + 2, 2, mounting_plate.z/2]) 
                         rotate([0, 0, -20]) block([x_zip_tie_slot, a_lot, z_zip_tie_slot], center = FRONT + ABOVE);
     }
-
     pad = [12, 18, 7.5];
+    s = 8;
+    z_nut_block = 7.5;
+    intermediate = [s, 14, z_nut_block];
+    connector = [s, s, s];
+    landing = [8, 8, plate.z];        
+    dz_end =  -dz_servo - extruder.z + extruder_fixed.z;     
+    
+    module pad(translation) {
+         translate(translation) block(pad, center = BELOW + RIGHT);
+    }
+    module intermediate(translation) {
+        translate(translation) rounded_block(intermediate, center = BELOW + RIGHT, radius = 2);
+    }
+    module connector(translation) {
+         translate(translation) rounded_block(connector, center = BELOW + RIGHT, radius = 2);
+    }  
+    module landing(translation) {
+         translate(translation) rounded_block(landing, center = BELOW + RIGHT, radius =2);
+    }    
+    module pedistal(x_offset, y_offset) {
+        translate([dx_servo_screws/2, 0, 0]) {
+            pairwise_hull() {     
+                pad([1, y_offset, 0]);
+                intermediate([x_offset, y_offset, 0]);
+                connector([x_offset, y_offset,  -6]);
+                connector([x_offset, y_offset, dz_end]);
+                landing([x_offset-10, y_offset, dz_end]);
+                landing([x_offset-40, y_offset, dz_end]);            
+            }
+        }
+    }
+
+    
     module segment(dx1, dz1, e1, dx2, dz2, e2) {
         dy1 = (e1.y - pad.y)/2;
         dy2 = (e2.y - pad.y)/2;
@@ -717,28 +758,10 @@ module ZiptieServoMount() {
             translate([dx2, dy2, dz2]) rounded_block(e2, center = BELOW, radius = r2);
         }            
     }
-    
-    module pedistal(x_offset) {
-        z_nut_block = 7.5;
-        s = 8;
-        intermediate = [s, 14, z_nut_block];
-        connector = [s, s, s];
-        landing = [8, 8, plate.z];        
-        dz_end =  -dz_servo - extruder.z + extruder_fixed.z; 
-        translate([dx_servo_screws/2, 0, 0]) {
-            segment(1, 0, pad, 1, 0, intermediate);
-            segment(3, 0, intermediate, x_offset, 0, intermediate);
-            segment(x_offset, 0, intermediate, x_offset, -6, connector);
-            
-            segment(x_offset, -6, connector, x_offset, dz_end, connector);
-            segment(x_offset, dz_end, connector, x_offset-10, dz_end, landing);
-            segment(x_offset-10, dz_end, landing, x_offset-40, dz_end, landing);
-        }
-    }
     module connected_servo_pedistals() {
         translate([dx_servo, dy_servo, dz_servo] + [-10, 10, 0]) {
-            pedistal(0);
-            mirror([1, 0, 0]) pedistal(16); 
+            pedistal(0, y_offset = -pad.y/2);
+            mirror([1, 0, 0]) pedistal(24, y_offset = -pad.y/2); 
         }
     }
 
@@ -758,7 +781,7 @@ module ZiptieServoMount() {
             translate([dx_servo, dy_servo, dz_servo]) servo_mounting_screws(as_clearance = true);
         }
     }
-    z_printing = 0;
+    z_printing = 5;
     rotation = 
         mode == PRINTING ? [90,  0, 0] : 
         [0, 0, 0];

@@ -58,8 +58,10 @@ a_lot = 200+ 0;
     
 /* [Inlet Attachment Design] */
     x_inlet_attachment = 4;
-    dy_left_overhang = -2;
-    y_top_cap = 20.5;
+    dy_left_overhang = -2.4;
+    y_top_cap = 30;
+    z_attachment_inlet_face = 16;
+    z_atttachment_bracket = 10;
 
 /* [Tube Design] */
     od_ptfe_tube = 4 + 0;
@@ -91,7 +93,7 @@ runout_visualization = visualize_info(BLACK_PLASTIC_2, runout_alpha);
 
 
 
-entrance_translation = [0, 15, 11]; //[0, 14.6, 10.0];
+entrance_translation = [0, 15, 10.0]; //[0, 14.6, 10.0];
 
 function visualize_info(color_code, alpha) = [color_code, alpha];
     
@@ -522,7 +524,7 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
             translate([0, entrance_translation.y, entrance_translation.z]) {
                 difference() {
                     rod(d = 2*connector_extent.x, taper=connector_neck.x, l=connector_extent.z, center = FRONT);
-                    rod(d = 3,  l=a_lot);
+                    rod(d = 4,  l=a_lot);
                 }      
             }      
             // Breakaway  printing support for flute
@@ -532,27 +534,47 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
                 entrance_translation.y- connector_extent.y/2, 
                 entrance_translation.z
             ];
-            base = [2*connector_extent.z, 1, flute_support.z/2];
+            base = [2*connector_extent.z, 0.4, flute_support.z/2];
             hull() {
                 translate(flute_support_translation) block(flute_support, center =BEHIND+LEFT);
-                translate([2*connector_extent.z, dy_left_overhang, entrance_translation.z]) block([3, base.y, base.z], center = BEHIND + RIGHT);
+                translate([2*connector_extent.z, dy_left_overhang, entrance_translation.z]) 
+                    rod(d=base.z, l=2, center = SIDEWISE+RIGHT);
             }
             translate([0, dy_left_overhang, entrance_translation.z]) block(base, center = FRONT+RIGHT);
             
-        }       
-        face = [x_inlet_attachment, y_top_cap, runout_detector.z + h_runout_pivot];
+        }
+        inlet_face_translation = [runout_detector_translation.x + runout_detector.x, 0, 0];
+        face = [x_inlet_attachment, y_top_cap, z_attachment_inlet_face];
+        bracket = [x_inlet_attachment, y_top_cap, z_atttachment_bracket];
+        dz_bracket_screws = runout_detector.z - entrance_translation.z + 0.5 * z_attachment_inlet_face;
+        module bracket_screws(as_clearance) {
+            translate(entrance_translation + inlet_face_translation + [0, 0, dz_bracket_screws]) {
+                rotate([0, 90, 0]) {
+                    if (as_clearance) {
+                        translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
+                        center_reflect([0, 1, 0]) translate([0, 8, 25]) hole_through("M3", cld=0.6, $fn=12);
+                    }
+                }
+            }
+        }
         
         
         module blank() {
-            translate([runout_detector_translation.x + runout_detector.x, 0, 0]) {
-                translate([0, dy_left_overhang, 0]) block(face, center=ABOVE+RIGHT+FRONT);
+            translate(inlet_face_translation) {
+                translate([0, dy_left_overhang, runout_detector.z+h_runout_pivot]) {
+                    block(face, center=BELOW+RIGHT+FRONT);
+                    block(bracket, center=ABOVE+RIGHT+FRONT);
+                }
                 collet_blank( );
             }
         }
             difference() {
                 blank();
                 translate(entrance_translation) rod(d = 2, l=a_lot);
+                bracket_screws(as_clearance = true);
                 translate([0, y_top_cap + dy_left_overhang, 0]) plane_clearance(RIGHT);
+                translate([0, 0, 5]) plane_clearance(BELOW);
+                
             }   
     }
     module outlet_printing_support(){
@@ -581,6 +603,25 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
         }
     }
     
+    module printer_adhesion() {
+        h_printer_adhesion_pad = 0.2;
+        module pad(dx, dz, d) {
+            translate([dx, dy_left_overhang, dz]) rod(d=d, l=h_printer_adhesion_pad, center = SIDEWISE+RIGHT);
+        }
+        pairwise_hull() {
+            pad(dx=runout_detector_translation.x-2.5, dz=runout_detector.z, d=9);
+            pad(dx=11, dz=entrance_translation.z+1, d=6);
+            pad(dx=runout_detector_translation.x-3.5, dz=entrance_translation.z +3, d=9);
+            pad(dx=runout_detector_translation.x, dz=runout_detector.z, d=12);
+            pad(dx=runout_detector_translation.x + runout_detector.x+3, dz=runout_detector.z, d=9);
+            pad(dx=runout_detector_translation.x + runout_detector.x + 15, dz=entrance_translation.z, d=7);
+            pad(dx=runout_detector_translation.x + runout_detector.x, dz=runout_detector.z/2-1, d=6);
+            pad(dx=runout_detector_translation.x + runout_detector.x-6, dz=runout_detector.z, d=6);
+            pad(dx=runout_detector_translation.x + runout_detector.x + 2, dz=runout_detector.z + z_atttachment_bracket+1, d=8);
+            pad(dx=runout_detector_translation.x + runout_detector.x + 15, dz=entrance_translation.z, d=7);
+        }
+    }
+    
     module parts() {
 
         if (ptfe_lining) {
@@ -601,6 +642,7 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
         if (!ptfe_lining) {
             outlet_printing_support();
         }
+        printer_adhesion();
     }
     
     module shape() {

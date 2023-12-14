@@ -42,6 +42,7 @@ a_lot = 200+ 0;
     build_guide = true;
     build_outlet = true;
     build_inlet = false; // Currently, the inlet is built into the guide!
+    build_mantis_support = true;
 
 /* [Guide Design] */
     ptfe_lining = false;
@@ -79,13 +80,22 @@ a_lot = 200+ 0;
     bracket_alpha = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
     runout_alpha = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
     extruder_alpha = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
+   
     idler_color = "Maroon"; 
+
+/* [Build Plate Layout] */   
+    x_mantis_support_bp  = 0;
+    y_mantis_support_bp  = 20; 
+    
+    x_mantis_holder_bp = 0;
+    y_mantis_holder_bp = -20;
 
 module end_of_customization() {}
 
 guide_visualization = visualize_info(PART_1, guide_alpha);
 guide_inlet_visualization = visualize_info(PART_2, guide_inlet_alpha);
 guide_outlet_visualization = visualize_info(PART_3, guide_outlet_alpha);
+
 extruder_visualization = visualize_info(BLACK_PLASTIC_1, extruder_alpha);
 bracket_visualization = visualize_info(CREALITY_POWDER_COATED_METAL_PLATE, bracket_alpha);
 idler_visualization = visualize_info(idler_color, bracket_alpha);
@@ -136,6 +146,9 @@ extruder = [42.8, 43.3, 24.7];
 dy_extruder_offset = -16.5;
 bracket_front = [57, 45.6, 4.7];
 dy_back_bracket = dy_extruder_offset + extruder.y + 4;
+
+
+dz_bracket_screws = runout_detector.z - entrance_translation.z + 0.5 * z_attachment_inlet_face;
 
 module Extruder() {
     translate([0, dy_extruder_offset, 0]) {
@@ -237,7 +250,9 @@ if (build_inlet) {
     }
 }
 
-
+if (build_mantis_support) {
+    mantis_support();   
+}
 
 
 module outlet(orient_for_build=false, as_clearance=false, ptfe_lining=false, l_tube_holder=7) {
@@ -546,7 +561,7 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
         inlet_face_translation = [runout_detector_translation.x + runout_detector.x, 0, 0];
         face = [x_inlet_attachment, y_top_cap, z_attachment_inlet_face];
         bracket = [x_inlet_attachment, y_top_cap, z_atttachment_bracket];
-        dz_bracket_screws = runout_detector.z - entrance_translation.z + 0.5 * z_attachment_inlet_face;
+        
         module bracket_screws(as_clearance) {
             translate(entrance_translation + inlet_face_translation + [0, 0, dz_bracket_screws]) {
                 rotate([0, 90, 0]) {
@@ -592,7 +607,7 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
 
     module inlet_printing_support() {
         color("limegreen") 
-        render(convexity=10) difference() {
+        difference() {
             translate([runout_detector_translation.x, dy_left_overhang, entrance_translation.z]) 
                 block([x_inlet, entrance_translation.y-3.9 + abs(dy_left_overhang), 2], center=RIGHT+BEHIND);
             translate([0, entrance_translation.y, 0]) plane_clearance(RIGHT);
@@ -600,6 +615,8 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
             translate([runout_detector_translation.x - x_runout_clearance, entrance_translation.y, 0]) 
                 rotate([0, 0, -pivot_clearance_angle]) 
                     plane_clearance(FRONT);
+        
+            translate([12, 0, 0]) rotate([0, 0, 30]) plane_clearance(BEHIND);
         }
     }
     
@@ -609,16 +626,10 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
             translate([dx, dy_left_overhang, dz]) rod(d=d, l=h_printer_adhesion_pad, center = SIDEWISE+RIGHT);
         }
         pairwise_hull() {
-            pad(dx=runout_detector_translation.x-2.5, dz=runout_detector.z, d=9);
-            pad(dx=11, dz=entrance_translation.z+1, d=6);
-            pad(dx=runout_detector_translation.x-3.5, dz=entrance_translation.z +3, d=9);
-            pad(dx=runout_detector_translation.x, dz=runout_detector.z, d=12);
-            pad(dx=runout_detector_translation.x + runout_detector.x+3, dz=runout_detector.z, d=9);
-            pad(dx=runout_detector_translation.x + runout_detector.x + 15, dz=entrance_translation.z, d=7);
-            pad(dx=runout_detector_translation.x + runout_detector.x, dz=runout_detector.z/2-1, d=6);
-            pad(dx=runout_detector_translation.x + runout_detector.x-6, dz=runout_detector.z, d=6);
-            pad(dx=runout_detector_translation.x + runout_detector.x + 2, dz=runout_detector.z + z_atttachment_bracket+1, d=8);
-            pad(dx=runout_detector_translation.x + runout_detector.x + 15, dz=entrance_translation.z, d=7);
+            pad(dx=17, dz=15, d=16);
+            pad(dx=70, dz=11, d=15);
+            pad(dx=60, dz=25, d=15);
+            pad(dx=17, dz=15, d=16);
         }
     }
     
@@ -661,6 +672,150 @@ module guide(orient_for_build = false, show_vitamins = true, ptfe_lining = false
             shape();
         }
     }
+}
+
+module footprint(h_layer = 0.2) {
+    // Creates a foot print for the model
+    // Assume that the model is oriented on the  build plate above
+    difference() {
+        children();
+        translate([0, 0, h_layer]) plane_clearance(ABOVE); 
+    }
+}
+
+module x_segmented_hull(x_range) {
+    for (x = x_range) {
+            hull() difference() {
+                children(); 
+                //echo("x", x);
+                translate([x, 0, 0]) plane_clearance(BEHIND);
+                xf = x + x_range[1];
+                //echo("xf", xf);
+                translate([xf, 0, 0]) plane_clearance(FRONT);
+        }
+    }
+    
+}
+
+module chamfered_can(x, y, h=6) {
+    translate([x, y, 0]) {
+        can(d = 4, h = h, center = ABOVE);
+        dz = 2;
+        translate([0, 0, dz]) can(d = 6, h = h-dz, center = ABOVE);
+    }
+}
+
+module mantis_support() {
+
+    module fillet(x, y, fd=6, h=4, az=0) {
+        translate([x, y, 0]) {
+            rotate([0, 0, az]) {
+                render(convexity=10) 
+                difference() {
+                    hull() {
+                        block([0.1, 0.1, h], center=ABOVE+FRONT);
+                        translate([fd/2, 0, 0]) can(d=fd, h=h, center=FRONT + ABOVE, $fn=12);
+                    }
+                    translate([fd/2, 0, 0]) can(d=fd, h=3*h, center=FRONT, $fn=40);
+                }
+            }
+        }
+    }
+    module hole(x, y) {
+        translate([x, y, 45]) hole_through("M3", cld=0.6, $fn=12);
+    }
+    x_dogbone = 90;
+    module blank() {
+       
+        pairwise_hull() {
+            // Dogbone around the hole:
+            chamfered_can(-2, 0);
+            chamfered_can(-2, 3);
+            chamfered_can(10, 0);
+            // End of dogbone
+            chamfered_can(x_dogbone-20, 0, h=8);
+            chamfered_can(x_dogbone, 10, h=15); 
+            chamfered_can(x_dogbone, -10, h=0); 
+            chamfered_can(x_dogbone, -10, h=30);
+        }
+        fillet(x_dogbone -14, 0, h=10);
+        fillet(x_dogbone - 1.5, 6, h=8, az=-125);        
+    }
+
+    module shape() {
+        render(convexity=50) {
+            center_reflect([0, 1, 0]) {
+                difference() {
+                    blank();
+                    hole(0, 0);
+                    hole(x_dogbone, 10);
+                    hole(x_dogbone, -10);
+                }
+            }
+        }
+    }
+    
+    module footprinted_shape() {
+        shape();
+        // Start footprint hulling beyond hole, so it doesn't need to broken through
+        x_segmented_hull(x_range=[4.5:2:x_dogbone-3]) footprint() shape();        
+    }
+    rotation = orient_for_build ? [0, 0, 0] :  [270, 270, 270];
+    translation = orient_for_build ? [x_mantis_support_bp, y_mantis_support_bp, 0] : 
+        [runout_detector_translation.x + runout_detector.x + x_inlet_attachment, 
+        entrance_translation.y, 
+        runout_detector.z + z_atttachment_bracket/2 + 3];
+    translate(translation) rotate(rotation) {
+        footprinted_shape();
+    }
+}
+
+mantis_holder() {
+    
+}
+
+module mantis_holder() {
+    
+    module blank() {
+        hull() {
+            chamfered_can(10, 12, h=8); 
+            chamfered_can(10, -12, h=8);  
+            chamfered_can(-10, 12, h=8); 
+            chamfered_can(-10, -12, h=8);             
+        }
+    }
+    
+    module screws(as_clearance) {
+        center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) {
+            translate([0, 10, 4]) rotate([0, -90, 0]) {
+                if (as_clearance) {
+                     translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
+                     translate([0, 0, 10]) nutcatch_sidecut(
+                            name   = "M3",  // name of screw family (i.e. M3, M4, ...) 
+                            l      = 50.0,  // length of slot
+                            clk    =  0.0,  // key width clearance
+                            clh    =  0.0,  // height clearance
+                            clsl   =  0.1);  // slot width clearance
+                }
+            }
+        }
+    }
+    
+    module cavity() {
+        can(d=17, h=a_lot);
+        translate([0, 0, 2]) can(d=19.2, h=a_lot, center=ABOVE);
+    }
+    
+    module shape() {
+        difference() {
+            blank();
+            screws(as_clearance=true);
+            cavity();
+        }
+    }
+    translation = orient_for_build ? [x_mantis_holder_bp, y_mantis_holder_bp, 0] :  [0, 0, 0];
+    translate(translation) shape();
+    
 }
 
 

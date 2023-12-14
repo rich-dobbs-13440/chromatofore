@@ -70,6 +70,13 @@ a_lot = 200+ 0;
     ptfe_tube_tolerance = 0.1;
     as_cavity = false;
     z_runout_detector_screw_lift = 2; //[0: 0.5: 2.5]
+    
+ /* [Mantis Support Design] */
+    delta_mantis_screw = 9;
+    x_mantis_support = 90;
+    ay_mantis_holder = 40;   
+    dx_mantis_support_base = -15; 
+    dz_mantis_holder = 10;
 
 /* [Colors] */
     guide_show_parts = false;
@@ -87,7 +94,7 @@ a_lot = 200+ 0;
     x_mantis_support_bp  = 0;
     y_mantis_support_bp  = 20; 
     
-    x_mantis_holder_bp = 0;
+    x_mantis_holder_bp = 100;
     y_mantis_holder_bp = -20;
 
 module end_of_customization() {}
@@ -697,11 +704,27 @@ module x_segmented_hull(x_range) {
     
 }
 
-module chamfered_can(x, y, h=6) {
+module chamfered_can(x, y, h=6, d=6, chamfer = 2) { 
     translate([x, y, 0]) {
-        can(d = 4, h = h, center = ABOVE);
-        dz = 2;
-        translate([0, 0, dz]) can(d = 6, h = h-dz, center = ABOVE);
+        hull() {
+            can(d = d-chamfer, h = h, center = ABOVE);
+            translate([0, 0, chamfer]) can(d = d, h = h-chamfer, center = ABOVE);
+        }
+    }
+}
+
+module mantis_holder_blank(as_lock = false, mounting_target=false) {
+    h = as_lock ? 5 : 8;
+    difference() {
+        hull() {
+            chamfered_can(10, 10, h=h); 
+            chamfered_can(10, -10, h=h);  
+            chamfered_can(-10, 10, h=h); 
+            chamfered_can(-10, -10, h=h);             
+        }
+        if (mounting_target) {
+            translate([-9.8, 0, 0]) plane_clearance(FRONT);
+        }
     }
 }
 
@@ -721,36 +744,50 @@ module mantis_support() {
             }
         }
     }
-    module hole(x, y) {
-        translate([x, y, 45]) hole_through("M3", cld=0.6, $fn=12);
+    module hole(x, y, z) {
+        translate([x, y, z]) rotate([0, ay_mantis_holder, 0]) translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
     }
-    x_dogbone = 90;
+
     module blank() {
-       
         pairwise_hull() {
-            // Dogbone around the hole:
-            chamfered_can(-2, 0);
-            chamfered_can(-2, 3);
-            chamfered_can(10, 0);
-            // End of dogbone
-            chamfered_can(x_dogbone-20, 0, h=8);
-            chamfered_can(x_dogbone, 10, h=15); 
-            chamfered_can(x_dogbone, -10, h=0); 
-            chamfered_can(x_dogbone, -10, h=30);
+            translate([0, 0, 5]) rotate([0, ay_mantis_holder, 0]) can(d=10, h = 7, center=ABOVE);
+            translate([0, 0, 5]) rotate([0, ay_mantis_holder, 0]) can(d=10, h = 2, center=BELOW);
+            chamfered_can(5, 0, d=10);
+            chamfered_can(x_mantis_support+dx_mantis_support_base, 0, d=10);
+            translate([x_mantis_support, 0, dz_mantis_holder]) 
+                rotate([0, -ay_mantis_holder, 0]) 
+                    mantis_holder_blank(as_lock = false, mounting_target=true);
+            translate([x_mantis_support, 0, dz_mantis_holder]) 
+                rotate([0, -ay_mantis_holder, 0]) 
+                    mantis_holder_blank(as_lock = false);
+        }    
+    }
+    
+    module cavity() {
+        translate([x_mantis_support, 0, dz_mantis_holder]) {
+            rotate([0, -ay_mantis_holder, 0]) {
+                can(d=17, h=a_lot);
+                translate([0, 0, 6]) can(d=19.2, h=a_lot, center=BELOW);
+            }
         }
-        fillet(x_dogbone -14, 0, h=10);
-        fillet(x_dogbone - 1.5, 6, h=8, az=-125);        
+    } 
+    module holder_screws(as_clearance = true) {
+        translate([x_mantis_support, 0, dz_mantis_holder]) {
+            rotate([0, -ay_mantis_holder, 0]) {
+                center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) 
+                    translate([delta_mantis_screw, delta_mantis_screw, 25]) 
+                        hole_through("M3", cld=0.6, $fn=12);   
+            }
+        }
     }
 
     module shape() {
         render(convexity=50) {
-            center_reflect([0, 1, 0]) {
-                difference() {
-                    blank();
-                    hole(0, 0);
-                    hole(x_dogbone, 10);
-                    hole(x_dogbone, -10);
-                }
+            difference() {
+                blank();
+                hole(0, 0, 5);
+                cavity();
+                holder_screws(as_clearance=true) ;
             }
         }
     }
@@ -758,47 +795,44 @@ module mantis_support() {
     module footprinted_shape() {
         shape();
         // Start footprint hulling beyond hole, so it doesn't need to broken through
-        x_segmented_hull(x_range=[4.5:2:x_dogbone-3]) footprint() shape();        
+        //x_segmented_hull(x_range=[4.5:2:x_mantis_support+5]) footprint() shape();        
     }
     rotation = orient_for_build ? [0, 0, 0] :  [270, 270, 270];
+    inner_rotation = orient_for_build ? [0, 0, 0] : [0, -45, 0];
     translation = orient_for_build ? [x_mantis_support_bp, y_mantis_support_bp, 0] : 
         [runout_detector_translation.x + runout_detector.x + x_inlet_attachment, 
         entrance_translation.y, 
         runout_detector.z + z_atttachment_bracket/2 + 3];
     translate(translation) rotate(rotation) {
-        footprinted_shape();
+        rotate(inner_rotation)  footprinted_shape();
     }
 }
 
-mantis_holder() {
-    
-}
+mantis_holder(as_lock=true);
 
-module mantis_holder() {
-    
-    module blank() {
-        hull() {
-            chamfered_can(10, 12, h=8); 
-            chamfered_can(10, -12, h=8);  
-            chamfered_can(-10, 12, h=8); 
-            chamfered_can(-10, -12, h=8);             
-        }
-    }
-    
+module mantis_holder(as_lock = false) {
+        
     module screws(as_clearance) {
-        center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) {
-            translate([0, 10, 4]) rotate([0, -90, 0]) {
-                if (as_clearance) {
-                     translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
-                     translate([0, 0, 10]) nutcatch_sidecut(
-                            name   = "M3",  // name of screw family (i.e. M3, M4, ...) 
-                            l      = 50.0,  // length of slot
-                            clk    =  0.0,  // key width clearance
-                            clh    =  0.0,  // height clearance
-                            clsl   =  0.1);  // slot width clearance
+        // Screws attaching holder to support
+        if (!as_lock) {
+            center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) {
+                translate([0, delta_mantis_screw, 4]) rotate([0, -90, 0]) {
+                    if (as_clearance) {
+                         translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
+                         translate([0, 0, 10]) nutcatch_sidecut(
+                                name   = "M3",  // name of screw family (i.e. M3, M4, ...) 
+                                l      = 50.0,  // length of slot
+                                clk    =  0.0,  // key width clearance
+                                clh    =  0.0,  // height clearance
+                                clsl   =  0.1);  // slot width clearance
+                    }
                 }
             }
         }
+        // Screws for attaching Mantis to holder base
+        center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) 
+            translate([delta_mantis_screw, delta_mantis_screw, 25]) 
+                hole_through("M3", cld=0.6, $fn=12);
     }
     
     module cavity() {
@@ -806,11 +840,18 @@ module mantis_holder() {
         translate([0, 0, 2]) can(d=19.2, h=a_lot, center=ABOVE);
     }
     
+    module clip_opening() {
+        block([a_lot, 10, a_lot], center=FRONT);
+    }
+    
     module shape() {
         difference() {
-            blank();
+            mantis_holder_blank();
             screws(as_clearance=true);
             cavity();
+            if (as_lock) {
+                clip_opening();
+            }
         }
     }
     translation = orient_for_build ? [x_mantis_holder_bp, y_mantis_holder_bp, 0] :  [0, 0, 0];

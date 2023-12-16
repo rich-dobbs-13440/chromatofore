@@ -38,11 +38,13 @@ a_lot = 200+ 0;
     show_vitamins = true;
 
     orient_for_build = false;
+    test_print = false;
 
     build_guide = true;
     build_outlet = true;
     build_inlet = false; // Currently, the inlet is built into the guide!
     build_mantis_support = true;
+    build_mantis_holder_lock = true;
 
 /* [Guide Design] */
     ptfe_lining = false;
@@ -259,6 +261,10 @@ if (build_inlet) {
 
 if (build_mantis_support) {
     mantis_support();   
+}
+
+if (build_mantis_holder_lock) {
+    mantis_holder(as_lock=true, test_print=test_print);
 }
 
 
@@ -745,7 +751,10 @@ module mantis_support() {
         }
     }
     module hole(x, y, z) {
-        translate([x, y, z]) rotate([0, ay_mantis_holder, 0]) translate([0, 0, 25]) hole_through("M3", cld=0.6, $fn=12);
+        translate([x, y, z]) 
+            rotate([0, ay_mantis_holder, 0]) 
+                translate([0, 0, 25]) 
+                    hole_through("M3", cld=0.6, $fn=12);
     }
 
     module blank() {
@@ -782,21 +791,16 @@ module mantis_support() {
     }
 
     module shape() {
-        render(convexity=50) {
+        render(convexity=10) {
             difference() {
                 blank();
-                hole(0, 0, 5);
                 cavity();
                 holder_screws(as_clearance=true) ;
+                hole(0, 0, 5);
             }
         }
     }
-    
-    module footprinted_shape() {
-        shape();
-        // Start footprint hulling beyond hole, so it doesn't need to broken through
-        //x_segmented_hull(x_range=[4.5:2:x_mantis_support+5]) footprint() shape();        
-    }
+
     rotation = orient_for_build ? [0, 0, 0] :  [270, 270, 270];
     inner_rotation = orient_for_build ? [0, 0, 0] : [0, -45, 0];
     translation = orient_for_build ? [x_mantis_support_bp, y_mantis_support_bp, 0] : 
@@ -804,13 +808,13 @@ module mantis_support() {
         entrance_translation.y, 
         runout_detector.z + z_atttachment_bracket/2 + 3];
     translate(translation) rotate(rotation) {
-        rotate(inner_rotation)  footprinted_shape();
+        rotate(inner_rotation)  shape();
     }
 }
 
-mantis_holder(as_lock=true);
 
-module mantis_holder(as_lock = false) {
+
+module mantis_holder(as_lock = false, test_print = false) {
         
     module screws(as_clearance) {
         // Screws attaching holder to support
@@ -845,12 +849,15 @@ module mantis_holder(as_lock = false) {
     }
     
     module shape() {
-        difference() {
-            mantis_holder_blank();
+        render(convexity=10) difference() {
+            mantis_holder_blank(as_lock = true);
             screws(as_clearance=true);
             cavity();
             if (as_lock) {
                 clip_opening();
+            }
+            if (test_print) {
+                translate([0, 0, 1]) plane_clearance(ABOVE);
             }
         }
     }

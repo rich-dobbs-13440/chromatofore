@@ -1,3 +1,5 @@
+/* This version of the filament detector has an adjuster */
+
 include <ScadStoicheia/centerable.scad>
 use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
@@ -46,7 +48,7 @@ dz_limit_switch_holder = -1;  // [-3:0.1:3]
 
 dx_roller_clearance = 1;
 x_roller_clearance = 10;
-y_roller_clearance = 6;
+y_roller_clearance = 7;
 x_extra_for_inlet = 4;
 nut_block = [7, 7, 6];
 
@@ -72,6 +74,7 @@ module end_of_customization() {}
 
 
 layout = layout_from_mode(mode);
+function mode_is_print(mode) = mode == 3;
 
 function show(variable, name) = 
     (print_one_part && mode_is_print(mode)) ? name == part_to_print :
@@ -116,12 +119,18 @@ module filament_holder() {
         }
     }
     module adjustable_mount() {
-        mount_translation = [dx_limit_switch_holder, roller_switch_body.y + 8, adjustable_mount_slide_length + 3.6];
-        translate(mount_translation) {
-            nsrsh_adjustable_mount(
-                show_vitamins=show_vitamins, 
-                screw_length=adjuster_screw_length,
-                slide_length = adjustable_mount_slide_length);     
+        //mount_translation = [dx_limit_switch_holder, roller_switch_body.y + 8, adjustable_mount_slide_length + 3.6];
+        // Shift mount in Z direction to give desired range of adjustment
+        mount_translation = [dx_limit_switch_holder, roller_switch_body.y + 8, 4];
+        difference() {
+            translate(mount_translation) {
+                nsrsh_adjustable_mount(
+                    show_vitamins=show_vitamins, 
+                    screw_length=adjuster_screw_length,
+                    slide_length = adjustable_mount_slide_length);     
+            }
+            // Trim off bottome of mount, for printability
+            translate([0, 0, -3]) plane_clearance(BELOW);
         }      
     } 
    
@@ -138,12 +147,14 @@ module filament_holder() {
                 }
                 translate([dx_roller_clearance, 0, 0]) block(roller_clearance_stiffener, center = LEFT); 
                 // Join the mount to the underneath the filament path
-                translate([dx_limit_switch_holder, 0, -z_base]) block([10, roller_switch_body.y/2, connector_extent.y], center=ABOVE+RIGHT);                
+                translate([dx_limit_switch_holder, 0, -z_base]) block([10, roller_switch_body.y/2, connector_extent.y], center=ABOVE+RIGHT);
+
             }
             
             // Teardrop filament path
             hull() {
-                rod(d=2, l=a_lot);
+                // Add additional clearance, for filament tip bulge.
+                rod(d=2.5, l=a_lot);
                 block([a_lot, 0.7, 1.5], center=ABOVE);
             }
             roller_clearance();
@@ -161,12 +172,19 @@ module filament_holder() {
 }
 
 module outlet() {
+    
     wrench = [x_wrench, y_wrench, clamp_extent.y];
     translate([dx_outlet, 0, 0]) {
         rotate([0, -90, 0]) rotate([0, 0, 90]) {
             render(convexity = 10) difference() {
                 translate([0, 0, -clamp_extent.z]) flute_collet(is_filament_entrance = false);
                 translate([0, 0, -2]) plane_clearance(BELOW);
+                // Need to add more clearance, for the filament tip bulge
+                rotate([0, 90, 0]) rotate([90, 0, 0]) hull() {
+                    // Add additional clearance, for filament tip bulge.
+                    rod(d=2.5, l=a_lot);
+                    block([a_lot, 0.7, 1.5], center=ABOVE);
+                }
             }
         }
         if (y_wrench > 0) {
@@ -183,6 +201,12 @@ module inlet() {
             difference() {
                 translate([0, 0, -clamp_extent.z]) flute_collet(is_filament_entrance = false);  
                 translate([0, 0, 3]) plane_clearance(ABOVE);
+                // Need to add more clearance, for the filament tip bulge
+                rotate([0, 90, 0]) rotate([90, 0, 0]) hull() {
+                    // Add additional clearance, for filament tip bulge.
+                    rod(d=2.5, l=a_lot);
+                    block([a_lot, 0.7, 1.5], center=ABOVE);
+                }                
             }
     }    
 }

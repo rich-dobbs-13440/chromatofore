@@ -1,3 +1,6 @@
+/* It looks like this version is obsolete and broken.*/ 
+
+
 include <ScadStoicheia/centerable.scad>
 use <ScadStoicheia/shapes.scad>
 use <ScadStoicheia/visualization.scad>
@@ -12,45 +15,48 @@ PRINTING = 4 + 0;
 
 /* [Output Control] */
 
-mode = 3; // [1:"Designing, no rotation or translation", 3: "Assemble", 4: "Printing"]
-show_vitamins = true;
-guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-qc_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
-copies_to_print = 1; // [1:10]
+    mode = 3; // [1:"Designing, no rotation or translation", 3: "Assemble", 4: "Printing"]
+    show_vitamins = true;
+    guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+    base = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+    qc_body = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+    copies_to_print = 1; // [1:10]
 
 /* [Design] */
-use_ferrule_clamping = true;
-dz_filament = -14;
-dx_roller = -6;
-dz_roller = 1; // [0:0.1:2]
-filament_clearance = 0.5;
-d_roller_clearance = 5.5;
-l_roller_clearance = 5.; // [4:0.1:6]
-dx_mount_holes = 5;
-dy_outlet_screw_offset = 8;
-dx_flange = 16;
+    use_ferrule_clamping = true;
+    dz_filament = -14;
+    dx_roller = -6;
+    dz_roller = 1; // [0:0.1:2]
+    filament_clearance = 0.5;
+    d_roller_clearance = 5.5;
+    l_roller_clearance = 5.; // [4:0.1:6]
+    dx_mount_holes = 5;
+    dy_outlet_screw_offset = 8;
+    dx_flange = 16;
 
 /* [Build Plate Layout] */
-x_guide_bp = 10; 
-y_guide_bp = 0; 
-dx_guide_bp = 30;
+    x_guide_bp = 10; 
+    y_guide_bp = 0; 
+    dx_guide_bp = 30;
 
-x_base_bp = 0;
-y_base_bp = -20;
-dx_base_bp = 30;
+    x_base_bp = 0;
+    y_base_bp = -20;
+    dx_base_bp = 30;
 
-x_qc_body_bp = 0;
-y_qc_body_bp = 30;
-dx_qc_body_bp = 30;
+    x_qc_body_bp = 0;
+    y_qc_body_bp = 30;
+    dx_qc_body_bp = 30;
 
 module end_customization() {}
 
 
-a_lot = 100;
-d_filament = 1.75;
-filament_length = 50;
-outlet_flange = [2, 2*dy_outlet_screw_offset+6, 6];
+    a_lot = 100 + 0.1;
+    d_filament = 1.75;
+    filament_length = 50;
+    outlet_flange = [2, 2*dy_outlet_screw_offset+6, 6];
+
+    function back_plate() = [1, 1, 1];
+    function back_plate_translation() = [10, 10, 10];
 
     l_guide = back_plate().x + 2*dx_flange;
     guide_base = [l_guide, back_plate_translation().y, 10];
@@ -265,7 +271,8 @@ module filament_sensor_base(item=0) {
     if (base > 0) {
         translate(translation) {
             rotate(rotation) {
-                no_solder_roller_limit_switch_holder(use_ferrules=use_ferrule_clamping, show_vitamins=show_vitamins && mode != PRINTING);
+                // use_ferrules=use_ferrule_clamping
+                nsrsh_terminal_end_clamp(, show_vitamins=show_vitamins && mode != PRINTING);
                 color(PART_34) base_extension();
             }
         }

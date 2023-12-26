@@ -18,6 +18,7 @@ show_vitamins = true;
 show_filament = true;
 show_filament_holder = true;
 show_end_clamp = true;
+show_side_clamp = true;
 show_adjuster = true;
 show_adjustable_mount_clip = true;
 show_parts = true; // But nothing here has parts yet.
@@ -26,6 +27,7 @@ show_legend = false;
 
 filament_holder = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 adjuster = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+side_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
 
 /* [Animation] */    
 
@@ -68,7 +70,7 @@ y_wrench = 0;
 
 /* [Printing] */
 print_one_part = false;
-part_to_print = "barrel"; // [barrel]
+part_to_print = "barrel"; // [barrel, side_clamp]
 
 module end_of_customization() {}
 
@@ -89,6 +91,11 @@ visualization_filament_holder =
 visualization_adjuster =        
     visualize_info(
         "Adjuster ", PART_1, show(adjuster, "adjuster") , layout, show_parts);  
+
+visualization_side_clamp =        
+    visualize_info(
+        "Side Clamp ", PART_1, show(side_clamp, "side_clamp") , layout, show_parts);  
+
 
 roller_switch_body = rls_base();
 
@@ -171,14 +178,18 @@ module filament_holder() {
 
 }
 
-module outlet() {
+module outlet(to_ptfe_tube = true) {
     
     wrench = [x_wrench, y_wrench, clamp_extent.y];
+    outer_rotation = to_ptfe_tube ? [0, 90, 0] : [0, -90, 0];
+    dz_below_pc = to_ptfe_tube ? -10 : -2;
+    dz_above_pc =  to_ptfe_tube ? 2 : 10;
     translate([dx_outlet, 0, 0]) {
-        rotate([0, -90, 0]) rotate([0, 0, 90]) {
-            render(convexity = 10) difference() {
+        rotate(outer_rotation) rotate([0, 0, 90]) {
+            render(convexity=10) difference() {
                 translate([0, 0, -clamp_extent.z]) flute_collet(is_filament_entrance = false);
-                translate([0, 0, -2]) plane_clearance(BELOW);
+                translate([0, 0, dz_below_pc]) plane_clearance(BELOW);
+                translate([0, 0, dz_above_pc]) plane_clearance(ABOVE);
                 // Need to add more clearance, for the filament tip bulge
                 rotate([0, 90, 0]) rotate([90, 0, 0]) hull() {
                     // Add additional clearance, for filament tip bulge.
@@ -199,7 +210,7 @@ module inlet() {
     translate([dx_inlet, 0, 0]) 
         rotate([0, -90, 0]) rotate([0, 0, 90]) {
             difference() {
-                translate([0, 0, -clamp_extent.z]) flute_collet(is_filament_entrance = false);  
+               translate([0, 0, -clamp_extent.z]) flute_collet(is_filament_entrance = false);  
                 translate([0, 0, 3]) plane_clearance(ABOVE);
                 // Need to add more clearance, for the filament tip bulge
                 rotate([0, 90, 0]) rotate([90, 0, 0]) hull() {
@@ -220,10 +231,26 @@ module medusa_filament_detecter_adjuster() {
             nsrsh_adjuster(
                 show_vitamins=show_vitamins, 
                 screw_length=adjuster_screw_length, 
-                slide_length=adjuster_slide_length);
+                slide_length=adjuster_slide_length, 
+                z_mounting_plate_extra = 6.5);
         }
     }
 }
+
+module medusa_filament_detecter_side_clamp() {
+    translation = mode_is_printing(mode) ? [0, 0, 0] : switch_translation;
+    rotation = mode_is_printing(mode) ? [0, 0, 0] : [0, 0, 180];    
+    translate(translation) {
+        rotate(rotation) {
+            nsrsh_terminal_side_clamp(
+                show_vitamins=show_vitamins && ! mode_is_printing(mode), 
+                back_plate_mount = false,
+                switch_depressed = roller_switch_depressed); 
+
+        }    
+    }
+}
+
 
 module medusa_filament_detecter_end_clamp() {
     translation = mode_is_printing(mode) ? [0, -50, roller_switch_body.y/2 + limit_switch_holder_base_thickness] :switch_translation;
@@ -239,10 +266,10 @@ module medusa_filament_detecter_end_clamp() {
                 use_dupont_connectors = true,
                 roller_arm_length = roller_arm_length,
                 switch_depressed = roller_switch_depressed); 
-
         }    
     }
 }
+
 
 
 module medusa_filament_detecter() {
@@ -254,13 +281,14 @@ module medusa_filament_detecter() {
     }
 }
 
-
-module medusa_filament_detecter_assembly() {
-    medusa_filament_detecter();
-    medusa_filament_detecter_adjuster();
-    medusa_filament_detecter_end_clamp();
-    
-}
+// Not currently used
+//module medusa_filament_detecter_assembly() {
+//    medusa_filament_detecter();
+//    medusa_filament_detecter_adjuster();
+//    medusa_filament_detecter_end_clamp();
+//    medusa_filament_detecter_side_clamp();
+//    
+//}
 
 if (show_filament_holder) {
     medusa_filament_detecter();
@@ -286,6 +314,12 @@ if (show_adjustable_mount_clip) {
 if (show_end_clamp) {    
     medusa_filament_detecter_end_clamp();
 }
+
+if (show_side_clamp) {
+    medusa_filament_detecter_side_clamp();
+}
+
+
 
 
 

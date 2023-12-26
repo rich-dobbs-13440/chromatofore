@@ -2,6 +2,23 @@
 The Mantis filament actuator is narrower and has less non-functional
 material.  It is designed for easier assembly, with an integral pivot. 
 
+Vitamins:
+
+Qty     Item                                             Specification
+  3           Servos with single arm horns          9g servos                               
+  1           Optical reflective IR sensor              TCTR5000
+  1           IR LED resistor                                 33Ω
+  1           Sensor pulldown resistor                  8.2KΩ  
+  4           Position sensor connection screws  M2x8  
+  6           Servo mounting screws                    M2x10
+  10         Nuts                                                  M2  
+  3           Dupont jumpers                                 20 cm
+
+Order of Assembly:
+1.  Insert TCTR5000, resistors , and Dupont leads to holder body.
+2.  Insert M2x8 screws and nuts into holder body and tighten. 
+3.  Snap mounted TCTR5000 sensor to slider plate. 
+4.  
 
 
 TODO:
@@ -12,6 +29,7 @@ TODO:
 3.  Add Wire guides to keep servo and limit switch wires from being fouled with 
      the moving parts.  
 4.  Assembly instructions.
+5. Fixed clam servo and cam is not located properly. 
 */
 
 
@@ -27,9 +45,20 @@ use <ScadApotheka/quarter_turn_clamping_connector.scad>
 use <ScadApotheka/ptfe_filament_tubing_connector.scad>
 use <ScadApotheka/audrey_horizontal_pivot.scad>
 include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
+use  <ScadApotheka/tcrt5000_mount.scad>
 
 
-// Constants are calculations so they don't show up in the customization    
+
+    
+    * tcrt5000_reflective_optical_sensor_holder(
+        show_body = show_vitamins,
+        show_rails = true,
+        orient_for_printing = false,
+        orient_for_mounting = FRONT, 
+        show_vitamins = true);
+
+
+// Constants are calculations so they don't show up in the customization.    
 
     a_lot = 200 + 0;
     d_filament = 1.75 + 0.;
@@ -77,13 +106,15 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
 /* [Show Parts and Features] */
     show_vitamins = true;
     show_filament = true;
-    show_parts = true; // But nothing here has parts yet.
-
+    show_parts = true && true; // But nothing here has parts yet.
+    use_limit_switch_position_sensor = false;
+    use_optical_position_sensor = true;
 
 // Order alphabetically!
     clamp_cam = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
     filament_guide = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ] 
-    limit_cam =  1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
+// Working on using IR position sensor, so by default limit_cam is invisible.     
+    limit_cam =  0; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
     moving_clamp_bracket = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
     pusher_coupler_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
     pusher_driver_link = 1; // [1:Solid, 0.25:Ghostly, 0:"Invisible, won't print" ]
@@ -97,7 +128,7 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
 
     // Update options for part_to_print with each defined variable in the following Show section!
     // Options can not be broken over multiple lines, they must only wrap!
-    one_part_to_print = "filament_guide"; // [clip, collet, clamp_cam, filament_guide, limit_cam, pusher_coupler_link, pusher_driver_link, , servo_mounting_nut_wrench, slide_plate, slider]
+    one_part_to_print = "slide_plate"; // [clip, collet, clamp_cam, filament_guide, pusher_coupler_link, pusher_driver_link, servo_mounting_nut_wrench, slide_plate, slider]
 
     mode = print_one_part ? PRINTING: 
         print_all_parts ? PRINTING:
@@ -127,7 +158,7 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
     servo_angle_fixed_clamp = 0; // [0:180]
     servo_offset_angle_fixed_clamp = 0; // [0:360]
 
-    
+/* [Roller Position Sensor Animation ] */
     roller_switch_depressed = true;
     roller_arm_length = 20; // [18:Short, 20:Long]
     limit_switch_is_depressed = true;
@@ -156,6 +187,7 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
     l_filament_entrance = 8; // [0:12]
     dy_filament_entrance_offset = -9; //[-20:0]
     z_filament_guide_base =  4; 
+    filament_guide_mounting_screw = "M2x12";
 
 
 
@@ -184,13 +216,15 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
     z_pusher_servo_wires_clearance = 9;
 // Offset pusher servo to avoid filament
     dx_pusher_servo_offset = 4.7;
+// Offset sensor so it doesn't interfer with pusher coupler link   
+    dy_optical_sensor_holder = 19;
 
     dy_servo_offset_for_slide_plate = y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2;
 
 
 /* [Slider Design] */
 // Lateral clearance between slider and guide.  Needs to big enough that the parts print separately.  Small enough relative to thickness of plate so that slider doesn't fall out or move too much vertically.
-    slider_clearance = 0.4;
+    slider_clearance = 0.6;
 // Lateral rim around servos inserted into slider
     x_slider_rim = 2;
 // The offset between the linkage centerline and the centerline of servo
@@ -256,6 +290,17 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
     dr_limit_cam_bumper = 15;
 
 
+/* [Optical Position Sensor Design] */
+// Must be large enough so that far wall doesn't interfere
+    x_pattern = 10;
+// Must match range of motion
+    y_pattern = 26;
+    z_pattern = 2;
+// Adjust to align pattern over sensor, without interference
+    dx_pattern = 3.5;
+// Adjust to make it possible to check limits 
+    dy_pattern = 17;
+    dz_pattern = 7;
 
 /* [Build Plate Layout] */
 
@@ -465,7 +510,9 @@ module servo_mounting_screws(as_clearance = false, dz_nut = -6, dz_screw_head= 6
                     clh    =  10  // nut height clearance
                 );                 
         } else {
-            translate([0, 0, dz_screw_head])  color(STAINLESS_STEEL) screw("M2x12", $fn=12);
+            translate([0, 0, dz_screw_head])  
+                color(STAINLESS_STEEL) 
+                    screw(filament_guide_mounting_screw, $fn=12);
             translate([0, 0, dz_nut])   color(BLACK_IRON) nut("M2", $fn=12);
         }
     }
@@ -623,17 +670,50 @@ module filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=fa
             }
         }
     }
+    
+    module ir_pattern() {   
+    // Add the pattern for the position sensor
+    translate([dx_core_offset + core.x/2, 0, 0])  {
+        // Attach pattern to guide, without interfering with guide movement
+        hull() {
+            block([2,  core.y/2, 2], center = BEHIND+RIGHT+ABOVE);
+            translate([dx_pattern, 5, dz_pattern]) 
+                block([2,  core.y/2, z_pattern], center = FRONT+RIGHT+ABOVE);
+        }
+        translate([dx_pattern, dy_pattern, dz_pattern]) 
+            block([x_pattern, y_pattern, z_pattern], center = FRONT+ABOVE);
+        // Close wall - breakaway, to not interfer with slide
+        translate([dx_pattern, core.y/2 + 6, 0]) 
+            block([0.6, y_pattern - core.y/2,  abs(dz_pattern) + z_pattern], center = FRONT + RIGHT + ABOVE);
+        // Far wall - other side of sensor - support for bridging, breakaway
+        translate([dx_pattern + x_pattern, dy_pattern, 0]) 
+            block([0.6, y_pattern,  abs(dz_pattern) + z_pattern], center = BEHIND + ABOVE); 
+        // Add mouse ears, to try to hold down thin walls
+        translate([dx_pattern + x_pattern/2, dy_pattern, 0]) 
+            center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) 
+                translate([x_pattern/2 + 1, y_pattern/2+1, 0]) can(d=5, h= 0.2, center=ABOVE); 
+        }        
+    }
    
     module blank() {    
         translate([dx_core_offset, 0, 0]) block(core, center = ABOVE);
         translate([-dx_slide_plate, 0, 0]) block(guide, center = ABOVE);
         if (use_cam)  {
-            translate([0, dy_cam_offset, 0]) block(cam_backer, center = ABOVE + BEHIND);    
+            // Chamfer, to not interfer with sliding
+            hull() {
+                translate([0, dy_cam_offset, cam_backer.z]) 
+                    block([cam_backer.x, cam_backer.y, 4], center = BEHIND + BELOW);  
+                translate([0, dy_cam_offset, 0]) 
+                    block([cam_backer.x-3, cam_backer.y, 0.1] , center = ABOVE + BEHIND);
+            } 
         }
         if (fixed_clamp) {
             collet_blank(is_exit=true);
        } if (pusher_guide) {
            collet_blank(is_exit=false);
+       }
+       if (moving_clamp && use_optical_position_sensor) {
+            ir_pattern();
        }
    } 
 
@@ -641,7 +721,8 @@ module filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=fa
     module cam_cavity() {
         d_cam_clearance = d_bottom_for_clamp_cam;
         dz_horn_clearance = z_guide - 2; 
-        d_horn_clearance = 34;
+        // When using the optical position sensor, you must trim servo horn!
+        d_horn_clearance = use_optical_position_sensor ? 20 : 34;
         translate([0, dy_cam_offset, z_filament_guide_base]) can(d=d_cam_clearance, h=10, center=ABOVE);
         translate([0, dy_cam_offset, dz_horn_clearance]) can(d=d_horn_clearance, h=10, center=ABOVE);  
     }  
@@ -762,7 +843,7 @@ module pusher_driver_link(a_horn_pivot, as_blank = false) {
         if (!attach_driver_link_pivot_to_horn) {
             hull() {
                 can(d=d_center, h=2, center=ABOVE);
-                #rotate([0, 0, az_drive_link_pivot])  
+                rotate([0, 0, az_drive_link_pivot])  
                     translate([r_drive_link - dr_horn_clearance, 0, 0]) 
                         can(d=d_horn_pivot_end, h=2, center=ABOVE);
             }   
@@ -1091,7 +1172,9 @@ module slide_plate() {
     
     dz_pusher_servo = -(z_pusher_servo_pedistal + 9g_servo_vertical_offset_origin_to_flange);
     
-
+    x_sliding_blank = 2 * x_slide_plate_rim + 9g_servo_body_width;
+    y_sliding_blank = y_slide + 2 * y_slide_plate_rim;    
+    optical_sensor_translation = [x_sliding_blank/2, dy_optical_sensor_holder, z_slide_plate/2];
 
     module fixed_clamp_cavity() {
         dy = (y_slide/2 + y_slide_plate_rim + 9g_servo_body_length/2);
@@ -1114,8 +1197,7 @@ module slide_plate() {
     
     module blank() {
         // The sliding area blank:
-        x_sliding_blank = 2 * x_slide_plate_rim + 9g_servo_body_width;
-        y_sliding_blank = y_slide + 2 * y_slide_plate_rim;
+
         block([x_sliding_blank, y_sliding_blank, z_slide_plate]); 
         
         x_servo_blank = 9g_servo_body_width + 2 * x_slider_rim;
@@ -1131,19 +1213,16 @@ module slide_plate() {
         dy_fixed_clamp_servo = dy_servo_offset_for_slide_plate;
         translate ([0, dy_fixed_clamp_servo, 0]) {
             block([x_servo_blank, y_servo_blank, z_slide_plate]); 
-            // TODO: Allow pedistals?
         }
-        
-        
-        // Pedistal for outer part of pusher servo:
-//        dy_pusher_servo_outer_pedistal = -y/2;
-//        x_outer_pedistal = 9g_servo_body_width;
-//        translate([0, dy_pusher_servo_outer_pedistal, 0]) 
-//            block([x_outer_pedistal, y_slide_plate_rim, z_pusher_servo_pedistal], center=BELOW + RIGHT);
-        // Inner pedistal - must avoid interfering with wire and still allow assembly
-     
-//        translate([0, dy_pusher_servo_inner_pedistal, 0]) 
-//            block([9g_servo_body_width, y_slide_plate_rim, z_pusher_servo_pedistal], center=BELOW+LEFT);
+        translate(optical_sensor_translation) {
+            tcrt5000_reflective_optical_sensor_holder(
+                show_body = false,
+                show_rails = true,
+                orient_for_mounting = FRONT, 
+                orient_for_printing = false,
+                mouse_ears = true,
+                show_vitamins = false);
+        }
     }
     
     module shape() {
@@ -1167,16 +1246,24 @@ module slide_plate() {
         [dx_slide_plate, dy_slide_plate, dz_slide_plate];
     translate(translation) rotate(rotation) {
          if (show_vitamins && mode != PRINTING) {
-             translate([dx_pusher_servo_offset, dy_pusher_servo, dz_pusher_servo]) 
+             translate([dx_pusher_servo_offset, dy_pusher_servo, dz_pusher_servo]) {
                 rotate([0, 180, -90]) 
                     color(MIUZEIU_SERVO_BLUE) 9g_motor_sprocket_at_origin();
+             }
+             
+            translate(optical_sensor_translation) {
+                tcrt5000_reflective_optical_sensor_holder(
+                    show_body = true,
+                    orient_for_mounting = FRONT, 
+                    show_vitamins = show_vitamins);
+            }
          }
         visualize(visualization_slide_plate) shape();  
     }
     
 }
 
-module position_sensor(show_vitamins=false) {
+module limit_switch_position_sensor(show_vitamins=false) {
     /*
     The position sensor is a limit switch upon which the limit_cam rotates. 
     
@@ -1262,7 +1349,9 @@ module slide_assembly() {
    
     slide_plate();
     slider(dy_moving_clamp);
-    position_sensor(show_vitamins=show_vitamins);
+    if (use_limit_switch_position_sensor) {
+        limit_switch_position_sensor(show_vitamins=show_vitamins);
+    }
     
     translate([dx_slide_plate, -dy_servo_offset_for_slide_plate, 0]) filament_guide(pusher_guide=true);
 }
@@ -1285,7 +1374,9 @@ module print_parts() {
     if (print_slide) {
         slide_plate();
         slider();
-        position_sensor();
+        if (use_limit_switch_position_sensor) {
+            limit_switch_position_sensor();
+        }
     }
     if (print_fixed_clamp_cam) {
         clamp_cam(item=0);   

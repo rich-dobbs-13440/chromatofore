@@ -1,6 +1,6 @@
 /* 
 The Mantis filament actuator is narrower and has less non-functional
-material.  It is designed for easier assembly, with an integral pivot. 
+material.  It is designed for easier assembly, with a integral pivots on the linkages 
 
 Vitamins:
 
@@ -17,19 +17,27 @@ Qty     Item                                             Specification
 Order of Assembly:
 1.  Insert TCTR5000, resistors , and Dupont leads to holder body.
 2.  Insert M2x8 screws and nuts into holder body and tighten. 
-3.  Snap mounted TCTR5000 sensor to slider plate. 
-4.  
+3.  Trim off any exposed leads.
+4.  Snap mounted TCTR5000 sensor to slider plate. 
+5.  Insert moving clamp servo and attach the filament guide using M2x10 screws and nuts.
+6.  Insert pusher servo and the filament guide using M2x10 screws and nuts.
+7.  Insert fixed clamp servo and the filament guide using M2x10 screws and nuts.
+8.  Attach servo leads to the electronics junction box. 
+9.  Attach position sensor lead to the electronics junction box.
+10.  Position servos in installation positions using the Octoprint plugin. 
+11.  Install the clamp cams in the installation positions.  
+12.  Fine tune the starting and ending ranges for the servo using settings page of the Octoprint plugin.
+13.  Test actuator using the plugin to load and unload filament. 
+
 
 
 TODO:
 
-1. Fix broken arrangement of the pusher coupler link which doesn't attach correctly
-    to the pusher linkage. Maybe pusher coupler link should be longer?
-2.  Implement alternative limit detection using photodetectors. 
-3.  Add Wire guides to keep servo and limit switch wires from being fouled with 
+1.  Implement alternative limit detection using photodetector. 
+2.  Add Wire guides to keep servo and limit switch wires from being fouled with 
      the moving parts.  
-4.  Assembly instructions.
-5. Fixed clam servo and cam is not located properly. 
+3. Fixed clam servo and cam is not located properly. 
+4.  Remove code for roller switch position sensing once photodetection is proven out. 
 */
 
 
@@ -248,7 +256,7 @@ use  <ScadApotheka/tcrt5000_mount.scad>
 // Adjust for engagement with servo horn and attachment with pivot.
     r_pusher_driver_link = 15; // [10: 0.1: 20]
 // Adjust so the bearing attachment doesn't interfer with insertion of horn.  Also, not interferring with roller switch.
-    az_drive_link_pivot = 40;
+    az_drive_link_pivot = 40; // 40;
     attach_driver_link_pivot_to_horn = true;
 
 
@@ -266,7 +274,7 @@ use  <ScadApotheka/tcrt5000_mount.scad>
     az_attachment_to_moving_clamp = 75; // [70:110]
 // Adjust these two variable so the attachment doesn't intefere with insertion of horn
     dz_bearing_attachment_for_driver_pivot = 1.6; // [0:0.1:3]
-    da_driver_horn_to_linkage  = 167; // [0: 360]
+    da_driver_horn_to_linkage  = 135; // [0: 360]
 
 /* [Moving Clamp Bracket Design] */
     z_moving_clamp_bracket = 6;  // [0:10]
@@ -300,7 +308,7 @@ use  <ScadApotheka/tcrt5000_mount.scad>
     dx_pattern = 3.5;
 // Adjust to make it possible to check limits 
     dy_pattern = 17;
-    dz_pattern = 7;
+    dz_pattern = 9;
 
 /* [Build Plate Layout] */
 
@@ -314,9 +322,9 @@ use  <ScadApotheka/tcrt5000_mount.scad>
     y_servo_filament_guide_bp = 40;
     dy_servo_filament_guide_bp = -40;
 
-    x_clamp_cam_bp = 100;
-    y_clamp_cam_bp = 60;
-    dy_clamp_cam_bp = -40;
+    x_clamp_cam_bp = 115;
+    y_clamp_cam_bp = 65;
+    dy_clamp_cam_bp = -50;
 
     x_pusher_bp = 110;
     y_pusher_bp = -20;

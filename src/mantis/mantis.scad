@@ -12,7 +12,8 @@ Qty     Item                                             Specification
   4           Position sensor connection screws  M2x8  
   6           Servo mounting screws                    M2x10
   10         Nuts                                                  M2  
-  3           Dupont jumpers                                 20 cm
+  2           Dupont jumpers                                M-M 20 cm
+  1           Dupont jumper                                 M-F 20 cm
 
 Order of Assembly:
 1.  Insert TCTR5000, resistors , and Dupont leads to holder body.
@@ -196,6 +197,8 @@ use  <ScadApotheka/tcrt5000_mount.scad>
     dy_filament_entrance_offset = -9; //[-20:0]
     z_filament_guide_base =  4; 
     filament_guide_mounting_screw = "M2x12";
+// Don't overlap the slide plate!
+    cl_x_filament_guide = 1;
 
 
 
@@ -299,16 +302,16 @@ use  <ScadApotheka/tcrt5000_mount.scad>
 
 
 /* [Optical Position Sensor Design] */
-// Must be large enough so that far wall doesn't interfere
-    x_pattern = 10;
+// Since far wall is now breakway, reduce distance to cut down on bridgine distance
+    x_pattern = 8;
 // Must match range of motion
     y_pattern = 26;
     z_pattern = 2;
 // Adjust to align pattern over sensor, without interference
-    dx_pattern = 3.5;
+    dx_pattern = 2;
 // Adjust to make it possible to check limits 
-    dy_pattern = 17;
-    dz_pattern = 9;
+    dy_pattern = 0;
+    dz_pattern = 6;
 
 /* [Build Plate Layout] */
 
@@ -629,7 +632,7 @@ module filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=fa
     use_filament_entrance = use_cam;
     ay_mounting_screws = use_cam ? 0 : 180;
     
-    x = 2 * x_slider_rim + 9g_servo_body_width;  
+    x = 2 * x_slider_rim + 9g_servo_body_width - cl_x_filament_guide;  
     y = 2 * y_slide_plate_rim + 9g_servo_body_length;
     // The core provides the body into which the servo will be inserted.
     core = [x, y, z_filament_guide_base];
@@ -681,25 +684,33 @@ module filament_guide(moving_clamp = false, fixed_clamp = false, pusher_guide=fa
     
     module ir_pattern() {   
     // Add the pattern for the position sensor
-    translate([dx_core_offset + core.x/2, 0, 0])  {
-        // Attach pattern to guide, without interfering with guide movement
-        hull() {
-            block([2,  core.y/2, 2], center = BEHIND+RIGHT+ABOVE);
-            translate([dx_pattern, 5, dz_pattern]) 
-                block([2,  core.y/2, z_pattern], center = FRONT+RIGHT+ABOVE);
-        }
-        translate([dx_pattern, dy_pattern, dz_pattern]) 
-            block([x_pattern, y_pattern, z_pattern], center = FRONT+ABOVE);
-        // Close wall - breakaway, to not interfer with slide
-        translate([dx_pattern, core.y/2 + 6, 0]) 
-            block([0.6, y_pattern - core.y/2,  abs(dz_pattern) + z_pattern], center = FRONT + RIGHT + ABOVE);
-        // Far wall - other side of sensor - support for bridging, breakaway
-        translate([dx_pattern + x_pattern, dy_pattern, 0]) 
-            block([0.6, y_pattern,  abs(dz_pattern) + z_pattern], center = BEHIND + ABOVE); 
-        // Add mouse ears, to try to hold down thin walls
-        translate([dx_pattern + x_pattern/2, dy_pattern, 0]) 
-            center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) 
-                translate([x_pattern/2 + 1, y_pattern/2+1, 0]) can(d=5, h= 0.2, center=ABOVE); 
+        translate([dx_core_offset + core.x/2, 0, 0])  {
+            // Attach pattern to guide, without interfering with guide movement
+            hull() {
+                block([2,  core.y/2, 2], center = BEHIND+RIGHT+ABOVE);
+                translate([dx_pattern, dy_pattern, dz_pattern]) 
+                    block([2,  core.y/2, z_pattern], center = FRONT+RIGHT+ABOVE);
+            }
+            // post for attaching pattern
+            ddy_pattern = 4;
+            for (i = [0:1:3]) {
+                dy = dy_pattern + i * ddy_pattern;
+                translate([dx_pattern, dy, dz_pattern]) {
+                    block([2, 2, 6], center = FRONT+RIGHT+ABOVE);
+                }
+            }
+//            translate([dx_pattern, dy_pattern, dz_pattern]) 
+//                block([x_pattern, y_pattern, z_pattern], center = FRONT+ABOVE);
+//            // Close wall - breakaway, to not interfer with slide
+//            translate([dx_pattern, core.y/2 +4, 0]) 
+//                block([0.6, y_pattern - core.y/2,  abs(dz_pattern) + z_pattern], center = FRONT + RIGHT + ABOVE);
+//            // Far wall - other side of sensor - support for bridging, breakaway
+//            translate([dx_pattern + x_pattern, dy_pattern, 0]) 
+//                block([0.6, y_pattern,  abs(dz_pattern) + z_pattern], center = BEHIND + ABOVE); 
+//            // Add mouse ears, to try to hold down thin walls
+//            translate([dx_pattern + x_pattern/2, dy_pattern, 0]) 
+//                center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) 
+//                    translate([x_pattern/2 + 1, y_pattern/2+1, 0]) can(d=5, h= 0.2, center=ABOVE); 
         }        
     }
    
